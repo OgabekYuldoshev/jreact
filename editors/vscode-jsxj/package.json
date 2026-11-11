@@ -1,18 +1,27 @@
 {
   "name": "jsxj",
   "displayName": "JSXJ (JReact)",
-  "description": "Syntax highlighting for .jsxj files: Java with JSX.",
-  "version": "0.1.0",
+  "description": "JSXJ (Java + JSX): syntax highlighting and a language server (diagnostics, completion, hover, go to definition).",
+  "version": "0.2.0",
   "publisher": "jreact",
   "license": "MIT",
-  "engines": { "vscode": "^1.60.0" },
-  "categories": ["Programming Languages"],
+  "engines": {
+    "vscode": "^1.60.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
   "contributes": {
     "languages": [
       {
         "id": "jsxj",
-        "aliases": ["JSXJ", "jsxj"],
-        "extensions": [".jsxj"],
+        "aliases": [
+          "JSXJ",
+          "jsxj"
+        ],
+        "extensions": [
+          ".jsxj"
+        ],
         "configuration": "./language-configuration.json"
       }
     ],
@@ -21,8 +30,48 @@
         "language": "jsxj",
         "scopeName": "source.jsxj",
         "path": "./syntaxes/jsxj.tmLanguage.json",
-        "embeddedLanguages": { "meta.embedded.expression.jsxj": "java" }
+        "embeddedLanguages": {
+          "meta.embedded.expression.jsxj": "java"
+        }
       }
-    ]
+    ],
+    "configuration": {
+      "title": "JSXJ",
+      "properties": {
+        "jsxj.server.jar": {
+          "type": "string",
+          "default": "",
+          "description": "Path to jsxj-lsp.jar. Empty: the jar bundled with the extension (server/jsxj-lsp.jar)."
+        },
+        "jsxj.javaPath": {
+          "type": "string",
+          "default": "java",
+          "description": "The java executable that runs the server (JDK 17+; javac diagnostics need a JDK, not a JRE)."
+        },
+        "jsxj.sourceRoots": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Extra folders with .java sources for javac and component lookup (relative to the workspace root). Folders inside the workspace are found automatically."
+        },
+        "jsxj.classpath": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Jars or class folders for javac, e.g. the jreact-core jar, when its sources are not in the workspace."
+        }
+      }
+    }
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:jsxj"
+  ],
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
   }
 }

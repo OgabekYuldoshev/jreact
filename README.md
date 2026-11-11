@@ -43,12 +43,13 @@ git clone <repo-url> jreact
 cd jreact
 
 ./build.sh        # kompilyator → runtime → .jsxj → .java → javac → namunani ishga tushiradi
-./build.sh test   # kompilyator (38), scheduler (14), reconciler (56) va dom (19) testlari
+./build.sh test   # kompilyator (38), scheduler (14), reconciler (56), dom (19) va language server (12) testlari
 
 ./build.sh web        # Todo'ni brauzer uchun yig'adi: examples/todo-web/target/web/{index.html,app.js}
 ./build.sh web-test   # shuni jsdom'da ochib, ilovada bosib/yozib tekshiradi
 ./build.sh dev        # dev server: http://localhost:5173, manba o'zgarsa o'zi qayta yig'adi va sahifani yangilaydi
-./editors/vscode-jsxj/install.sh   # VS Code'da .jsxj ranglash (qarang: editors/vscode-jsxj)
+./editors/vscode-jsxj/install.sh   # VS Code: .jsxj ranglash + language server (qarang: editors/vscode-jsxj)
+./build.sh lsp        # faqat language server jar'i: build/jsxj-lsp.jar
 ```
 
 `./build.sh` Todo namunasini kompilyatsiya qilib, uning HTML'ini terminalga chiqaradi:
@@ -68,6 +69,7 @@ Loyiha quyidagi qismlardan iborat:
 | `jreact-compiler` | `.jsxj` → `.java` kompilyatori (`jsxjc`) |
 | `jreact-core` | Runtime: `Component`, `Element`, `Attrs`, hooks API, `Jsx`, `ServerRenderer` |
 | `jreact-scheduler` | Vazifalar navbati: ustuvorlik, muddat (timeout), `shouldYield`, delay |
+| `jreact-lsp` | `.jsxj` language server (LSP): diagnostika, completion, hover, definition |
 | `jreact-dom` | DOM host: `DomHost`, `DomRoot`, event delegation, atribut/style qoidalari (JSO'siz) |
 | `jreact-web` | Brauzer bog'lamalari (TeaVM JSO): `JsDomOps`, `JsTimers`, `JReactWeb.createRoot` |
 | `jreact-reconciler` | Fiber reconciler: work loop, key'li diff, commit, hooks dispatcher, `HostConfig` |
@@ -349,7 +351,24 @@ javac -encoding UTF-8 -cp build/core -d build/app $(find build/gen src/main/java
 java -cp build/core:build/app app.Main        # Windows'da ':' o'rniga ';'
 ```
 
+**IDE (VS Code):** `./editors/vscode-jsxj/install.sh`, keyin oynani qayta yuklang. Ranglash, xatolarni qizil chiziq bilan ko'rsatish, `<` dan keyin komponent nomlari va prop'lar, hover va "definitionga o'tish" ishlaydi. Batafsil: [Language server](#language-server).
+
 **IDE (IntelliJ IDEA):** *Settings → Editor → File Types → Java* ga `*.jsxj` naqshini qo'shing. Java qismlari rangli bo'ladi. JSX qismlarini IDE xato deb ko'rsatishi mumkin, chunki bu format uchun hali plagin yo'q. Haqiqiy xatolarni `jsxjc` va `javac` beradi.
+
+## Language server
+
+`jreact-lsp` modul `.jsxj` uchun oddiy LSP serveri (JDK'dan boshqa qaramligi yo'q, kompilyatorni qayta ishlatadi). VS Code kengaytmasi uni `java -jar` bilan ishga tushiradi; LSP so'zlashadigan boshqa muharrir ham ishlatishi mumkin: `java -jar build/jsxj-lsp.jar` (stdio).
+
+| Imkoniyat | Qanday ishlaydi |
+|---|---|
+| Diagnostika | JSX xatolari (`jsxjc`) har bosishda aniq qator/ustun bilan. Java xatolari (`javac`) yozish to'xtagandan ~0.5 s keyin va saqlaganda. Generatsiya qilingan Java'da qator raqami `.jsxj` bilan bir xil, JSX'siz qatorlarda ustun ham aniq |
+| Completion | `<` dan keyin komponentlar (`record Props` bor sinflar) va HTML teglar. Tag ichida prop'lar (berilganlari chiqmaydi, `key`, `ref` bilan), `name={}` shaklida qo'yiladi. `{...}` va string ichida taklif yo'q |
+| Hover | Tag ustida `record Props(...)`, atribut ustida uning turi |
+| Definition | Komponent tegidan sinf e'loniga o'tadi |
+
+- Loyihadagi barcha `.jsxj`/`.java` fayllar indekslanadi (`target`, `build`, `node_modules`, `test` papkalaridan tashqari, chunki test sinflari bir xil nomlar bilan indeksni buzadi). `package` qatorlaridan javac uchun source root'lar o'zi topiladi.
+- `jreact-core` manbasi workspace ichida bo'lmasa, VS Code sozlamalarida `jsxj.sourceRoots` (papkalar) yoki `jsxj.classpath` (jar) bering. Java'ni `jsxj.javaPath` bilan almashtirish mumkin, javac diagnostikasi uchun JRE emas, JDK kerak.
+- Cheklov: Java ifodalari ichida (`{...}` ichida) avtokomplit va hover yo'q, bu Java til serveri ishi. Bir xil nomli komponentlar (turli paketlarda) indeksda adashadi, kompilyatordagi kabi.
 
 ## Xatolar
 
@@ -480,6 +499,9 @@ jreact/
 │       │   └── EventLoopSchedulerHost.java  # Timers asosidagi SchedulerHost
 │       └── test/java/jreact/dom/
 │           └── DomTest.java          # 19 ta test (soxta DOM)
+├── jreact-lsp/                       # .jsxj language server (jreact.lsp): Server, Analyzer, Features, Workspace, Json
+│   └── src/test/java/jreact/lsp/LspTest.java   # 12 ta test, haqiqiy JSON-RPC oqimi bilan
+├── editors/vscode-jsxj/              # VS Code kengaytmasi: grammar + LSP klienti
 ├── jreact-web/                       # brauzer bog'lamalari (paket jreact.web, TeaVM JSO)
 │   └── src/main/java/jreact/web/
 │       ├── JReactWeb.java            # JReactWeb.createRoot("root")
@@ -502,7 +524,7 @@ jreact/
 - `useContext` provider'ni `ret` zanjiri bo'ylab qidiradi (chuqurlikka mutanosib), alohida qiymatlar stekidan foydalanmaydi. `key` reconciler'da ishlaydi.
 - `{...spread}` komponentlarda qo'llab-quvvatlanmaydi.
 - Bir xil nomli komponentlar turli paketlarda bo'lsa indeks adashadi.
-- IDE qo'llab-quvvatlashi (sintaksis bo'yash, autocomplete) JSX qismlari uchun yo'q.
+- IDE: VS Code uchun bor (ranglash + language server). IntelliJ uchun plagin yo'q. VS Code klienti haqiqiy VS Code oynasida hali sinalmagan (server esa `vscode-jsonrpc` orqali haqiqiy repoda sinalgan).
 - Litsenziya hali tanlanmagan.
 
 ## Yo'l xaritasi
@@ -512,4 +534,4 @@ jreact/
 3. ~~**`jreact-dom`:** DOM host config, event delegation, TeaVM JSO orqali `jreact-web`~~ (tayyor)
 4. **Build:** ~~TeaVM bilan `app.js`~~ (tayyor, `./build.sh web`). Qolgani: alohida Maven plagini (`jsxj:compile`)
 5. ~~`Context`, `memo`~~ (tayyor), ~~error boundary~~ (tayyor). Bundle: ~137 KB, dev-mode ogohlantirishlar (key) tayyor. Qolgani: boshqa ogohlantirishlar (masalan `value` bor, `onInput` yo'q)
-6. IDE plagini (JSX sintaksisini bo'yash va xatolarni ko'rsatish
+6. ~~IDE (VS Code): ranglash, language server~~ (tayyor). Qolgani: IntelliJ plagini, Java ifodalari uchun autocomplete (jdtls bilan birlashtirish), rename/find references

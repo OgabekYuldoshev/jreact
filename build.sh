@@ -25,6 +25,17 @@ if [[ "${1:-}" == "web" || "${1:-}" == "web-test" ]]; then
   exit 0
 fi
 
+# Language server for .jsxj (diagnostics, completion, hover, definition): build/jsxj-lsp.jar
+#   ./build.sh lsp        -> build/jsxj-lsp.jar (used by editors/vscode-jsxj/install.sh)
+if [[ "${1:-}" == "lsp" ]]; then
+  rm -rf "$B/compiler" "$B/lsp" "$B/jsxj-lsp.jar"
+  $JAVAC -d $B/compiler $(find jreact-compiler/src/main/java -name '*.java')
+  $JAVAC -cp $B/compiler -d $B/lsp $(find jreact-lsp/src/main/java -name '*.java')
+  jar --create --file $B/jsxj-lsp.jar --main-class jreact.lsp.Main -C $B/compiler . -C $B/lsp .
+  echo "built $B/jsxj-lsp.jar"
+  exit 0
+fi
+
 rm -rf "$B"
 
 echo "== jsxjc compiler"
@@ -42,6 +53,9 @@ $JAVAC -cp $B/core:$B/scheduler -d $B/reconciler $(find jreact-reconciler/src/ma
 echo "== jreact-dom"
 $JAVAC -cp $B/core:$B/scheduler:$B/reconciler -d $B/dom $(find jreact-dom/src/main/java -name '*.java')
 
+echo "== jsxj language server"
+$JAVAC -cp $B/compiler -d $B/lsp $(find jreact-lsp/src/main/java -name '*.java')
+
 if [[ "${1:-}" == "test" ]]; then
   echo "== compiler tests"
   $JAVAC -cp $B/compiler -d $B/compiler-test $(find jreact-compiler/src/test/java -name '*.java')
@@ -55,6 +69,9 @@ if [[ "${1:-}" == "test" ]]; then
   echo "== dom tests"
   $JAVAC -cp $B/core:$B/scheduler:$B/reconciler:$B/dom -d $B/dom-test $(find jreact-dom/src/test/java -name '*.java')
   java -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/dom-test jreact.dom.DomTest
+  echo "== language server tests"
+  $JAVAC -cp $B/compiler:$B/lsp -d $B/lsp-test $(find jreact-lsp/src/test/java -name '*.java')
+  java -cp $B/compiler:$B/lsp:$B/lsp-test jreact.lsp.LspTest
   exit 0
 fi
 
