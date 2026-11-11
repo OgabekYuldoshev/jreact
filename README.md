@@ -441,7 +441,7 @@ jreact/
 
 ## Hozirgi cheklovlar
 
-- Brauzer build'i faqat jsdom'da sinalgan, haqiqiy brauzerda emas. `app.js` ~400 KB (TeaVM, minifikatsiyasiz). Maven build'i `jsxj:compile` plagini o'rniga `exec-maven-plugin` bilan `jsxjc` ni chaqiradi.
+- Brauzer build'i faqat jsdom'da sinalgan, haqiqiy brauzerda emas. `app.js` ~137 KB (gzip bilan ~45 KB, TeaVM `FULL` + minifikatsiya). Maven build'i `jsxj:compile` plagini o'rniga `exec-maven-plugin` bilan `jsxjc` ni chaqiradi.
 - DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q. `onChange` React kabi: matn maydoni `input` da, checkbox/select `change` da.
 - Ustuvorlik root bo'yicha, update bo'yicha emas (lane yo'q): bitta render barcha kutayotgan update'larni oladi. Bo'laklab render faqat `LOW`/`IDLE` (`startTransition`) uchun, uni boshqa update to'xtatib qayta boshlamaydi, faqat tezroq tugatadi.
 - Error boundary yo'q: render xatosi `flush()` dan chiqadi, commit qilingan daraxt buzilmaydi.
@@ -457,6 +457,6 @@ jreact/
 1. ~~**`jreact-reconciler`:** Fiber daraxti, work loop, key'li diff, commit fazasi, hooks dispatcher'i~~ (tayyor)
 2. ~~**`jreact-scheduler`:** bo'laklab render qilish, ustuvorlik~~ (tayyor, root darajasida). Qolgani: haqiqiy lane'lar (update bo'yicha ustuvorlik, render'ni to'xtatib qayta boshlash)
 3. ~~**`jreact-dom`:** DOM host config, event delegation, TeaVM JSO orqali `jreact-web`~~ (tayyor)
-4. **Build:** ~~TeaVM bilan `app.js`~~ (tayyor, `./build.sh web`). Qolgani: alohida Maven plagini (`jsxj:compile`), minifikatsiya va hajmni kamaytirish
-5. ~~`Context`, `memo`~~ (tayyor). Qolgani: dev-mode ogohlantirishlar, bundle hajmini optimallashtirish
+4. **Build:** ~~TeaVM bilan `app.js`~~ (tayyor, `./build.sh web`). Qolgani: alohida Maven plagini (`jsxj:compile`)
+5. ~~`Context`, `memo`~~ (tayyor). Bundle: ~137 KB (tayyor). Qolgani: dev-mode ogohlantirishlar
 6. IDE plagini (JSX sintaksisini bo'yash va xatolarni ko'rsatish

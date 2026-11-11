@@ -93,8 +93,8 @@
                             <mainClass>app.WebMain</mainClass>
                             <targetDirectory>${project.build.directory}/web</targetDirectory>
                             <targetFileName>app.js</targetFileName>
-                            <optimizationLevel>SIMPLE</optimizationLevel>
-                            <minifying>false</minifying>
+                            <optimizationLevel>FULL</optimizationLevel>
+                            <minifying>true</minifying>
                             <debugInformationGenerated>false</debugInformationGenerated>
                             <sourceMapsGenerated>false</sourceMapsGenerated>
                         </configuration>
