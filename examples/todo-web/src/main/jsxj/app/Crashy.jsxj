@@ -1,0 +1,22 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+/** Demo of an error boundary: renders fine until the button is pressed, then throws while rendering. */
+public class Crashy extends Component<Crashy.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        State<Boolean> armed = useState(false);
+        if (armed.get()) throw new IllegalStateException("Crashy render xatosi");
+        return (
+            <p className="crashy">
+                <button id="crash" onClick={e -> armed.set(true)}>Xato chiqar</button>
+            </p>
+        );
+    }
+}

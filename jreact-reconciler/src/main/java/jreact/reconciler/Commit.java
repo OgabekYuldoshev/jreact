@@ -12,9 +12,10 @@ import java.util.List;
  */
 final class Commit<N> {
 
+    private final Reconciler<N> reconciler;
     private final HostConfig<N> host;
 
-    Commit(HostConfig<N> host) { this.host = host; }
+    Commit(Reconciler<N> reconciler) { this.reconciler = reconciler; this.host = reconciler.host; }
 
     void commitRoot(Root<N> root, Fiber finished) {
         mutate(root, finished);
@@ -132,10 +133,11 @@ final class Commit<N> {
     // ---------------------------------------------------------------- layout: refs
 
     private void layout(Fiber fiber) {
-        if ((fiber.subtreeFlags & Fiber.REF) != 0) {
+        if ((fiber.subtreeFlags & Fiber.LAYOUT_MASK) != 0) {
             for (Fiber c = fiber.child; c != null; c = c.sibling) layout(c);
         }
         if ((fiber.flags & Fiber.REF) != 0) attachRef(fiber);
+        if ((fiber.flags & Fiber.CAUGHT) != 0) reconciler.notifyCaught(fiber);
     }
 
     @SuppressWarnings("unchecked")
@@ -178,7 +180,7 @@ final class Commit<N> {
                 if (e.prev != null && e.prev.destroy != null) {
                     Runnable destroy = e.prev.destroy;
                     e.prev.destroy = null;
-                    destroy.run();
+                    try { destroy.run(); } catch (RuntimeException | Error ex) { effectFailed(fiber, ex); }
                 }
             }
         }
@@ -191,8 +193,15 @@ final class Commit<N> {
         if ((fiber.flags & Fiber.PASSIVE) != 0 && fiber.effects != null) {
             for (HookEffect e : fiber.effects) {
                 e.prev = null;
-                e.destroy = e.create.run();
+                try { e.destroy = e.create.run(); } catch (RuntimeException | Error ex) { effectFailed(fiber, ex); }
             }
         }
+    }
+
+    /** An effect threw: the nearest error boundary above shows its fallback, otherwise the error propagates. */
+    private void effectFailed(Fiber fiber, Throwable error) {
+        if (reconciler.captureEffectError(fiber, error)) return;
+        if (error instanceof RuntimeException re) throw re;
+        throw (Error) error;
     }
 }

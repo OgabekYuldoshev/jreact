@@ -18,13 +18,38 @@ final class Render<N> {
 
     private final Reconciler<N> reconciler;
 
+    /** The fiber being begun or completed, so a thrown error can be traced back to its boundary. */
+    private Fiber working;
+
     Render(Reconciler<N> reconciler) { this.reconciler = reconciler; }
+
+    /**
+     * An error was thrown by the unit of work in progress. Finds the nearest error boundary above it that is not
+     * already showing its fallback, marks it as caught and returns it: the work loop restarts there, so the
+     * boundary renders its fallback and everything it had built below is dropped. Null: nobody catches it.
+     */
+    Fiber captureError(Throwable error) {
+        Fiber origin = working;
+        if (origin == null) return null;
+        for (Fiber b = origin.ret; b != null; b = b.ret) {
+            if (b.tag != Fiber.Tag.COMPONENT || b.instance == null || !b.instance.catchesErrors() || b.error != null) continue;
+            b.error = error;
+            b.caughtStack = Diagnostics.componentStack(origin);
+            b.flags = (b.flags & Fiber.PLACEMENT) | Fiber.CAUGHT;   // the rest was computed from the abandoned subtree
+            b.subtreeFlags = 0;
+            b.deletions = null;
+            b.effects = null;
+            return b;
+        }
+        return null;
+    }
 
     /**
      * Processes one fiber and returns the next one to process, or null when the whole tree is done.
      * The caller drives the loop, so it can stop between any two units and resume later.
      */
     Fiber performUnitOfWork(Fiber unit) {
+        working = unit;
         Fiber next = beginWork(unit.alternate, unit);
         unit.memoizedElement = unit.element;
         unit.memoizedText = unit.text;
@@ -34,7 +59,7 @@ final class Render<N> {
     // ---------------------------------------------------------------- begin: go down
 
     private Fiber beginWork(Fiber current, Fiber wip) {
-        if (current != null) {
+        if (current != null && (wip.flags & Fiber.CAUGHT) == 0) {
             boolean sameInput = wip.tag == Fiber.Tag.TEXT
                     ? Objects.equals(wip.text, current.memoizedText)
                     : wip.element == current.memoizedElement;
@@ -64,6 +89,18 @@ final class Render<N> {
     private void updateComponent(Fiber current, Fiber wip) {
         if (wip.instance == null) wip.instance = wip.factory.get();
         wip.contexts = null;            // re-registered by useContext during this render
+        boolean caughtNow = (wip.flags & Fiber.CAUGHT) != 0;
+        if (wip.error != null && !caughtNow && current != null
+                && wip.instance.resetsErrorWith(current.memoizedElement.props(), wip.element.props())) {
+            wip.error = null;                   // resetKeys changed: try the real children again
+        }
+        if (wip.error != null) {
+            // boundary showing its fallback: its own render() (and hooks) are skipped
+            Throwable error = wip.error;
+            Element fallback = wip.instance.renderErrorWith(wip.element.props(), error, () -> reconciler.resetBoundary(wip));
+            reconcileChildren(current, wip, Arrays.asList(fallback));
+            return;
+        }
         FiberHooks hooks = new FiberHooks(reconciler, wip, current);
         Hooks.Dispatcher prev = Hooks.swap(hooks);
         Element out;
@@ -123,6 +160,7 @@ final class Render<N> {
         Fiber node = unit;
         while (node != null) {
             Fiber parent = node.ret;
+            working = node;
             completeWork(node.alternate, node);
             if (node.sibling != null) return node.sibling;
             node = parent;

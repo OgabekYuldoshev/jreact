@@ -20,7 +20,6 @@ public class TodoApp extends Component<TodoApp.Props> {
 
         return (
             <section className="todo-app">
-                {/* Sarlavha */}
                 <h1>{props.title()}</h1>
 
                 <form onSubmit={e -> { e.preventDefault(); add(todos, draft); }}>

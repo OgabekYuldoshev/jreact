@@ -41,4 +41,37 @@ public abstract class Component<P> {
     /** Untyped entry point for reconcilers, see {@link #renderWith}. */
     @SuppressWarnings("unchecked")
     public final boolean propsEqualWith(Object prev, Object next) { return arePropsEqual((P) prev, (P) next); }
+
+    // ---------------------------------------------------------------- error boundaries
+
+    /**
+     * Override to return true to make this component an error boundary: an exception thrown while rendering
+     * (or in a useEffect) of anything below it replaces its subtree by {@link #renderError}. It does not catch
+     * its own errors, nor errors in event handlers. See {@link ErrorBoundary} for a ready-made one.
+     */
+    protected boolean isErrorBoundary() { return false; }
+
+    /** What a boundary shows instead of its subtree. {@code reset} clears the error and renders normally again. */
+    protected Element renderError(P props, Throwable error, Runnable reset) { return null; }
+
+    /** Called after the fallback was committed. {@code componentStack} reads {@code Inner > Outer}. */
+    protected void didCatch(P props, Throwable error, String componentStack) {}
+
+    /** The error state is also cleared when a render with {@code next} props returns true here. */
+    protected boolean shouldResetError(P prev, P next) { return false; }
+
+    public final boolean catchesErrors() { return isErrorBoundary(); }
+
+    @SuppressWarnings("unchecked")
+    public final Element renderErrorWith(Object props, Throwable error, Runnable reset) {
+        return renderError((P) props, error, reset);
+    }
+
+    @SuppressWarnings("unchecked")
+    public final void didCatchWith(Object props, Throwable error, String componentStack) {
+        didCatch((P) props, error, componentStack);
+    }
+
+    @SuppressWarnings("unchecked")
+    public final boolean resetsErrorWith(Object prev, Object next) { return shouldResetError((P) prev, (P) next); }
 }

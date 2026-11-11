@@ -23,7 +23,9 @@ final class Fiber {
     static final int CHILD_DELETION = 4;  // `deletions` is non-empty
     static final int REF = 8;             // attach/detach ref
     static final int PASSIVE = 16;        // has useEffect work
+    static final int CAUGHT = 32;         // error boundary that just caught an error (didCatch runs in layout)
     static final int MUTATION_MASK = PLACEMENT | UPDATE | CHILD_DELETION;
+    static final int LAYOUT_MASK = REF | CAUGHT;
 
     final Tag tag;
     final String key;
@@ -50,6 +52,8 @@ final class Fiber {
     boolean hasUpdate;          // a setState is waiting on this fiber (React: lanes)
     boolean childHasUpdate;     // some descendant has hasUpdate (React: childLanes)
     boolean detached;           // unmounted: late setState calls are ignored
+    Throwable error;            // COMPONENT (error boundary): the caught error, while it shows its fallback
+    String caughtStack;         // component stack of the error, for didCatch
 
     Fiber(Tag tag, String key, Object type, Supplier<? extends Component<?>> factory) {
         this.tag = tag; this.key = key; this.type = type; this.factory = factory;
@@ -85,6 +89,7 @@ final class Fiber {
         w.index = current.index;
         w.hasUpdate = current.hasUpdate;
         w.childHasUpdate = current.childHasUpdate;
+        w.error = current.error;
         return w;
     }
 

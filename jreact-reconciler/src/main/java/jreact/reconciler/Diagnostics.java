@@ -53,6 +53,12 @@ final class Diagnostics {
         }
     }
 
+    /** A boundary caught {@code error}. Logged like React does, so it does not vanish silently. */
+    void reportCaught(Throwable error, String stack) {
+        if (enabled) handler.accept("Error caught by an error boundary: " + error
+                + (stack.isEmpty() ? "" : "\n    in " + stack));
+    }
+
     private void warn(String problem, String message, Fiber owner) {
         String where = componentStack(owner);
         if (!reported.add(problem + " @ " + where)) return;
@@ -60,7 +66,7 @@ final class Diagnostics {
     }
 
     /** {@code Card > TodoApp}: the components around the problem, innermost first. */
-    private static String componentStack(Fiber from) {
+    static String componentStack(Fiber from) {
         StringBuilder sb = new StringBuilder();
         int depth = 0;
         for (Fiber f = from; f != null && depth < 6; f = f.ret) {

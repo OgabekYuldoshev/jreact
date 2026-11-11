@@ -28,6 +28,7 @@
   - [Kompilyator (`jsxjc`)](#kompilyator-jsxjc)
   - [O'z loyihangizda ishlatish](#oz-loyihangizda-ishlatish)
   - [Xatolar](#xatolar)
+  - [Error boundary](#error-boundary)
   - [Dev-mode ogohlantirishlar](#dev-mode-ogohlantirishlar)
   - [Loyiha tuzilmasi](#loyiha-tuzilmasi)
   - [Hozirgi cheklovlar](#hozirgi-cheklovlar)
@@ -42,7 +43,7 @@ git clone <repo-url> jreact
 cd jreact
 
 ./build.sh        # kompilyator → runtime → .jsxj → .java → javac → namunani ishga tushiradi
-./build.sh test   # kompilyator (38), scheduler (14), reconciler (46) va dom (19) testlari
+./build.sh test   # kompilyator (38), scheduler (14), reconciler (56) va dom (19) testlari
 
 ./build.sh web        # Todo'ni brauzer uchun yig'adi: examples/todo-web/target/web/{index.html,app.js}
 ./build.sh web-test   # shuni jsdom'da ochib, ilovada bosib/yozib tekshiradi
@@ -368,6 +369,37 @@ Tip xatolari (masalan `int` o'rniga `String`) `javac`dan keladi. U generatsiya q
 build/gen/app/TodoApp.java:43: error: incompatible types: String cannot be converted to int
 ```
 
+## Error boundary
+
+Bitta komponent render paytida xato tashlasa, butun ilova yiqilmasligi uchun `ErrorBoundary` ishlatiladi. U ichidagi bolalar xatosini tutadi va o'rniga `fallback` ko'rsatadi, qolgan ilova (aka-uka komponentlar va ularning state'i) tegmasdan qoladi:
+
+```jsx
+import jreact.ErrorBoundary;
+
+<ErrorBoundary fallback={(err, reset) ->
+    <div className="error">
+        Xato: {err.getMessage()}
+        <button onClick={e -> reset.run()}>Qayta urinish</button>
+    </div>
+}>
+    <Widget />
+</ErrorBoundary>
+```
+
+| Prop | Vazifasi |
+|---|---|
+| `fallback` | `(xato, reset) -> Element`. `null` bo'lsa hech narsa ko'rsatilmaydi |
+| `onError` | `(xato, komponentStek) -> void`, log yuborish uchun. Commit'dan keyin bir marta chaqiriladi |
+| `resetKeys` | `List<Object>`. Ro'yxat o'zgarsa xato holati tozalanadi va bolalar qayta uriniladi |
+| `children` | himoyalanadigan daraxt |
+
+- `reset.run()` xatoni tozalab, bolalarni qayta render qiladi.
+- Boundary o'z `fallback`idagi xatoni tutolmaydi: u bir daraja yuqoridagi boundary'ga o'tadi. Boundary yo'q bo'lsa xato avvalgidek `flush()` dan chiqadi, commit qilingan daraxt buzilmaydi.
+- Xato dev konsolga ham yoziladi (`Error caught by an error boundary: ... in Bomb > ErrorBoundary`), `setDevMode(false)` uni o'chiradi.
+- Tutiladi: `render()`, hooks xatolari, `useEffect` (yaratish va tozalash). Tutilmaydi: event handler'lar, taymerlar.
+- O'z boundary'ingiz uchun `Component` da `isErrorBoundary()`, `renderError(...)`, `didCatch(...)`, `shouldResetError(...)` ni override qiling.
+- `ErrorBoundary` `jreact-core` ichida, shuning uchun kompilyatorga `jreact-core/src/main/java` ni ham indeks sifatida bering (`build.sh` va `todo-web/pom.xml` shunday qiladi).
+
 ## Dev-mode ogohlantirishlar
 
 Reconciler ishga tushirish vaqtida (runtime) ham React kabi tipik xatolarni xabar qiladi. Ular xatti-harakatni o'zgartirmaydi, har bir muammo bir marta chiqadi va komponent zanjirini ko'rsatadi:
@@ -434,7 +466,7 @@ jreact/
 │       │   ├── FiberHooks.java       # hooks dispatcher (mount/update)
 │       │   └── AttrsDiff.java        # atribut/event o'zgarishi
 │       └── test/java/jreact/reconciler/
-│           └── ReconcilerTest.java   # 46 ta test (xotiradagi test host)
+│           └── ReconcilerTest.java   # 56 ta test (xotiradagi test host)
 ├── jreact-dom/                       # DOM host (paket jreact.dom), TeaVM'siz qismi
 │   └── src/
 │       ├── main/java/jreact/dom/
@@ -466,8 +498,7 @@ jreact/
 - Brauzer build'i faqat jsdom'da sinalgan, haqiqiy brauzerda emas. `app.js` ~137 KB (gzip bilan ~45 KB, TeaVM `FULL` + minifikatsiya). Maven build'i `jsxj:compile` plagini o'rniga `exec-maven-plugin` bilan `jsxjc` ni chaqiradi.
 - DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q. `onChange` React kabi: matn maydoni `input` da, checkbox/select `change` da.
 - Ustuvorlik root bo'yicha, update bo'yicha emas (lane yo'q): bitta render barcha kutayotgan update'larni oladi. Bo'laklab render faqat `LOW`/`IDLE` (`startTransition`) uchun, uni boshqa update to'xtatib qayta boshlamaydi, faqat tezroq tugatadi.
-- Error boundary yo'q: render xatosi `flush()` dan chiqadi, commit qilingan daraxt buzilmaydi.
-- Brauzer uchun `app.js` build'i yo'q (TeaVM hali ulanmagan).
+- Error boundary render va `useEffect` xatolarini tutadi, event handler xatolarini tutmaydi (React'dagi kabi). `ServerRenderer` (SSR) boundary'da xatoni tutmaydi.
 - `useContext` provider'ni `ret` zanjiri bo'ylab qidiradi (chuqurlikka mutanosib), alohida qiymatlar stekidan foydalanmaydi. `key` reconciler'da ishlaydi.
 - `{...spread}` komponentlarda qo'llab-quvvatlanmaydi.
 - Bir xil nomli komponentlar turli paketlarda bo'lsa indeks adashadi.
@@ -480,5 +511,5 @@ jreact/
 2. ~~**`jreact-scheduler`:** bo'laklab render qilish, ustuvorlik~~ (tayyor, root darajasida). Qolgani: haqiqiy lane'lar (update bo'yicha ustuvorlik, render'ni to'xtatib qayta boshlash)
 3. ~~**`jreact-dom`:** DOM host config, event delegation, TeaVM JSO orqali `jreact-web`~~ (tayyor)
 4. **Build:** ~~TeaVM bilan `app.js`~~ (tayyor, `./build.sh web`). Qolgani: alohida Maven plagini (`jsxj:compile`)
-5. ~~`Context`, `memo`~~ (tayyor). Bundle: ~137 KB, dev-mode ogohlantirishlar (key) tayyor. Qolgani: boshqa ogohlantirishlar (masalan `value` bor, `onInput` yo'q)
+5. ~~`Context`, `memo`~~ (tayyor), ~~error boundary~~ (tayyor). Bundle: ~137 KB, dev-mode ogohlantirishlar (key) tayyor. Qolgani: boshqa ogohlantirishlar (masalan `value` bor, `onInput` yo'q)
 6. IDE plagini (JSX sintaksisini bo'yash va xatolarni ko'rsatish

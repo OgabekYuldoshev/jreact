@@ -4,6 +4,7 @@ import jreact.Attrs;
 import jreact.Component;
 import jreact.Context;
 import jreact.Element;
+import jreact.ErrorBoundary;
 import jreact.Event;
 import jreact.EventHandler;
 import jreact.Jsx;
@@ -141,6 +142,27 @@ public final class ReconcilerTest {
         }
         static Element make(String name, String dep) { return c(Logger.class, Logger::new, null, new Props(name, dep)); }
     }
+
+    /** Throws while rendering when {@code boom}, or from its effect when {@code effectBoom}. */
+    static class Bomb extends Component<Bomb.Props> {
+        record Props(String name, boolean boom, boolean effectBoom) {}
+        public Element render(Props p) {
+            if (p.boom()) throw new IllegalStateException("boom " + p.name());
+            useEffect(() -> {
+                log.add("bomb mount " + p.name());
+                if (p.effectBoom()) throw new IllegalStateException("effect " + p.name());
+                return () -> log.add("bomb cleanup " + p.name());
+            }, p.effectBoom());
+            return Jsx.el("b", null, null, p.name());
+        }
+        static Element make(String name, boolean boom) { return c(Bomb.class, Bomb::new, null, new Props(name, boom, false)); }
+    }
+
+    static Element boundary(ErrorBoundary.Fallback fb, ErrorBoundary.Handler onError, List<Object> resetKeys, Object... children) {
+        return c(ErrorBoundary.class, ErrorBoundary::new, null, new ErrorBoundary.Props(fb, onError, resetKeys, Jsx.children(children)));
+    }
+
+    static final ErrorBoundary.Fallback SHOW = (err, reset) -> Jsx.el("p", null, null, "fallback:" + err.getMessage());
 
     /** Burns `cost` ms of fake time per render, like an expensive component. */
     static class Slow extends Component<Slow.Props> {
@@ -672,6 +694,100 @@ public final class ReconcilerTest {
         });
 
         // ---------------------------------------------------------------- scheduling and priorities
+
+        test("error boundary: a render error shows the fallback, siblings stay", () -> {
+            Env e = new Env();
+            e.render(el("div", el("h1", "title"), boundary(SHOW, null, null, Bomb.make("a", true)), el("h2", "after")));
+            eq("<root><div><h1>title</h1><p>fallback:boom a</p><h2>after</h2></div></root>", e.html().replace("<root>", "<root>").length() > 0
+                    ? "<root>" + e.html() + "</root>" : "");
+        });
+
+        test("error boundary: without a boundary the error still propagates and the old tree survives", () -> {
+            Env e = new Env();
+            e.render(el("div", Bomb.make("ok", false)));
+            e.root.render(el("div", Bomb.make("bad", true)));
+            throwsMsg("boom bad", e::flush);
+            eq("<div><b>ok</b></div>", e.html());
+        });
+
+        test("error boundary: an update that starts throwing swaps the subtree and runs cleanups", () -> {
+            Env e = new Env();
+            log.clear();
+            e.render(boundary(SHOW, null, null, el("div", Logger.make("L", "x"), Bomb.make("a", false))));
+            eq("<div><i>L</i><b>a</b></div>", e.html());
+            e.render(boundary(SHOW, null, null, el("div", Logger.make("L", "x"), Bomb.make("a", true))));
+            eq("<p>fallback:boom a</p>", e.html());
+            check(log.contains("cleanup L:x"), "children are unmounted: " + log);
+        });
+
+        test("error boundary: nested boundary catches first, the outer one is untouched", () -> {
+            Env e = new Env();
+            e.render(boundary(SHOW, null, null, el("div", boundary((er, r) -> el("u", "inner"), null, null, Bomb.make("a", true)), el("s", "kept"))));
+            eq("<div><u>inner</u><s>kept</s></div>", e.html());
+        });
+
+        test("error boundary: an error in the fallback goes to the next boundary above", () -> {
+            Env e = new Env();
+            ErrorBoundary.Fallback bad = (er, r) -> { throw new IllegalStateException("fallback broke"); };
+            e.render(boundary(SHOW, null, null, boundary(bad, null, null, Bomb.make("a", true))));
+            eq("<p>fallback:fallback broke</p>", e.html());
+        });
+
+        test("error boundary: onError gets the error and the component stack once", () -> {
+            Env e = new Env();
+            List<String> seen = new ArrayList<>();
+            e.render(boundary(SHOW, (err, stack) -> seen.add(err.getMessage() + " @ " + stack), null, Bomb.make("a", true)));
+            eq("[boom a @ Bomb > ErrorBoundary]", seen);
+            check(e.warnings.stream().anyMatch(w -> w.contains("Error caught by an error boundary: java.lang.IllegalStateException: boom a")), "logged: " + e.warnings);
+        });
+
+        test("error boundary: reset renders the children again", () -> {
+            Env e = new Env();
+            boolean[] broken = {true};
+            Runnable[] resetRef = new Runnable[1];
+            class Flaky extends Component<Void> {
+                public Element render(Void p) {
+                    if (broken[0]) throw new IllegalStateException("flaky");
+                    return Jsx.el("b", null, null, "fine");
+                }
+            }
+            e.render(boundary((er, reset) -> { resetRef[0] = reset; return Jsx.el("p", null, null, "oops"); }, null, null,
+                    c(Flaky.class, Flaky::new, null, null)));
+            eq("<p>oops</p>", e.html());
+            broken[0] = false;
+            resetRef[0].run();
+            e.flush();
+            eq("<b>fine</b>", e.html());
+        });
+
+        test("error boundary: stays in fallback on re-render, resetKeys change retries", () -> {
+            Env e = new Env();
+            e.render(boundary(SHOW, null, List.of(1), Bomb.make("a", true)));
+            eq("<p>fallback:boom a</p>", e.html());
+            e.render(boundary(SHOW, null, List.of(1), Bomb.make("a", false)));      // same keys: still failed
+            eq("<p>fallback:boom a</p>", e.html());
+            e.render(boundary(SHOW, null, List.of(2), Bomb.make("a", false)));      // keys changed: retry
+            eq("<b>a</b>", e.html());
+            e.render(boundary(SHOW, null, List.of(3), Bomb.make("a", true)));       // fails again after the retry
+            eq("<p>fallback:boom a</p>", e.html());
+        });
+
+        test("error boundary: an effect that throws is caught too", () -> {
+            Env e = new Env();
+            log.clear();
+            e.render(boundary(SHOW, null, null, c(Bomb.class, Bomb::new, null, new Bomb.Props("e", false, true))));
+            eq("<p>fallback:effect e</p>", e.html());
+        });
+
+        test("error boundary: state of components outside the boundary is kept", () -> {
+            Env e = new Env();
+            e.render(el("div", Counter.make("c"), boundary(SHOW, null, List.of(1), Bomb.make("a", false))));
+            e.first().children.get(0).click();
+            e.flush();
+            eq("c:1", e.first().children.get(0).children.get(0).text + ":" + e.first().children.get(0).children.get(2).text);
+            e.render(el("div", Counter.make("c"), boundary(SHOW, null, List.of(1), Bomb.make("a", true))));
+            eq("<button>c:1</button><p>fallback:boom a</p>", e.first().html().replace("<div>", "").replace("</div>", ""));
+        });
 
         test("normal updates render in a single task, never sliced", () -> {
             Env e = new Env();

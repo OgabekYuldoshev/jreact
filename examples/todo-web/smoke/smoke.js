@@ -53,6 +53,18 @@ const check = (name, ok, extra) => { console.log((ok ? 'ok   ' : 'FAIL ') + name
   await sleep(100);
   check('delete removed an item', root().querySelectorAll('li').length === 3, root().querySelectorAll('li').length);
 
+  // error boundary: a render error replaces only the boundary's subtree
+  const countBefore = root().querySelectorAll('li').length;
+  d.getElementById('crash').click();
+  await sleep(100);
+  const errBox = root().querySelector('.error');
+  check('boundary shows the fallback', errBox && errBox.textContent.includes('Crashy render xatosi'), root().innerHTML);
+  check('rest of the app survives the error', root().querySelectorAll('li').length === countBefore && !d.getElementById('crash'), root().innerHTML);
+  check('error was logged', logs.some(l => l.includes('Error caught by an error boundary')), JSON.stringify(logs));
+  d.getElementById('reset').click();
+  await sleep(100);
+  check('reset renders the children again', !!d.getElementById('crash') && !root().querySelector('.error'), root().innerHTML);
+
   check('no dev-mode warnings', !logs.some(l => l.includes('Warning:')), JSON.stringify(logs.filter(l => l.includes('Warning:'))));
 
   console.log(failed ? `\n${failed} FAILED` : '\nall browser checks passed');

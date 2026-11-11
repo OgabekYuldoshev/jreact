@@ -50,6 +50,7 @@
                             <includePluginDependencies>true</includePluginDependencies>
                             <arguments>
                                 <argument>${jsxj.generated}</argument>
+                                <argument>${project.basedir}/../../jreact-core/src/main/java</argument>
                                 <argument>${todo.src}/jsxj</argument>
                                 <argument>${todo.src}/java</argument>
                                 <argument>${project.basedir}/src/main/jsxj</argument>

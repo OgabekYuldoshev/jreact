@@ -59,7 +59,7 @@ if [[ "${1:-}" == "test" ]]; then
 fi
 
 echo "== .jsxj -> .java"
-java -cp $B/compiler jreact.compiler.JsxjCompiler $B/gen examples/todo/src/main/jsxj examples/todo/src/main/java
+java -cp $B/compiler jreact.compiler.JsxjCompiler $B/gen jreact-core/src/main/java examples/todo/src/main/jsxj examples/todo/src/main/java
 
 echo "== javac"
 $JAVAC -cp $B/core -d $B/app $(find $B/gen examples/todo/src/main/java -name '*.java')

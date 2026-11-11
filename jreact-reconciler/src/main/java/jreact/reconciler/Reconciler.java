@@ -45,7 +45,7 @@ public final class Reconciler<N> {
     public Reconciler(HostConfig<N> host, Scheduler scheduler) {
         this.host = Objects.requireNonNull(host, "host");
         this.scheduler = Objects.requireNonNull(scheduler, "scheduler");
-        this.commit = new Commit<>(host);
+        this.commit = new Commit<>(this);
     }
 
     public Root<N> createRoot(N container) { return new Root<>(this, container); }
@@ -93,6 +93,47 @@ public final class Reconciler<N> {
         queue.pending.add(action);
         Root<N> root = markUpdateFromFiberToRoot(fiber);
         if (root != null) requestRender(root);
+    }
+
+    // ---------------------------------------------------------------- error boundaries
+
+    /** The {@code reset} callback of a fallback: clears the boundary's error so it renders its children again. */
+    void resetBoundary(Fiber boundary) {
+        if (boundary.detached || boundary.error == null && (boundary.alternate == null || boundary.alternate.error == null)) return;
+        boundary.error = null;
+        if (boundary.alternate != null) boundary.alternate.error = null;
+        Root<N> root = markUpdateFromFiberToRoot(boundary);
+        if (root != null) requestRender(root);
+    }
+
+    /** An effect of {@code source} threw: hand the error to the nearest boundary above. False if there is none. */
+    boolean captureEffectError(Fiber source, Throwable error) {
+        for (Fiber b = source.ret; b != null; b = b.ret) {
+            if (b.tag != Fiber.Tag.COMPONENT || b.instance == null || !b.instance.catchesErrors() || b.error != null) continue;
+            b.error = error;
+            if (b.alternate != null) b.alternate.error = error;
+            String stack = Diagnostics.componentStack(source);
+            diagnostics.reportCaught(error, stack);
+            Root<N> root = markUpdateFromFiberToRoot(b);
+            if (root != null) requestRender(root);
+            callDidCatch(b, error, stack);
+            return true;
+        }
+        return false;
+    }
+
+    /** Layout phase of a commit in which {@code boundary} caught a render error. */
+    void notifyCaught(Fiber boundary) {
+        diagnostics.reportCaught(boundary.error, boundary.caughtStack);
+        callDidCatch(boundary, boundary.error, boundary.caughtStack);
+    }
+
+    private void callDidCatch(Fiber boundary, Throwable error, String stack) {
+        try {
+            boundary.instance.didCatchWith(boundary.element.props(), error, stack);
+        } catch (RuntimeException | Error handlerError) {
+            diagnostics.reportCaught(handlerError, "the onError handler of " + stack);   // never break the commit
+        }
     }
 
     private void requestRender(Root<N> root) {
@@ -192,7 +233,13 @@ public final class Reconciler<N> {
         try {
             while (root.nextUnit != null) {
                 if (timeSlice && scheduler.shouldYield()) break;
-                root.nextUnit = render.performUnitOfWork(root.nextUnit);
+                try {
+                    root.nextUnit = render.performUnitOfWork(root.nextUnit);
+                } catch (RuntimeException | Error e) {
+                    Fiber boundary = render.captureError(e);    // restart at the error boundary, if there is one
+                    if (boundary == null) throw e;
+                    root.nextUnit = boundary;
+                }
             }
         } catch (RuntimeException | Error e) {
             root.wipRoot = null;                            // drop the half-built tree, the committed one is intact
