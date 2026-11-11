@@ -53,6 +53,8 @@ const check = (name, ok, extra) => { console.log((ok ? 'ok   ' : 'FAIL ') + name
   await sleep(100);
   check('delete removed an item', root().querySelectorAll('li').length === 3, root().querySelectorAll('li').length);
 
+  check('no dev-mode warnings', !logs.some(l => l.includes('Warning:')), JSON.stringify(logs.filter(l => l.includes('Warning:'))));
+
   console.log(failed ? `\n${failed} FAILED` : '\nall browser checks passed');
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error('ERROR', e); process.exit(2); });

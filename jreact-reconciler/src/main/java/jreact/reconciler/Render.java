@@ -94,6 +94,7 @@ final class Render<N> {
     }
 
     private void reconcileChildren(Fiber current, Fiber wip, List<Object> children) {
+        reconciler.diagnostics.checkChildren(wip, children);
         wip.child = current == null
                 ? ChildReconciler.MOUNT.reconcile(wip, null, children)
                 : ChildReconciler.UPDATE.reconcile(wip, current.child, children);

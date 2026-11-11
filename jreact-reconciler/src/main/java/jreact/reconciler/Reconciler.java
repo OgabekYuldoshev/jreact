@@ -37,6 +37,7 @@ public final class Reconciler<N> {
     private final Scheduler scheduler;
     private final Render<N> render = new Render<>(this);
     private final Commit<N> commit;
+    final Diagnostics diagnostics = new Diagnostics();
     private Priority updatePriority = Priority.NORMAL;
     private boolean rendering;
     private boolean working;
@@ -48,6 +49,14 @@ public final class Reconciler<N> {
     }
 
     public Root<N> createRoot(N container) { return new Root<>(this, container); }
+
+    // ---------------------------------------------------------------- dev mode
+
+    /** Dev-mode warnings (missing or duplicate keys). On by default; turn off for production builds. */
+    public void setDevMode(boolean enabled) { diagnostics.setEnabled(enabled); }
+
+    /** Where warnings go. Default: {@code System.err} (the browser console in a TeaVM build). */
+    public void setWarningHandler(java.util.function.Consumer<String> handler) { diagnostics.setHandler(handler); }
 
     // ---------------------------------------------------------------- update priority
 

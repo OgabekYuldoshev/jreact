@@ -28,6 +28,7 @@
   - [Kompilyator (`jsxjc`)](#kompilyator-jsxjc)
   - [O'z loyihangizda ishlatish](#oz-loyihangizda-ishlatish)
   - [Xatolar](#xatolar)
+  - [Dev-mode ogohlantirishlar](#dev-mode-ogohlantirishlar)
   - [Loyiha tuzilmasi](#loyiha-tuzilmasi)
   - [Hozirgi cheklovlar](#hozirgi-cheklovlar)
   - [Yo'l xaritasi](#yol-xaritasi)
@@ -41,7 +42,7 @@ git clone <repo-url> jreact
 cd jreact
 
 ./build.sh        # kompilyator → runtime → .jsxj → .java → javac → namunani ishga tushiradi
-./build.sh test   # kompilyator (38), scheduler (14), reconciler (42) va dom (19) testlari
+./build.sh test   # kompilyator (38), scheduler (14), reconciler (46) va dom (19) testlari
 
 ./build.sh web        # Todo'ni brauzer uchun yig'adi: examples/todo-web/target/web/{index.html,app.js}
 ./build.sh web-test   # shuni jsdom'da ochib, ilovada bosib/yozib tekshiradi
@@ -365,6 +366,25 @@ Tip xatolari (masalan `int` o'rniga `String`) `javac`dan keladi. U generatsiya q
 build/gen/app/TodoApp.java:43: error: incompatible types: String cannot be converted to int
 ```
 
+## Dev-mode ogohlantirishlar
+
+Reconciler ishga tushirish vaqtida (runtime) ham React kabi tipik xatolarni xabar qiladi. Ular xatti-harakatni o'zgartirmaydi, har bir muammo bir marta chiqadi va komponent zanjirini ko'rsatadi:
+
+```
+Warning: Each child in a list should have a unique "key" prop, but <li> has none. Keys let the reconciler keep state and DOM nodes when the list changes.
+    in TodoList > TodoApp
+```
+
+- Ma'lumotdan yasalgan ro'yxatda (`.map(...).toList()`) `key` yo'q.
+- Bir xil ro'yxatda takrorlangan `key`.
+
+`<Card>...</Card>` ichidagi qo'lda yozilgan JSX bolalari (`props.children()`) ro'yxat hisoblanmaydi, ularga `key` shart emas.
+
+```java
+reconciler.setDevMode(false);                      // production: o'chirish
+reconciler.setWarningHandler(msg -> log.warn(msg)); // default: System.err (brauzerda console)
+```
+
 ## Loyiha tuzilmasi
 
 ```
@@ -412,7 +432,7 @@ jreact/
 │       │   ├── FiberHooks.java       # hooks dispatcher (mount/update)
 │       │   └── AttrsDiff.java        # atribut/event o'zgarishi
 │       └── test/java/jreact/reconciler/
-│           └── ReconcilerTest.java   # 42 ta test (xotiradagi test host)
+│           └── ReconcilerTest.java   # 46 ta test (xotiradagi test host)
 ├── jreact-dom/                       # DOM host (paket jreact.dom), TeaVM'siz qismi
 │   └── src/
 │       ├── main/java/jreact/dom/
@@ -458,5 +478,5 @@ jreact/
 2. ~~**`jreact-scheduler`:** bo'laklab render qilish, ustuvorlik~~ (tayyor, root darajasida). Qolgani: haqiqiy lane'lar (update bo'yicha ustuvorlik, render'ni to'xtatib qayta boshlash)
 3. ~~**`jreact-dom`:** DOM host config, event delegation, TeaVM JSO orqali `jreact-web`~~ (tayyor)
 4. **Build:** ~~TeaVM bilan `app.js`~~ (tayyor, `./build.sh web`). Qolgani: alohida Maven plagini (`jsxj:compile`)
-5. ~~`Context`, `memo`~~ (tayyor). Bundle: ~137 KB (tayyor). Qolgani: dev-mode ogohlantirishlar
+5. ~~`Context`, `memo`~~ (tayyor). Bundle: ~137 KB, dev-mode ogohlantirishlar (key) tayyor. Qolgani: boshqa ogohlantirishlar (masalan `value` bor, `onInput` yo'q)
 6. IDE plagini (JSX sintaksisini bo'yash va xatolarni ko'rsatish

@@ -87,7 +87,12 @@ public final class ReconcilerTest {
         final Node container = new Node("root", null);
         final Root<Node> root = reconciler.createRoot(container);
 
-        Env() { Slow.clock = clock; }
+        final List<String> warnings = new ArrayList<>();
+
+        Env() {
+            Slow.clock = clock;
+            reconciler.setWarningHandler(warnings::add);
+        }
 
         /** Like the browser event loop: run every macrotask the scheduler asked for. */
         void flush() { clock.runUntilIdle(); }
@@ -620,6 +625,50 @@ public final class ReconcilerTest {
             eq("<p>light/0</p>", ServerRenderer.renderToString(Themed.make()));
             eq("<div><p>dark/0</p><p>blue/0</p><p>dark/0</p></div>", ServerRenderer.renderToString(
                     THEME.provide("dark", el("div", Themed.make(), THEME.provide("blue", Themed.make()), Themed.make()))));
+        });
+
+        // ---------------------------------------------------------------- dev warnings
+
+        test("warns once about list items without a key, naming the component", () -> {
+            Env e = new Env();
+            class Rows extends Component<Rows.Props> {
+                record Props() {}
+                public Element render(Props p) {
+                    return Jsx.el("ul", null, null, List.of(Jsx.el("li", null, null, "a"), Jsx.el("li", null, null, "b")));
+                }
+            }
+            e.render(c(Rows.class, Rows::new, null, new Rows.Props()));
+            e.render(c(Rows.class, Rows::new, null, new Rows.Props()));
+            eq(1, e.warnings.size());
+            check(e.warnings.get(0).contains("unique \"key\"") && e.warnings.get(0).contains("<li>"), e.warnings.get(0));
+            check(e.warnings.get(0).contains("in Rows"), e.warnings.get(0));
+        });
+
+        test("no warning for keyed lists, fixed JSX children or plain text lists", () -> {
+            Env e = new Env();
+            class Card extends Component<Card.Props> {
+                record Props(List<Object> children) {}
+                public Element render(Props p) { return Jsx.el("div", null, null, p.children()); }
+            }
+            e.render(el("div", list("a", "b"),
+                    c(Card.class, Card::new, null, new Card.Props(Jsx.children(el("i", "x"), el("b", "y")))),
+                    List.of("t1", "t2")));
+            eq("[]", e.warnings.toString());
+        });
+
+        test("warns about duplicate keys", () -> {
+            Env e = new Env();
+            e.render(list("a", "a"));
+            eq(1, e.warnings.size());
+            check(e.warnings.get(0).contains("same key `a`"), e.warnings.get(0));
+        });
+
+        test("dev mode can be switched off", () -> {
+            Env e = new Env();
+            e.reconciler.setDevMode(false);
+            e.render(list("a", "a"));
+            e.render(Jsx.el("ul", null, null, List.of(el("li", "x"))));
+            eq("[]", e.warnings.toString());
         });
 
         // ---------------------------------------------------------------- scheduling and priorities

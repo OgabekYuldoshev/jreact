@@ -28,8 +28,11 @@ public final class Jsx {
 
     /** Value of a component's {@code List<Object> children} prop. Items may be null. */
     public static List<Object> children(Object... children) {
-        return list(children);
+        return children.length == 0 ? List.of() : new StaticChildren(children.clone());
     }
+
+    /** True for the list made by {@link #children}: fixed JSX children, which need no keys. */
+    public static boolean isStaticChildren(Object list) { return list instanceof StaticChildren; }
 
     private static List<Object> list(Object[] items) {
         return items.length == 0 ? List.of() : Collections.unmodifiableList(Arrays.asList(items.clone()));
