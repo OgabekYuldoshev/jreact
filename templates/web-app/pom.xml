@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- Template of a JReact browser app: copy this folder, rename artifactId, see README "O'z ilovangizni yaratish". -->
+    <groupId>com.example</groupId>
+    <artifactId>myapp</artifactId>
+    <version>1.0.0</version>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>17</maven.compiler.release>   <!-- TeaVM reads Java 17 bytecode -->
+        <jreact.version>0.1.0-SNAPSHOT</jreact.version>
+        <teavm.version>0.16.0</teavm.version>
+        <generated>${project.build.directory}/generated-sources/jsxj</generated>
+        <!-- A jreact checkout next to this project. Only needed for ErrorBoundary: its Props must be indexed. A missing folder is skipped. -->
+        <jreact.home>${project.basedir}/../jreact</jreact.home>
+    </properties>
+
+    <dependencies>
+        <dependency><groupId>dev.jreact</groupId><artifactId>jreact-web</artifactId><version>${jreact.version}</version></dependency>
+        <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso</artifactId><version>${teavm.version}</version></dependency>
+        <dependency><groupId>org.teavm</groupId><artifactId>teavm-classlib</artifactId><version>${teavm.version}</version></dependency>
+        <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso-impl</artifactId><version>${teavm.version}</version></dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- .jsxj -> .java -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <dependencies>
+                    <dependency><groupId>dev.jreact</groupId><artifactId>jreact-compiler</artifactId><version>${jreact.version}</version></dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>jsxjc</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>java</goal></goals>
+                        <configuration>
+                            <mainClass>jreact.compiler.JsxjCompiler</mainClass>
+                            <includePluginDependencies>true</includePluginDependencies>
+                            <arguments>
+                                <argument>${generated}</argument>
+                                <argument>${jreact.home}/jreact-core/src/main/java</argument>
+                                <argument>${project.basedir}/src/main/jsxj</argument>
+                                <argument>${project.basedir}/src/main/java</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration><sources><source>${generated}</source></sources></configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- bytecode -> app.js -->
+            <plugin>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-maven-plugin</artifactId>
+                <version>${teavm.version}</version>
+                <executions>
+                    <execution>
+                        <id>app-js</id>
+                        <phase>process-classes</phase>
+                        <goals><goal>compile</goal></goals>
+                        <configuration>
+                            <mainClass>app.WebMain</mainClass>
+                            <targetDirectory>${project.build.directory}/web</targetDirectory>
+                            <targetFileName>app.js</targetFileName>
+                            <optimizationLevel>FULL</optimizationLevel>
+                            <minifying>true</minifying>
+                            <debugInformationGenerated>false</debugInformationGenerated>
+                            <sourceMapsGenerated>false</sourceMapsGenerated>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- index.html -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-page</id>
+                        <phase>process-classes</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/web</outputDirectory>
+                            <resources><resource><directory>${project.basedir}/src/main/webapp</directory></resource></resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -31,6 +31,10 @@ public final class JsxjCompiler {
 
         for (int i = 1; i < args.length; i++) {
             Path root = Path.of(args[i]);
+            if (!Files.isDirectory(root)) {      // e.g. a project that has no plain .java sources yet
+                System.err.println("jsxjc: skipping missing source folder " + root);
+                continue;
+            }
             try (Stream<Path> walk = Files.walk(root)) {
                 for (Path p : walk.filter(Files::isRegularFile).sorted().toList()) {
                     String name = p.getFileName().toString();

@@ -1,0 +1,14 @@
+package app;
+
+import jreact.web.JReactWeb;
+
+public class WebMain {
+    public static void main(String[] args) {
+        JReactWeb.createRoot("root").render(
+            <div>
+                <h1>Salom, JReact!</h1>
+                <Counter label="Bosildi" />
+            </div>
+        );
+    }
+}

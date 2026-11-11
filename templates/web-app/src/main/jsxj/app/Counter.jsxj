@@ -1,0 +1,20 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+public class Counter extends Component<Counter.Props> {
+
+    public record Props(String label) {}
+
+    @Override
+    public Element render(Props props) {
+        State<Integer> count = useState(0);
+        return (
+            <button onClick={e -> count.update(c -> c + 1)}>
+                {props.label()}: {count.get()}
+            </button>
+        );
+    }
+}
