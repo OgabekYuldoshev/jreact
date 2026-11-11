@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Todo example in the browser: .jsxj -> .java (jsxjc) -> .class -> app.js (TeaVM).
+  Build: mvn -pl examples/todo-web -am package   (or ./build.sh web)
+  Result: examples/todo-web/target/web/{index.html, app.js}
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.jreact</groupId>
+        <artifactId>jreact-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>todo-web</artifactId>
+    <name>todo-web</name>
+
+    <properties>
+        <jsxj.generated>${project.build.directory}/generated-sources/jsxj</jsxj.generated>
+        <todo.src>${project.basedir}/../todo/src/main</todo.src>
+    </properties>
+
+    <dependencies>
+        <dependency><groupId>dev.jreact</groupId><artifactId>jreact-web</artifactId></dependency>
+        <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso</artifactId></dependency>
+        <dependency><groupId>org.teavm</groupId><artifactId>teavm-classlib</artifactId></dependency>
+        <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso-impl</artifactId></dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 1. .jsxj -> .java. The shared Todo sources live in examples/todo, only WebMain is browser specific. -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <dependencies>
+                    <dependency><groupId>dev.jreact</groupId><artifactId>jreact-compiler</artifactId><version>${project.version}</version></dependency>
+                </dependencies>
+                <executions>
+                    <execution>
+                        <id>jsxjc</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>java</goal></goals>
+                        <configuration>
+                            <mainClass>jreact.compiler.JsxjCompiler</mainClass>
+                            <includePluginDependencies>true</includePluginDependencies>
+                            <arguments>
+                                <argument>${jsxj.generated}</argument>
+                                <argument>${todo.src}/jsxj</argument>
+                                <argument>${todo.src}/java</argument>
+                                <argument>${project.basedir}/src/main/jsxj</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 2. compile generated sources together with Todo.java -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration>
+                            <sources>
+                                <source>${jsxj.generated}</source>
+                                <source>${todo.src}/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 3. bytecode -> app.js -->
+            <plugin>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-maven-plugin</artifactId>
+                <version>${teavm.version}</version>
+                <executions>
+                    <execution>
+                        <id>app-js</id>
+                        <phase>process-classes</phase>
+                        <goals><goal>compile</goal></goals>
+                        <configuration>
+                            <mainClass>app.WebMain</mainClass>
+                            <targetDirectory>${project.build.directory}/web</targetDirectory>
+                            <targetFileName>app.js</targetFileName>
+                            <optimizationLevel>SIMPLE</optimizationLevel>
+                            <minifying>false</minifying>
+                            <debugInformationGenerated>false</debugInformationGenerated>
+                            <sourceMapsGenerated>false</sourceMapsGenerated>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- 4. the page -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-page</id>
+                        <phase>process-classes</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/web</outputDirectory>
+                            <resources><resource><directory>${project.basedir}/src/main/webapp</directory></resource></resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

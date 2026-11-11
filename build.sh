@@ -5,6 +5,21 @@ cd "$(dirname "$0")"
 
 B=build
 JAVAC="javac -encoding UTF-8 -Xlint:-options"
+
+# Browser build (needs Maven, downloads TeaVM): .jsxj -> .java -> .class -> app.js
+#   ./build.sh web        -> examples/todo-web/target/web/{index.html,app.js}
+#   ./build.sh web-test   -> same, then loads it in jsdom and clicks through the app (needs node + npm)
+if [[ "${1:-}" == "web" || "${1:-}" == "web-test" ]]; then
+  echo "== browser build (Maven + TeaVM)"
+  mvn -B -q -pl examples/todo-web -am package
+  echo "built examples/todo-web/target/web/app.js"
+  if [[ "$1" == "web-test" ]]; then
+    echo "== browser smoke test (jsdom)"
+    (cd examples/todo-web/smoke && npm install --silent --no-audit --no-fund && node smoke.js ../target/web)
+  fi
+  exit 0
+fi
+
 rm -rf "$B"
 
 echo "== jsxjc compiler"

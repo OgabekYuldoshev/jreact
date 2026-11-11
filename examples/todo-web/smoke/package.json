@@ -1,0 +1,7 @@
+{
+  "name": "todo-web-smoke",
+  "private": true,
+  "description": "Smoke test of the Todo browser build (jsdom)",
+  "scripts": { "test": "node smoke.js ../target/web" },
+  "devDependencies": { "jsdom": "^26.0.0" }
+}

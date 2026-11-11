@@ -1,0 +1,19 @@
+package app;
+
+import java.util.List;
+import jreact.web.JReactWeb;
+
+/** Browser entry point of the Todo example: compiled to app.js by TeaVM. */
+public class WebMain {
+    public static void main(String[] args) {
+        List<Todo> todos = List.of(
+            new Todo(1, ".jsxj kompilyatorini yozish", true),
+            new Todo(2, "Fiber reconciler", true),
+            new Todo(3, "TeaVM bilan JS'ga build", false)
+        );
+
+        JReactWeb.createRoot("root").render(
+            <TodoApp title="JReact Todo" initial={todos} />
+        );
+    }
+}

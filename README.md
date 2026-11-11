@@ -7,7 +7,7 @@
       (shu repo)                          (rejada)
 ```
 
-> **Holat: erta bosqich.** Hozir ishlaydiganlari: `.jsxj` kompilyatori, runtime API, bir martalik HTML render (`ServerRenderer`) va Fiber reconciler (`jreact-reconciler`: state, hooks, key'li diff, commit) scheduler (`jreact-scheduler`: ustuvorlik, bo'laklab render) va DOM host mantiqi (`jreact-dom`: atribut/style qoidalari, event delegation). Hammasi JVM'da xotiradagi soxta DOM bilan sinalgan. Brauzerga ulash (TeaVM JSO) va `app.js` build'i yozilmagan. Batafsil: [Yo'l xaritasi](#yol-xaritasi).
+> **Holat: erta bosqich.** Ishlaydiganlari: `.jsxj` kompilyatori, runtime API, bir martalik HTML render (`ServerRenderer`), Fiber reconciler (state, hooks, key'li diff, commit), scheduler (ustuvorlik, bo'laklab render) va DOM host (atribut/style qoidalari, event delegation). Brauzer uchun build ham bor: Todo namunasi TeaVM bilan `app.js` ga aylanadi va jsdom'da sinaladi (`./build.sh web-test`). Haqiqiy brauzerda hali sinalmagan. Batafsil: [Yo'l xaritasi](#yol-xaritasi).
 
 ## Mundarija
 
@@ -33,7 +33,7 @@
 
 ## Tez boshlash
 
-**Talablar:** JDK 17 yoki yangiroq (record, switch expression va text block ishlatilgan). JDK 21 va 26'da sinalgan. Maven yoki Gradle shart emas. macOS, Linux va Windows'da (Git Bash yoki WSL) ishlaydi.
+**Talablar:** JDK 17 yoki yangiroq (record, switch expression va text block ishlatilgan). JDK 21 va 26'da sinalgan. Brauzer build'idan tashqari Maven shart emas. macOS, Linux va Windows'da (Git Bash yoki WSL) ishlaydi.
 
 ```bash
 git clone <repo-url> jreact
@@ -41,6 +41,9 @@ cd jreact
 
 ./build.sh        # kompilyator → runtime → .jsxj → .java → javac → namunani ishga tushiradi
 ./build.sh test   # kompilyator (38), scheduler (14), reconciler (31) va dom (19) testlari
+
+./build.sh web        # Todo'ni brauzer uchun yig'adi: examples/todo-web/target/web/{index.html,app.js}
+./build.sh web-test   # shuni jsdom'da ochib, ilovada bosib/yozib tekshiradi
 ```
 
 `./build.sh` Todo namunasini kompilyatsiya qilib, uning HTML'ini terminalga chiqaradi:
@@ -53,7 +56,7 @@ Har ishga tushganda `build/` papkasi noldan qayta yaratiladi.
 
 ## Qanday ishlaydi
 
-Loyiha oltita qismdan iborat:
+Loyiha quyidagi qismlardan iborat:
 
 | Modul | Vazifasi |
 |---|---|
@@ -61,7 +64,9 @@ Loyiha oltita qismdan iborat:
 | `jreact-core` | Runtime: `Component`, `Element`, `Attrs`, hooks API, `Jsx`, `ServerRenderer` |
 | `jreact-scheduler` | Vazifalar navbati: ustuvorlik, muddat (timeout), `shouldYield`, delay |
 | `jreact-dom` | DOM host: `DomHost`, `DomRoot`, event delegation, atribut/style qoidalari (JSO'siz) |
+| `jreact-web` | Brauzer bog'lamalari (TeaVM JSO): `JsDomOps`, `JsTimers`, `JReactWeb.createRoot` |
 | `jreact-reconciler` | Fiber reconciler: work loop, key'li diff, commit, hooks dispatcher, `HostConfig` |
+| `examples/todo-web` | Todo namunasi brauzerda: `.jsxj` → `app.js` (Maven + TeaVM) |
 | `examples/todo` | `.jsxj` bilan yozilgan namunaviy ilova |
 
 ### 1. Kompilyatsiya
@@ -381,12 +386,22 @@ jreact/
 │       │   └── EventLoopSchedulerHost.java  # Timers asosidagi SchedulerHost
 │       └── test/java/jreact/dom/
 │           └── DomTest.java          # 19 ta test (soxta DOM)
-└── examples/todo/                    # namunaviy ilova (.jsxj)
+├── jreact-web/                       # brauzer bog'lamalari (paket jreact.web, TeaVM JSO)
+│   └── src/main/java/jreact/web/
+│       ├── JReactWeb.java            # JReactWeb.createRoot("root")
+│       ├── JsDomOps.java             # DomOps haqiqiy DOM'da
+│       ├── JsTimers.java             # performance.now, MessageChannel, setTimeout
+│       └── JsNode.java, JsEvent.java, JsListener.java, JsDocument.java
+├── examples/
+│   ├── todo/                         # namunaviy ilova (.jsxj), JVM'da HTML chiqaradi
+│   └── todo-web/                     # shu ilova brauzerda: WebMain.jsxj, index.html, pom.xml
+│       └── smoke/                    # jsdom smoke testi (node)
+└── pom.xml                           # Maven: faqat brauzer build'i uchun, boshqa modullar ./build.sh bilan ham yig'iladi
 ```
 
 ## Hozirgi cheklovlar
 
-- Brauzerda hali ishlamaydi: `DomOps` va `Timers` ning JSO (TeaVM) amalga oshirilishi yo'q, hammasi soxta DOM'da sinalgan.
+- Brauzer build'i faqat jsdom'da sinalgan, haqiqiy brauzerda emas. `app.js` ~400 KB (TeaVM, minifikatsiyasiz). Maven build'i `jsxj:compile` plagini o'rniga `exec-maven-plugin` bilan `jsxjc` ni chaqiradi.
 - DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q. `onChange` React kabi: matn maydoni `input` da, checkbox/select `change` da.
 - Ustuvorlik root bo'yicha, update bo'yicha emas (lane yo'q): bitta render barcha kutayotgan update'larni oladi. Bo'laklab render faqat `LOW`/`IDLE` (`startTransition`) uchun, uni boshqa update to'xtatib qayta boshlamaydi, faqat tezroq tugatadi.
 - Error boundary yo'q: render xatosi `flush()` dan chiqadi, commit qilingan daraxt buzilmaydi.
@@ -401,7 +416,7 @@ jreact/
 
 1. ~~**`jreact-reconciler`:** Fiber daraxti, work loop, key'li diff, commit fazasi, hooks dispatcher'i~~ (tayyor)
 2. ~~**`jreact-scheduler`:** bo'laklab render qilish, ustuvorlik~~ (tayyor, root darajasida). Qolgani: haqiqiy lane'lar (update bo'yicha ustuvorlik, render'ni to'xtatib qayta boshlash)
-3. **`jreact-dom`:** ~~DOM host config, event delegation~~ (tayyor, JSO'siz). Qolgani: TeaVM JSO orqali `DomOps` va `Timers`, Maven moduli
-4. **Build:** Maven plagini (`jsxj:compile`) va TeaVM bilan `app.js` hosil qilish
+3. ~~**`jreact-dom`:** DOM host config, event delegation, TeaVM JSO orqali `jreact-web`~~ (tayyor)
+4. **Build:** ~~TeaVM bilan `app.js`~~ (tayyor, `./build.sh web`). Qolgani: alohida Maven plagini (`jsxj:compile`), minifikatsiya va hajmni kamaytirish
 5. `Context`, `memo`, dev-mode ogohlantirishlar, bundle hajmini optimallashtirish
 6. IDE plagini (JSX sintaksisini bo'yash va xatolarni ko'rsatish
