@@ -19,6 +19,9 @@ $JAVAC -d $B/scheduler $(find jreact-scheduler/src/main/java -name '*.java')
 echo "== jreact-reconciler"
 $JAVAC -cp $B/core:$B/scheduler -d $B/reconciler $(find jreact-reconciler/src/main/java -name '*.java')
 
+echo "== jreact-dom"
+$JAVAC -cp $B/core:$B/scheduler:$B/reconciler -d $B/dom $(find jreact-dom/src/main/java -name '*.java')
+
 if [[ "${1:-}" == "test" ]]; then
   echo "== compiler tests"
   $JAVAC -cp $B/compiler -d $B/compiler-test $(find jreact-compiler/src/test/java -name '*.java')
@@ -29,6 +32,9 @@ if [[ "${1:-}" == "test" ]]; then
   echo "== reconciler tests"
   $JAVAC -cp $B/core:$B/scheduler:$B/reconciler -d $B/reconciler-test $(find jreact-reconciler/src/test/java -name '*.java')
   java -cp $B/core:$B/scheduler:$B/reconciler:$B/reconciler-test jreact.reconciler.ReconcilerTest
+  echo "== dom tests"
+  $JAVAC -cp $B/core:$B/scheduler:$B/reconciler:$B/dom -d $B/dom-test $(find jreact-dom/src/test/java -name '*.java')
+  java -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/dom-test jreact.dom.DomTest
   exit 0
 fi
 
