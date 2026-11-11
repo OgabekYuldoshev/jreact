@@ -7,23 +7,29 @@
       (shu repo)                          (rejada)
 ```
 
-> **Holat: erta bosqich.** Hozir ishlaydiganlari: `.jsxj` kompilyatori, runtime API (komponent, hooks API, element daraxti) va bir martalik HTML render (`ServerRenderer`). Brauzerda state o'zgarganda qayta render qiluvchi Fiber reconciler va TeaVM orqali `app.js` build'i hali yozilmagan. Batafsil: [Yo'l xaritasi](#yol-xaritasi).
+> **Holat: erta bosqich.** Hozir ishlaydiganlari: `.jsxj` kompilyatori, runtime API, bir martalik HTML render (`ServerRenderer`) va Fiber reconciler (`jreact-reconciler`: state, hooks, key'li diff, commit) va scheduler (`jreact-scheduler`: ustuvorlik, bo'laklab render). Ikkalasi ham hali faqat test host bilan sinalgan: DOM host (`jreact-dom`) va TeaVM orqali `app.js` build'i yozilmagan. Batafsil: [Yo'l xaritasi](#yol-xaritasi).
 
 ## Mundarija
 
-- [Tez boshlash](#tez-boshlash)
-- [Qanday ishlaydi](#qanday-ishlaydi)
-- [Birinchi komponent](#birinchi-komponent)
-- [`.jsxj` sintaksisi](#jsxj-sintaksisi)
-- [Komponentlar va props](#komponentlar-va-props)
-- [Hooks](#hooks)
-- [Eventlar](#eventlar)
-- [Kompilyator (`jsxjc`)](#kompilyator-jsxjc)
-- [O'z loyihangizda ishlatish](#oz-loyihangizda-ishlatish)
-- [Xatolar](#xatolar)
-- [Loyiha tuzilmasi](#loyiha-tuzilmasi)
-- [Hozirgi cheklovlar](#hozirgi-cheklovlar)
-- [Yo'l xaritasi](#yol-xaritasi)
+- [JReact](#jreact)
+  - [Mundarija](#mundarija)
+  - [Tez boshlash](#tez-boshlash)
+  - [Qanday ishlaydi](#qanday-ishlaydi)
+    - [1. Kompilyatsiya](#1-kompilyatsiya)
+    - [2. Runtime](#2-runtime)
+    - [3. Qatorlar mosligi](#3-qatorlar-mosligi)
+  - [Birinchi komponent](#birinchi-komponent)
+  - [`.jsxj` sintaksisi](#jsxj-sintaksisi)
+  - [Komponentlar va props](#komponentlar-va-props)
+    - [Children](#children)
+  - [Hooks](#hooks)
+  - [Eventlar](#eventlar)
+  - [Kompilyator (`jsxjc`)](#kompilyator-jsxjc)
+  - [O'z loyihangizda ishlatish](#oz-loyihangizda-ishlatish)
+  - [Xatolar](#xatolar)
+  - [Loyiha tuzilmasi](#loyiha-tuzilmasi)
+  - [Hozirgi cheklovlar](#hozirgi-cheklovlar)
+  - [Yo'l xaritasi](#yol-xaritasi)
 
 ## Tez boshlash
 
@@ -34,7 +40,7 @@ git clone <repo-url> jreact
 cd jreact
 
 ./build.sh        # kompilyator → runtime → .jsxj → .java → javac → namunani ishga tushiradi
-./build.sh test   # kompilyator testlari (38 ta)
+./build.sh test   # kompilyator (38), scheduler (14) va reconciler (31) testlari
 ```
 
 `./build.sh` Todo namunasini kompilyatsiya qilib, uning HTML'ini terminalga chiqaradi:
@@ -47,12 +53,14 @@ Har ishga tushganda `build/` papkasi noldan qayta yaratiladi.
 
 ## Qanday ishlaydi
 
-Loyiha uchta qismdan iborat:
+Loyiha beshta qismdan iborat:
 
 | Modul | Vazifasi |
 |---|---|
 | `jreact-compiler` | `.jsxj` → `.java` kompilyatori (`jsxjc`) |
 | `jreact-core` | Runtime: `Component`, `Element`, `Attrs`, hooks API, `Jsx`, `ServerRenderer` |
+| `jreact-scheduler` | Vazifalar navbati: ustuvorlik, muddat (timeout), `shouldYield`, delay |
+| `jreact-reconciler` | Fiber reconciler: work loop, key'li diff, commit, hooks dispatcher, `HostConfig` |
 | `examples/todo` | `.jsxj` bilan yozilgan namunaviy ilova |
 
 ### 1. Kompilyatsiya
@@ -236,7 +244,9 @@ useEffect(() -> System.out.println("count = " + count.get()), count.get());
 return <button onClick={e -> count.update(c -> c + 1)}>+1 ({count.get()})</button>;
 ```
 
-> **Hozirgi holat:** `ServerRenderer` bir martalik render qiladi: `useState` boshlang'ich qiymatini qaytaradi, `set/update` hech narsa qilmaydi, effektlar ishlamaydi. Hooks'ning haqiqiy dispatcher'i Fiber reconciler bilan keladi.
+> **Hozirgi holat:** hooks `jreact-reconciler` ichida to'liq ishlaydi. `ServerRenderer` esa bir martalik render qiladi: `useState` boshlang'ich qiymatini qaytaradi, `set/update` hech narsa qilmaydi, effektlar ishlamaydi.
+>
+> Ba'zi qoidalar: `deps` berilmasa effekt (va `useMemo`) har renderda ishlaydi, `deps` bo'lsa `equals` bilan solishtiriladi. `State.get()` render paytidagi qiymatni qaytaradi (React closure kabi). Render paytida `set` chaqirish xato. Bir xil qiymatga `set` qilish render'ni ishga tushirmaydi.
 
 ## Eventlar
 
@@ -333,14 +343,40 @@ jreact/
 │       ├── State.java, Ref.java, Effect.java
 │       ├── Event.java, EventHandler.java
 │       └── ServerRenderer.java       # Element → HTML satr
+├── jreact-scheduler/                 # scheduler (paket jreact.scheduler, core'ga bog'liq emas)
+│   └── src/
+│       ├── main/java/jreact/scheduler/
+│       │   ├── Scheduler.java        # min-heap navbat, work loop, continuation
+│       │   ├── Priority.java         # IMMEDIATE ... IDLE va ularning timeout'lari
+│       │   ├── Task.java             # bekor qilish uchun handle
+│       │   ├── SchedulerHost.java    # soat va "keyinroq chaqir" (platforma beradi)
+│       │   └── ManualSchedulerHost.java  # virtual soatli host (test, headless)
+│       └── test/java/jreact/scheduler/
+│           └── SchedulerTest.java    # 14 ta test
+├── jreact-reconciler/                # Fiber reconciler (paket jreact.reconciler)
+│   └── src/
+│       ├── main/java/jreact/reconciler/
+│       │   ├── Reconciler.java       # ochiq API, work loop, setState dispatch
+│       │   ├── Root.java             # mount qilingan daraxt (FiberRoot)
+│       │   ├── HostConfig.java       # platforma interfeysi (DOM, test, ...)
+│       │   ├── Fiber.java            # daraxt tuguni, alternate (double buffering)
+│       │   ├── Render.java           # render fazasi: beginWork / completeWork
+│       │   ├── ChildReconciler.java  # key'li bolalar diff'i
+│       │   ├── Commit.java           # commit: mutation, ref, passive effects
+│       │   ├── FiberHooks.java       # hooks dispatcher (mount/update)
+│       │   └── AttrsDiff.java        # atribut/event o'zgarishi
+│       └── test/java/jreact/reconciler/
+│           └── ReconcilerTest.java   # 31 ta test (xotiradagi test host)
 └── examples/todo/                    # namunaviy ilova (.jsxj)
 ```
 
 ## Hozirgi cheklovlar
 
-- Faqat bir martalik HTML render ishlaydi. Interaktivlik (state o'zgarganda qayta render) yo'q.
+- Reconciler faqat xotiradagi test host bilan sinalgan. Brauzerda interaktivlik DOM host (`jreact-dom`) kelgach bo'ladi.
+- Ustuvorlik root bo'yicha, update bo'yicha emas (lane yo'q): bitta render barcha kutayotgan update'larni oladi. Bo'laklab render faqat `LOW`/`IDLE` (`startTransition`) uchun, uni boshqa update to'xtatib qayta boshlamaydi, faqat tezroq tugatadi.
+- Error boundary yo'q: render xatosi `flush()` dan chiqadi, commit qilingan daraxt buzilmaydi.
 - Brauzer uchun `app.js` build'i yo'q (TeaVM hali ulanmagan).
-- `Context` va `memo` hali yo'q. `key` kompilyatordan o'tadi, lekin faqat reconciler yozilgach ishlaydi.
+- `Context` va `memo` hali yo'q. `key` reconciler'da ishlaydi.
 - `{...spread}` komponentlarda qo'llab-quvvatlanmaydi.
 - Bir xil nomli komponentlar turli paketlarda bo'lsa indeks adashadi.
 - IDE qo'llab-quvvatlashi (sintaksis bo'yash, autocomplete) JSX qismlari uchun yo'q.
@@ -348,9 +384,9 @@ jreact/
 
 ## Yo'l xaritasi
 
-1. **`jreact-reconciler`:** Fiber daraxti (`child`/`sibling`/`return`, `alternate`), work loop, key'li diff, commit fazasi, hooks'ning haqiqiy dispatcher'i
-2. **`jreact-scheduler`:** bo'laklab render qilish, ustuvorlik (lane) tizimi
+1. ~~**`jreact-reconciler`:** Fiber daraxti, work loop, key'li diff, commit fazasi, hooks dispatcher'i~~ (tayyor)
+2. ~~**`jreact-scheduler`:** bo'laklab render qilish, ustuvorlik~~ (tayyor, root darajasida). Qolgani: haqiqiy lane'lar (update bo'yicha ustuvorlik, render'ni to'xtatib qayta boshlash)
 3. **`jreact-dom`:** TeaVM JSO orqali DOM host config, event delegation
 4. **Build:** Maven plagini (`jsxj:compile`) va TeaVM bilan `app.js` hosil qilish
 5. `Context`, `memo`, dev-mode ogohlantirishlar, bundle hajmini optimallashtirish
-6. IDE plagini (JSX sintaksisini bo'yash va xatolarni ko'rsatish)
+6. IDE plagini (JSX sintaksisini bo'yash va xatolarni ko'rsatish

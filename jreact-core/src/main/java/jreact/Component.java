@@ -11,8 +11,9 @@ public abstract class Component<P> {
 
     public abstract Element render(P props);
 
+    /** Untyped entry point used by renderers/reconcilers, which only hold props as {@code Object}. */
     @SuppressWarnings("unchecked")
-    final Element renderWith(Object props) { return render((P) props); }
+    public final Element renderWith(Object props) { return render((P) props); }
 
     protected final <T> State<T> useState(T initial) { return Hooks.current().useState(initial); }
 

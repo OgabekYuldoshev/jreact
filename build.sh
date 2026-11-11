@@ -13,10 +13,22 @@ $JAVAC -d $B/compiler $(find jreact-compiler/src/main/java -name '*.java')
 echo "== jreact-core runtime"
 $JAVAC -d $B/core $(find jreact-core/src/main/java -name '*.java')
 
+echo "== jreact-scheduler"
+$JAVAC -d $B/scheduler $(find jreact-scheduler/src/main/java -name '*.java')
+
+echo "== jreact-reconciler"
+$JAVAC -cp $B/core:$B/scheduler -d $B/reconciler $(find jreact-reconciler/src/main/java -name '*.java')
+
 if [[ "${1:-}" == "test" ]]; then
   echo "== compiler tests"
   $JAVAC -cp $B/compiler -d $B/compiler-test $(find jreact-compiler/src/test/java -name '*.java')
   java -cp $B/compiler:$B/compiler-test jreact.compiler.TranspilerTest
+  echo "== scheduler tests"
+  $JAVAC -cp $B/scheduler -d $B/scheduler-test $(find jreact-scheduler/src/test/java -name '*.java')
+  java -cp $B/scheduler:$B/scheduler-test jreact.scheduler.SchedulerTest
+  echo "== reconciler tests"
+  $JAVAC -cp $B/core:$B/scheduler:$B/reconciler -d $B/reconciler-test $(find jreact-reconciler/src/test/java -name '*.java')
+  java -cp $B/core:$B/scheduler:$B/reconciler:$B/reconciler-test jreact.reconciler.ReconcilerTest
   exit 0
 fi
 
