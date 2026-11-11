@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Maven build: needed only for the browser build (TeaVM). The JDK-only ./build.sh keeps working without it. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>dev.jreact</groupId>
+    <artifactId>jreact-parent</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>JReact</name>
+
+    <modules>
+        <module>jreact-core</module>
+        <module>jreact-compiler</module>
+        <module>jreact-scheduler</module>
+        <module>jreact-reconciler</module>
+        <module>jreact-dom</module>
+        <module>jreact-web</module>
+        <module>examples/todo-web</module>
+    </modules>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!-- TeaVM reads class files, so emit Java 17 bytecode whatever JDK runs the build -->
+        <maven.compiler.release>17</maven.compiler.release>
+        <!-- the tests are dependency-free main() runners, ./build.sh test runs them -->
+        <maven.test.skip>true</maven.test.skip>
+        <teavm.version>0.16.0</teavm.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-core</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-compiler</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-scheduler</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-reconciler</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-dom</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-web</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso</artifactId><version>${teavm.version}</version></dependency>
+            <dependency><groupId>org.teavm</groupId><artifactId>teavm-classlib</artifactId><version>${teavm.version}</version></dependency>
+            <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso-impl</artifactId><version>${teavm.version}</version></dependency>
+        </dependencies>
+    </dependencyManagement>
+</project>
