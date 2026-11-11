@@ -47,6 +47,7 @@ cd jreact
 ./build.sh web        # Todo'ni brauzer uchun yig'adi: examples/todo-web/target/web/{index.html,app.js}
 ./build.sh web-test   # shuni jsdom'da ochib, ilovada bosib/yozib tekshiradi
 ./build.sh dev        # dev server: http://localhost:5173, manba o'zgarsa o'zi qayta yig'adi va sahifani yangilaydi
+./editors/vscode-jsxj/install.sh   # VS Code'da .jsxj ranglash (qarang: editors/vscode-jsxj)
 ```
 
 `./build.sh` Todo namunasini kompilyatsiya qilib, uning HTML'ini terminalga chiqaradi:

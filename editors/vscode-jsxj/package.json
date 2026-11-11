@@ -1,0 +1,28 @@
+{
+  "name": "jsxj",
+  "displayName": "JSXJ (JReact)",
+  "description": "Syntax highlighting for .jsxj files: Java with JSX.",
+  "version": "0.1.0",
+  "publisher": "jreact",
+  "license": "MIT",
+  "engines": { "vscode": "^1.60.0" },
+  "categories": ["Programming Languages"],
+  "contributes": {
+    "languages": [
+      {
+        "id": "jsxj",
+        "aliases": ["JSXJ", "jsxj"],
+        "extensions": [".jsxj"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "jsxj",
+        "scopeName": "source.jsxj",
+        "path": "./syntaxes/jsxj.tmLanguage.json",
+        "embeddedLanguages": { "meta.embedded.expression.jsxj": "java" }
+      }
+    ]
+  }
+}

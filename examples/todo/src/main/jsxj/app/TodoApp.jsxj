@@ -24,7 +24,7 @@ public class TodoApp extends Component<TodoApp.Props> {
                 <h1>{props.title()}</h1>
 
                 <form onSubmit={e -> { e.preventDefault(); add(todos, draft); }}>
-                    <input value={draft.get()} placeholder="Yangi vazifa..."
+                    <input value={draft.get()} placeholder="Yangi vazifa kerak..."
                            onInput={e -> draft.set(e.value())} />
                     <button type="submit" disabled={draft.get().isBlank()}>Qo'shish</button>
                 </form>

@@ -1,0 +1,132 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "JSXJ",
+  "scopeName": "source.jsxj",
+  "patterns": [{ "include": "source.java" }],
+  "injections": {
+    "L:source.jsxj - (comment | string)": { "patterns": [{ "include": "#jsx-element" }] }
+  },
+  "repository": {
+    "jsx-element": {
+      "patterns": [
+        { "include": "#jsx-fragment" },
+        { "include": "#jsx-component" },
+        { "include": "#jsx-html" }
+      ]
+    },
+    "jsx-fragment": {
+      "name": "meta.tag.fragment.jsxj",
+      "begin": "(?<![\\w$.)\\]])(<)(?=>)",
+      "beginCaptures": { "1": { "name": "punctuation.definition.tag.begin.jsxj" } },
+      "end": "(</)(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "2": { "name": "punctuation.definition.tag.end.jsxj" }
+      },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-component": {
+      "name": "meta.tag.component.jsxj",
+      "begin": "(?<![\\w$.)\\]])(<)([A-Z][\\w$.]*)(?=[\\s/>])",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "2": { "name": "support.class.component.jsxj" }
+      },
+      "end": "(/>)|(</)([\\w$.]*)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.jsxj" },
+        "2": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "3": { "name": "support.class.component.jsxj" },
+        "4": { "name": "punctuation.definition.tag.end.jsxj" }
+      },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-html": {
+      "name": "meta.tag.html.jsxj",
+      "begin": "(?<![\\w$.)\\]])(<)([a-z][\\w$-]*)(?=[\\s/>])",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "2": { "name": "entity.name.tag.jsxj" }
+      },
+      "end": "(/>)|(</)([\\w$.-]*)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.jsxj" },
+        "2": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "3": { "name": "entity.name.tag.jsxj" },
+        "4": { "name": "punctuation.definition.tag.end.jsxj" }
+      },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-body": {
+      "patterns": [
+        { "include": "#jsx-expression" },
+        { "include": "#jsx-element-nested" },
+        { "include": "#jsx-attribute-string" },
+        { "match": "([A-Za-z_$][\\w$:-]*)\\s*(=)", "captures": {
+            "1": { "name": "entity.other.attribute-name.jsxj" },
+            "2": { "name": "keyword.operator.assignment.jsxj" } } },
+        { "match": ">", "name": "punctuation.definition.tag.end.jsxj" }
+      ]
+    },
+    "jsx-element-nested": {
+      "patterns": [
+        { "include": "#jsx-fragment-nested" },
+        { "include": "#jsx-component-nested" },
+        { "include": "#jsx-html-nested" }
+      ]
+    },
+    "jsx-fragment-nested": {
+      "begin": "(<)(?=>)", "end": "(</)(>)", "name": "meta.tag.fragment.jsxj",
+      "beginCaptures": { "1": { "name": "punctuation.definition.tag.begin.jsxj" } },
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "2": { "name": "punctuation.definition.tag.end.jsxj" } },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-component-nested": {
+      "begin": "(<)([A-Z][\\w$.]*)(?=[\\s/>])", "name": "meta.tag.component.jsxj",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "2": { "name": "support.class.component.jsxj" } },
+      "end": "(/>)|(</)([\\w$.]*)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.jsxj" },
+        "2": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "3": { "name": "support.class.component.jsxj" },
+        "4": { "name": "punctuation.definition.tag.end.jsxj" } },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-html-nested": {
+      "begin": "(<)([a-z][\\w$-]*)(?=[\\s/>])", "name": "meta.tag.html.jsxj",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "2": { "name": "entity.name.tag.jsxj" } },
+      "end": "(/>)|(</)([\\w$.-]*)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.jsxj" },
+        "2": { "name": "punctuation.definition.tag.begin.jsxj" },
+        "3": { "name": "entity.name.tag.jsxj" },
+        "4": { "name": "punctuation.definition.tag.end.jsxj" } },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-attribute-string": {
+      "name": "string.quoted.double.jsxj",
+      "begin": "\"", "end": "\"",
+      "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.jsxj" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.string.end.jsxj" } },
+      "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.jsxj" }]
+    },
+    "jsx-expression": {
+      "name": "meta.embedded.expression.jsxj",
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": { "0": { "name": "punctuation.section.embedded.begin.jsxj" } },
+      "endCaptures": { "0": { "name": "punctuation.section.embedded.end.jsxj" } },
+      "patterns": [
+        { "include": "source.java#comments" },
+        { "include": "#jsx-element" },
+        { "include": "source.java#code" }
+      ]
+    }
+  }
+}
