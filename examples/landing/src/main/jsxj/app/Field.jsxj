@@ -1,0 +1,32 @@
+package app;
+
+import java.util.function.Consumer;
+import jreact.Component;
+import jreact.Element;
+
+/** Label + input (or textarea) + error text. Red styling appears only when there is an error. */
+public class Field extends Component<Field.Props> {
+
+    public record Props(String id, String label, String value, String error, boolean multiline, Consumer<String> onInput) {}
+
+    @Override
+    public Element render(Props props) {
+        String box = props.error() == null
+            ? "w-full rounded-lg border border-slate-300 px-4 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+            : "w-full rounded-lg border border-rose-400 bg-rose-50 px-4 py-2.5 outline-none focus:ring-2 focus:ring-rose-200";
+
+        return (
+            <div>
+                <label htmlFor={props.id()} className="mb-1 block text-sm font-medium text-slate-700">{props.label()}</label>
+                {props.multiline()
+                    ? <textarea id={props.id()} rows="4" className={box} value={props.value()}
+                                onInput={e -> props.onInput().accept(e.value())}></textarea>
+                    : <input id={props.id()} className={box} value={props.value()}
+                             onInput={e -> props.onInput().accept(e.value())} />}
+                {props.error() != null
+                    ? <p className="error mt-1 text-sm text-rose-600">{props.error()}</p>
+                    : null}
+            </div>
+        );
+    }
+}

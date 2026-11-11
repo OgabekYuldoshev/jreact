@@ -1,0 +1,32 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+/** A small widget that can be told to fail, to show that an ErrorBoundary keeps the rest of the page alive. */
+public class TrafficWidget extends Component<TrafficWidget.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        State<Integer> visitors = useState(128);
+        State<Boolean> broken = useState(false);
+
+        if (broken.get()) throw new IllegalStateException("Traffic feed returned malformed data");
+
+        return (
+            <section className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                <h2 className="font-semibold">Live visitors</h2>
+                <p id="visitors" className="my-auto py-6 text-center text-5xl font-bold text-indigo-600 dark:text-indigo-400">{visitors.get()}</p>
+                <div className="flex gap-2">
+                    <button id="refresh" className="flex-1 rounded-full bg-slate-100 py-1.5 text-sm font-medium hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700"
+                            onClick={e -> visitors.update(v -> v + 7)}>Refresh</button>
+                    <button id="crash" className="flex-1 rounded-full bg-rose-50 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-300"
+                            onClick={e -> broken.set(true)}>Simulate error</button>
+                </div>
+            </section>
+        );
+    }
+}

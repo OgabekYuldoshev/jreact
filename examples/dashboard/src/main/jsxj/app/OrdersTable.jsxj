@@ -1,0 +1,103 @@
+package app;
+
+import java.util.Comparator;
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+/** Sortable, filterable table: click a header to sort, click again to reverse. */
+public class OrdersTable extends Component<OrdersTable.Props> {
+
+    public record Props(List<Order> orders) {}
+
+    @Override
+    public Element render(Props props) {
+        State<String> sortKey = useState("day");
+        State<Boolean> asc = useState(false);
+        State<String> status = useState("All");
+        State<String> query = useState("");
+
+        List<Order> rows = useMemo(() -> sorted(props.orders(), sortKey.get(), asc.get(), status.get(), query.get()),
+                props.orders(), sortKey.get(), asc.get(), status.get(), query.get());
+
+        return (
+            <section className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <h2 className="font-semibold">Recent orders <span id="row-count" className="ml-1 text-sm font-normal text-slate-400">({rows.size()})</span></h2>
+                    <div className="flex gap-2">
+                        <input id="order-search" placeholder="Search customer..."
+                               className="rounded-lg border border-slate-300 bg-transparent px-3 py-1.5 text-sm outline-none focus:border-indigo-500 dark:border-slate-700"
+                               value={query.get()} onInput={e -> query.set(e.value())} />
+                        <select id="status-filter" className="rounded-lg border border-slate-300 bg-transparent px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-900"
+                                value={status.get()} onChange={e -> status.set(e.value())}>
+                            <option value="All">All statuses</option>
+                            <option value="Paid">Paid</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Refunded">Refunded</option>
+                        </select>
+                    </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="border-y border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800 dark:bg-slate-800/50 dark:text-slate-400">
+                            <tr>
+                                {header("id", "Order", sortKey, asc)}
+                                {header("customer", "Customer", sortKey, asc)}
+                                <th className="px-5 py-3 font-medium">Product</th>
+                                {header("amount", "Amount", sortKey, asc)}
+                                <th className="px-5 py-3 font-medium">Status</th>
+                                {header("day", "Day", sortKey, asc)}
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                            {rows.stream().map(o ->
+                                <tr key={o.id()} className="order hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                                    <td className="px-5 py-3 font-mono text-slate-500">#{o.id()}</td>
+                                    <td className="customer px-5 py-3 font-medium">{o.customer()}</td>
+                                    <td className="px-5 py-3 text-slate-600 dark:text-slate-300">{o.product()}</td>
+                                    <td className="amount px-5 py-3 tabular-nums">${o.amount()}</td>
+                                    <td className="px-5 py-3"><StatusBadge status={o.status()} /></td>
+                                    <td className="px-5 py-3 text-slate-500">Nov {o.day()}</td>
+                                </tr>
+                            ).toList()}
+                        </tbody>
+                    </table>
+                    {rows.isEmpty()
+                        ? <p className="p-8 text-center text-sm text-slate-400">No orders match.</p>
+                        : null}
+                </div>
+            </section>
+        );
+    }
+
+    private static Element header(String key, String label, State<String> sortKey, State<Boolean> asc) {
+        boolean active = sortKey.get().equals(key);
+        return (
+            <th className="px-5 py-3 font-medium">
+                <button data-sort={key} className="inline-flex items-center gap-1 uppercase hover:text-slate-900 dark:hover:text-white"
+                        onClick={e -> {
+                            if (active) asc.update(a -> !a); else { sortKey.set(key); asc.set(true); }
+                        }}>
+                    {label}
+                    <span className="text-[10px]">{active ? (asc.get() ? "▲" : "▼") : ""}</span>
+                </button>
+            </th>
+        );
+    }
+
+    private static List<Order> sorted(List<Order> orders, String key, boolean asc, String status, String query) {
+        String q = query.trim().toLowerCase();
+        Comparator<Order> by = switch (key) {
+            case "id" -> Comparator.comparingInt(Order::id);
+            case "customer" -> Comparator.comparing(Order::customer);
+            case "amount" -> Comparator.comparingInt(Order::amount);
+            default -> Comparator.comparingInt(Order::day);
+        };
+        return orders.stream()
+                .filter(o -> status.equals("All") || o.status().equals(status))
+                .filter(o -> q.isEmpty() || o.customer().toLowerCase().contains(q))
+                .sorted(asc ? by : by.reversed())
+                .toList();
+    }
+}

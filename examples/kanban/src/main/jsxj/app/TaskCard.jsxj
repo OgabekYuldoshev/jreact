@@ -1,0 +1,45 @@
+package app;
+
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import jreact.Component;
+import jreact.Element;
+
+/** A single card with a tag badge and move/delete buttons. */
+public class TaskCard extends Component<TaskCard.Props> {
+
+    public record Props(Task task, boolean canLeft, boolean canRight,
+                        BiConsumer<Long, Integer> onMove, Consumer<Long> onDelete) {}
+
+    @Override
+    public Element render(Props props) {
+        Task t = props.task();
+        return (
+            <article className="card rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md">
+                <span className={"inline-block rounded-full px-2 py-0.5 text-xs font-medium " + tagClass(t.tag())}>{t.tag()}</span>
+                <p className="mt-2 text-sm font-medium text-slate-800">{t.title()}</p>
+                <div className="mt-3 flex items-center justify-between">
+                    <div className="flex gap-1">
+                        <button className="left rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                                title="Move left" disabled={!props.canLeft()}
+                                onClick={e -> props.onMove().accept(t.id(), -1)}>←</button>
+                        <button className="right rounded-md px-2 py-1 text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:hover:bg-transparent"
+                                title="Move right" disabled={!props.canRight()}
+                                onClick={e -> props.onMove().accept(t.id(), 1)}>→</button>
+                    </div>
+                    <button className="delete text-xs text-slate-400 hover:text-rose-600"
+                            onClick={e -> props.onDelete().accept(t.id())}>Delete</button>
+                </div>
+            </article>
+        );
+    }
+
+    private static String tagClass(String tag) {
+        return switch (tag) {
+            case "bug" -> "bg-rose-100 text-rose-700";
+            case "design" -> "bg-violet-100 text-violet-700";
+            case "docs" -> "bg-amber-100 text-amber-700";
+            default -> "bg-sky-100 text-sky-700";
+        };
+    }
+}

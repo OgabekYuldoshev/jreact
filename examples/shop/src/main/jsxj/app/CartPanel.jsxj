@@ -1,0 +1,69 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+/** Slide-in cart: lines with +/-, totals and a fake checkout. Always mounted, only translated off screen. */
+public class CartPanel extends Component<CartPanel.Props> {
+
+    public record Props(boolean open, Runnable onClose) {}
+
+    static final int FREE_SHIPPING = 5000;
+    static final int SHIPPING = 499;
+
+    @Override
+    public Element render(Props props) {
+        Cart cart = useContext(Cart.CONTEXT);
+        State<Boolean> ordered = useState(false);
+
+        int subtotal = cart.subtotal();
+        int shipping = subtotal == 0 || subtotal >= FREE_SHIPPING ? 0 : SHIPPING;
+
+        return (
+            <div>
+                <div className={props.open() ? "fixed inset-0 z-20 bg-black/40" : "pointer-events-none fixed inset-0 z-20 bg-black/0"}
+                     onClick={e -> props.onClose().run()}></div>
+                <aside id="cart-panel"
+                       className={"fixed inset-y-0 right-0 z-30 flex w-full flex-col bg-white shadow-2xl transition-transform duration-300 sm:w-96 "
+                                  + (props.open() ? "translate-x-0" : "translate-x-full")}>
+                    <div className="flex items-center justify-between border-b border-stone-200 px-5 py-4">
+                        <h2 className="text-lg font-bold">Your cart</h2>
+                        <button id="cart-close" className="rounded-full px-2 text-2xl leading-none text-stone-400 hover:text-stone-700"
+                                onClick={e -> props.onClose().run()}>×</button>
+                    </div>
+
+                    {ordered.get()
+                        ? <div id="order-done" className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                              <div className="text-5xl">🎉</div>
+                              <h3 className="text-xl font-bold">Order placed</h3>
+                              <p className="text-sm text-stone-500">Thanks! Your beans are on their way.</p>
+                              <button className="mt-2 rounded-full bg-amber-800 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700"
+                                      onClick={e -> { ordered.set(false); props.onClose().run(); }}>Keep shopping</button>
+                          </div>
+                        : cart.lines().isEmpty()
+                            ? <p id="cart-empty" className="flex flex-1 items-center justify-center p-8 text-stone-400">Your cart is empty.</p>
+                            : <div className="flex min-h-0 flex-1 flex-col">
+                                  <ul className="flex-1 divide-y divide-stone-100 overflow-y-auto px-5">
+                                      {cart.lines().entrySet().stream().map(en ->
+                                          <CartLine key={en.getKey()} product={Catalog.BY_ID.get(en.getKey())} quantity={en.getValue()} />
+                                      ).toList()}
+                                  </ul>
+                                  <div className="space-y-2 border-t border-stone-200 px-5 py-4 text-sm">
+                                      <div className="flex justify-between text-stone-600"><span>Subtotal</span><span>{Money.format(subtotal)}</span></div>
+                                      <div className="flex justify-between text-stone-600">
+                                          <span>Shipping</span><span>{shipping == 0 ? "Free" : Money.format(shipping)}</span>
+                                      </div>
+                                      <div className="flex justify-between text-base font-bold">
+                                          <span>Total</span><span id="cart-total">{Money.format(subtotal + shipping)}</span>
+                                      </div>
+                                      <button id="checkout"
+                                              className="mt-2 w-full rounded-full bg-amber-800 py-2.5 font-semibold text-white hover:bg-amber-700"
+                                              onClick={e -> { cart.clear().run(); ordered.set(true); }}>Checkout</button>
+                                  </div>
+                              </div>}
+                </aside>
+            </div>
+        );
+    }
+}

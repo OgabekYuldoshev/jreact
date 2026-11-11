@@ -1,0 +1,41 @@
+package app;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+/** Owns the cart state and shares it through Cart.CONTEXT, so any component below can read or change it. */
+public class CartProvider extends Component<CartProvider.Props> {
+
+    public record Props(List<Object> children) {}
+
+    @Override
+    public Element render(Props props) {
+        State<Map<Integer, Integer>> lines = useState(new LinkedHashMap<>());
+
+        Cart cart = new Cart(
+            lines.get(),
+            id -> lines.update(m -> change(m, id, 1)),
+            id -> lines.update(m -> change(m, id, -1)),
+            id -> lines.update(m -> without(m, id)),
+            () -> lines.set(new LinkedHashMap<>()));
+
+        return Cart.CONTEXT.provide(cart, props.children());
+    }
+
+    private static Map<Integer, Integer> change(Map<Integer, Integer> lines, int id, int delta) {
+        Map<Integer, Integer> next = new LinkedHashMap<>(lines);
+        int qty = next.getOrDefault(id, 0) + delta;
+        if (qty <= 0) next.remove(id); else next.put(id, qty);
+        return next;
+    }
+
+    private static Map<Integer, Integer> without(Map<Integer, Integer> lines, int id) {
+        Map<Integer, Integer> next = new LinkedHashMap<>(lines);
+        next.remove(id);
+        return next;
+    }
+}

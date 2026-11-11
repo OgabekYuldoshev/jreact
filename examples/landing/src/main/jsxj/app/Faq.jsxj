@@ -1,0 +1,36 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+/** Accordion: at most one answer is open at a time. */
+public class Faq extends Component<Faq.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        State<Integer> open = useState(-1);
+
+        return (
+            <section id="faq" className="mx-auto max-w-3xl px-6 py-20">
+                <h2 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">Frequently asked questions</h2>
+                <div className="mt-10 divide-y divide-slate-200 rounded-2xl ring-1 ring-slate-200">
+                    {java.util.stream.IntStream.range(0, Faqs.ALL.size()).mapToObj(i ->
+                        <div key={i} className="faq">
+                            <button className="question flex w-full items-center justify-between gap-4 px-6 py-4 text-left font-medium hover:bg-slate-50"
+                                    onClick={e -> open.set(open.get() == i ? -1 : i)}>
+                                {Faqs.ALL.get(i).question()}
+                                <span className="text-xl text-slate-400">{open.get() == i ? "−" : "+"}</span>
+                            </button>
+                            {open.get() == i
+                                ? <p className="answer px-6 pb-5 text-slate-600">{Faqs.ALL.get(i).answer()}</p>
+                                : null}
+                        </div>
+                    ).toList()}
+                </div>
+            </section>
+        );
+    }
+}

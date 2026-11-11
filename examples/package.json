@@ -1,0 +1,10 @@
+{
+  "name": "jreact-examples",
+  "private": true,
+  "description": "Tailwind CSS for the JReact example apps (run via ./build.sh examples)",
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.0",
+    "jsdom": "^26.0.0",
+    "tailwindcss": "^4.1.0"
+  }
+}

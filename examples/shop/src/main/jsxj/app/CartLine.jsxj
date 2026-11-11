@@ -1,0 +1,37 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+
+/** A row of the cart: name, quantity stepper, line price and a remove button. */
+public class CartLine extends Component<CartLine.Props> {
+
+    public record Props(Product product, int quantity) {}
+
+    @Override
+    public Element render(Props props) {
+        Cart cart = useContext(Cart.CONTEXT);
+        Product p = props.product();
+
+        return (
+            <li className="line flex items-center gap-3 py-4">
+                <span className="text-3xl">{p.emoji()}</span>
+                <div className="min-w-0 flex-1">
+                    <p className="overflow-hidden text-ellipsis whitespace-nowrap font-medium text-stone-800">{p.name()}</p>
+                    <div className="mt-1 flex items-center gap-2">
+                        <button className="dec h-6 w-6 rounded-full bg-stone-100 leading-none text-stone-600 hover:bg-stone-200"
+                                onClick={e -> cart.dec().accept(p.id())}>−</button>
+                        <span className="qty w-5 text-center text-sm">{props.quantity()}</span>
+                        <button className="inc h-6 w-6 rounded-full bg-stone-100 leading-none text-stone-600 hover:bg-stone-200"
+                                onClick={e -> cart.add().accept(p.id())}>+</button>
+                    </div>
+                </div>
+                <div className="text-right">
+                    <p className="text-sm font-semibold">{Money.format(p.price() * props.quantity())}</p>
+                    <button className="remove text-xs text-stone-400 hover:text-rose-600"
+                            onClick={e -> cart.remove().accept(p.id())}>Remove</button>
+                </div>
+            </li>
+        );
+    }
+}

@@ -1,0 +1,44 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+
+/** Headline, call to action and a fake product window built from divs. */
+public class Hero extends Component<Hero.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <section id="top" className="relative overflow-hidden bg-gradient-to-b from-violet-50 via-white to-white">
+                <div className="mx-auto max-w-6xl px-6 pb-20 pt-20 text-center">
+                    <span className="inline-block rounded-full bg-violet-100 px-4 py-1 text-sm font-medium text-violet-700">New: AI-assisted automations</span>
+                    <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-extrabold tracking-tight sm:text-6xl">
+                        Automate the busywork, <span className="bg-gradient-to-r from-violet-600 to-indigo-600 bg-clip-text text-transparent">ship the work that matters</span>
+                    </h1>
+                    <p className="mx-auto mt-6 max-w-xl text-lg text-slate-600">
+                        Flowly connects your tools and runs your repetitive processes for you, so your team can focus on what only humans do well.
+                    </p>
+                    <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+                        <a href="#contact" className="rounded-full bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg shadow-indigo-200 hover:bg-indigo-500">Start free trial</a>
+                        <a href="#features" className="rounded-full px-6 py-3 font-semibold text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50">See how it works</a>
+                    </div>
+
+                    <div className="mx-auto mt-14 max-w-4xl rounded-2xl bg-white p-3 shadow-2xl ring-1 ring-slate-200">
+                        <div className="flex gap-1.5 px-2 pb-3 pt-1">
+                            <span className="h-3 w-3 rounded-full bg-rose-400"></span>
+                            <span className="h-3 w-3 rounded-full bg-amber-400"></span>
+                            <span className="h-3 w-3 rounded-full bg-emerald-400"></span>
+                        </div>
+                        <div className="grid gap-3 rounded-xl bg-slate-50 p-4 sm:grid-cols-3">
+                            <div className="rounded-lg bg-white p-4 text-left shadow-sm"><p className="text-xs text-slate-500">Tasks automated</p><p className="mt-1 text-2xl font-bold">12,480</p></div>
+                            <div className="rounded-lg bg-white p-4 text-left shadow-sm"><p className="text-xs text-slate-500">Hours saved</p><p className="mt-1 text-2xl font-bold">1,920</p></div>
+                            <div className="rounded-lg bg-white p-4 text-left shadow-sm"><p className="text-xs text-slate-500">Active flows</p><p className="mt-1 text-2xl font-bold">87</p></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        );
+    }
+}

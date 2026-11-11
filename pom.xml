@@ -18,6 +18,7 @@
         <module>jreact-dom</module>
         <module>jreact-web</module>
         <module>examples/todo-web</module>
+        <module>examples</module>
     </modules>
 
     <properties>

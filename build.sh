@@ -25,6 +25,32 @@ if [[ "${1:-}" == "web" || "${1:-}" == "web-test" ]]; then
   exit 0
 fi
 
+# Tailwind example apps (examples/kanban, shop, dashboard, landing): Maven + TeaVM, then Tailwind CLI, then a gallery.
+#   ./build.sh examples        -> examples/dist/{index.html,kanban,shop,dashboard,landing}   (needs Maven + node)
+#   ./build.sh examples-test   -> same, then clicks through every app in jsdom
+#   python3 -m http.server -d examples/dist 8080     # open http://localhost:8080
+if [[ "${1:-}" == "examples" || "${1:-}" == "examples-test" ]]; then
+  APPS="kanban shop dashboard landing"
+  echo "== example apps (Maven + TeaVM)"
+  mvn -B -q -pl examples/kanban,examples/shop,examples/dashboard,examples/landing -am package
+  echo "== Tailwind CSS"
+  (cd examples && npm install --silent --no-audit --no-fund)
+  rm -rf examples/dist
+  mkdir -p examples/dist
+  for a in $APPS; do
+    (cd examples && npx @tailwindcss/cli -i $a/src/main/styles/app.css -o $a/target/web/app.css --minify 2>&1 | tail -1)
+    cp -R examples/$a/target/web examples/dist/$a
+  done
+  cp examples/gallery/index.html examples/dist/index.html
+  (cd examples && npx @tailwindcss/cli -i gallery/gallery.css -o dist/gallery.css --minify 2>&1 | tail -1)
+  echo "built examples/dist"
+  if [[ "$1" == "examples-test" ]]; then
+    echo "== example apps smoke test (jsdom)"
+    (cd examples && node smoke.js dist)
+  fi
+  exit 0
+fi
+
 # Language server for .jsxj (diagnostics, completion, hover, definition): build/jsxj-lsp.jar
 #   ./build.sh lsp        -> build/jsxj-lsp.jar (used by editors/vscode-jsxj/install.sh)
 if [[ "${1:-}" == "lsp" ]]; then

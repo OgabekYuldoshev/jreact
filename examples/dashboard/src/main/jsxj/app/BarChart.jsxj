@@ -1,0 +1,50 @@
+package app;
+
+import java.util.Map;
+import java.util.function.Consumer;
+import jreact.Component;
+import jreact.Element;
+
+/** A bar chart made of divs: heights are percentages of the highest value. */
+public class BarChart extends Component<BarChart.Props> {
+
+    public record Props(String[] labels, int[] values, String range, Consumer<String> onRange) {}
+
+    @Override
+    public Element render(Props props) {
+        int max = 1;
+        for (int v : props.values()) max = Math.max(max, v);
+        int top = max;
+
+        return (
+            <section className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="font-semibold">Revenue</h2>
+                    <div className="flex rounded-full bg-slate-100 p-1 text-sm dark:bg-slate-800">
+                        <button id="range-7d" className={tab(props.range().equals("7d"))} onClick={e -> props.onRange().accept("7d")}>7 days</button>
+                        <button id="range-12m" className={tab(props.range().equals("12m"))} onClick={e -> props.onRange().accept("12m")}>12 months</button>
+                    </div>
+                </div>
+                <div id="chart" className="flex h-56 items-end gap-2">
+                    {java.util.stream.IntStream.range(0, props.values().length).mapToObj(i ->
+                        <div key={i} className="flex h-full flex-1 flex-col justify-end" title={props.labels()[i] + ": $" + props.values()[i] + "k"}>
+                            <div className="bar w-full rounded-t-md bg-indigo-500 transition-all hover:bg-indigo-400 dark:bg-indigo-400 dark:hover:bg-indigo-300"
+                                 style={Map.of("height", (props.values()[i] * 100 / top) + "%")}></div>
+                        </div>
+                    ).toList()}
+                </div>
+                <div className="mt-2 flex gap-2 text-center text-xs text-slate-500 dark:text-slate-400">
+                    {java.util.stream.IntStream.range(0, props.labels().length).mapToObj(i ->
+                        <span key={i} className="flex-1">{props.labels()[i]}</span>
+                    ).toList()}
+                </div>
+            </section>
+        );
+    }
+
+    private static String tab(boolean active) {
+        return active
+            ? "rounded-full bg-white px-3 py-1 font-medium shadow-sm dark:bg-slate-700"
+            : "rounded-full px-3 py-1 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200";
+    }
+}

@@ -1,0 +1,33 @@
+package app;
+
+import java.util.List;
+import java.util.function.Consumer;
+import jreact.Component;
+import jreact.Element;
+
+/** Navigation links, vertical in the sidebar and horizontal on small screens. */
+public class Nav extends Component<Nav.Props> {
+
+    public record Props(String active, boolean vertical, Consumer<String> onSelect) {}
+
+    static final List<String> PAGES = List.of("overview", "orders", "customers");
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <nav className={props.vertical() ? "flex flex-col gap-1" : "flex gap-2"}>
+                {PAGES.stream().map(p ->
+                    <button key={p} data-page={p}
+                            className={(props.vertical() ? "w-full text-left " : "") + linkClass(p.equals(props.active()))}
+                            onClick={e -> props.onSelect().accept(p)}>{p}</button>
+                ).toList()}
+            </nav>
+        );
+    }
+
+    private static String linkClass(boolean active) {
+        return active
+            ? "rounded-lg bg-indigo-50 px-3 py-2 text-sm font-medium capitalize text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300"
+            : "rounded-lg px-3 py-2 text-sm font-medium capitalize text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800";
+    }
+}

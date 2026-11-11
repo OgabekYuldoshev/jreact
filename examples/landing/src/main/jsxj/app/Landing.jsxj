@@ -1,0 +1,27 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+
+/** The whole marketing page, one section per component. */
+public class Landing extends Component<Landing.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <div className="bg-white text-slate-800">
+                <Navbar />
+                <Hero />
+                <Features />
+                <Pricing />
+                <Faq />
+                <ContactForm />
+                <footer className="border-t border-slate-200 py-8 text-center text-sm text-slate-500">
+                    © 2026 Flowly, Inc. Built with JReact and Tailwind CSS.
+                </footer>
+            </div>
+        );
+    }
+}

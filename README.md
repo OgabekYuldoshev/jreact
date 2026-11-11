@@ -37,6 +37,7 @@ public class Counter extends Component<Counter.Props> {
 - [Context va memo](#context-va-memo)
 - [Eventlar](#eventlar)
 - [Stillar: CSS, Sass, Tailwind](#stillar-css-sass-tailwind)
+- [Namunalar: Tailwind bilan 4 ta ilova](#namunalar-tailwind-bilan-4-ta-ilova)
 - [Error boundary](#error-boundary)
 - [Ilovani ishga tushirish va ustuvorlik](#ilovani-ishga-tushirish-va-ustuvorlik)
 - [JVM'da ishlatish (HTML render, test)](#jvmda-ishlatish-html-render-test)
@@ -420,6 +421,27 @@ mvn -B -q clean package && npx sass src/main/styles/app.scss target/web/app.css
 
 Maven ichiga olish uchun `exec-maven-plugin` yoki `frontend-maven-plugin` ishlatiladi. `./build.sh dev` (Todo namunasi) CSS'ni `index.html` ichidagi `<style>` dan oladi, unga Sass/Tailwind ulanmagan.
 
+## Namunalar: Tailwind bilan 4 ta ilova
+
+`examples/` ichida Tailwind CSS v4 bilan yozilgan 4 ta real ilova bor. Hammasi `.jsxj`, brauzerda TeaVM orqali ishlaydi.
+
+| Ilova | Nima ko'rsatadi |
+|-------|-----------------|
+| `examples/kanban` | 3 ustunli doska: `useState` bilan ro'yxat, controlled input va select, kartani ko'chirish/o'chirish, `style` bilan progress bar |
+| `examples/shop` | Do'kon: 12 mahsulot, qidiruv, kategoriya, saralash (`useMemo`), savat `Context` orqali (`Cart.CONTEXT`), yon panel, yetkazish narxi hisobi |
+| `examples/dashboard` | Admin panel: statistika kartalari, bar chart, saralanadigan/filtrlanadigan jadval, dark mode (`dark:` variantlari), `ErrorBoundary` ichidagi vidjet |
+| `examples/landing` | Landing sahifa: gradient hero, narx jadvali (oylik/yillik), FAQ akkordeon, mobil menyu, validatsiyali kontakt forma |
+
+Yig'ish va ko'rish:
+
+```bash
+./build.sh examples        # Maven + TeaVM, keyin Tailwind CLI -> examples/dist/
+./build.sh examples-test   # shuni yig'ib, 4 ilovani jsdom'da bosib tekshiradi (75 tekshiruv)
+python3 -m http.server -d examples/dist 8080     # http://localhost:8080
+```
+
+Har ilova: `src/main/jsxj` (komponentlar), `src/main/java` (ma'lumot modellari), `src/main/styles/app.css` (`@import "tailwindcss"; @source ...`), `src/main/webapp/index.html`. Maven `.jsxj` ni kompilyatsiya qilib `app.js` yasaydi, Tailwind CLI esa `.jsxj`/`.java` ichidagi klass satrlarini topib `app.css` yasaydi. Umumiy sozlama `examples/pom.xml` da (4 ilova shuni meros qiladi), Tailwind va jsdom `examples/package.json` da.
+
 ## Error boundary
 
 Bitta komponent render paytida xato tashlasa, butun ilova yiqilmasligi uchun `ErrorBoundary` ishlatiladi. U ichidagi bolalar xatosini tutadi va o'rniga `fallback` ko'rsatadi, qolgan ilova (aka-uka komponentlar va ularning state'i) tegmasdan qoladi:
@@ -569,6 +591,8 @@ root.reconciler().setWarningHandler(msg -> log.warn(msg)); // default: System.er
 | `./build.sh web` | Todo'ni brauzer uchun yig'adi: `examples/todo-web/target/web/{index.html,app.js}` (Maven + TeaVM) |
 | `./build.sh web-test` | shuni jsdom'da ochib, ilovada yozib/bosib tekshiradi (node + npm) |
 | `./build.sh dev [port]` | dev server, qayta yig'ish + sahifani yangilash |
+| `./build.sh examples` | Tailwind namunalari (kanban, shop, dashboard, landing) -> `examples/dist/` (Maven + node) |
+| `./build.sh examples-test` | shuni yig'ib, jsdom'da bosib tekshiradi |
 | `./build.sh lsp` | language server jar'i: `build/jsxj-lsp.jar` |
 | `./editors/vscode-jsxj/install.sh` | VS Code kengaytmasini o'rnatadi (jar, npm, symlink) |
 | `mvn -B -q -pl jreact-web,jreact-compiler -am install` | JReact modullarini lokal Maven repoga qo'yadi (o'z ilovangiz uchun) |
@@ -605,6 +629,7 @@ java -cp build/core:build/app app.Main        # Windows'da ':' o'rniga ';'
 | `jreact-web` | Brauzer bog'lamalari (TeaVM JSO): `JsDomOps`, `JsTimers`, `JReactWeb.createRoot` |
 | `jreact-lsp` | `.jsxj` language server (LSP) |
 | `examples/todo`, `examples/todo-web` | namunaviy ilova: JVM'da HTML va brauzerda |
+| `examples/{kanban,shop,dashboard,landing}` | Tailwind bilan 4 ta real ilova + `gallery` |
 | `templates/web-app` | o'z brauzer ilovangiz uchun andoza |
 | `editors/vscode-jsxj` | VS Code kengaytmasi |
 
@@ -693,7 +718,11 @@ jreact/
 ├── templates/web-app/                # o'z ilovangiz uchun andoza (pom.xml, Counter, WebMain, index.html)
 └── examples/
     ├── todo/                         # namunaviy ilova (.jsxj), JVM'da HTML chiqaradi
-    └── todo-web/                     # shu ilova brauzerda + dev server + jsdom smoke testi
+    ├── todo-web/                     # shu ilova brauzerda + dev server + jsdom smoke testi
+    ├── kanban/ shop/ dashboard/ landing/   # Tailwind bilan 4 ta ilova (pom.xml, src/main/{jsxj,java,styles,webapp})
+    ├── gallery/                      # to'rttasini bog'lovchi bosh sahifa
+    ├── pom.xml, package.json         # umumiy Maven sozlamasi; Tailwind CLI + jsdom
+    └── smoke.js                      # 4 ilova uchun jsdom testi
 ```
 
 ## Cheklovlar

@@ -1,0 +1,42 @@
+package app;
+
+import java.util.function.BiConsumer;
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+/** Form below the board: a controlled input and a tag select. */
+public class AddTask extends Component<AddTask.Props> {
+
+    public record Props(BiConsumer<String, String> onAdd) {}
+
+    @Override
+    public Element render(Props props) {
+        State<String> title = useState("");
+        State<String> tag = useState("feature");
+
+        return (
+            <form className="mt-6 flex flex-col gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:flex-row"
+                  onSubmit={e -> {
+                      e.preventDefault();
+                      if (title.get().isBlank()) return;
+                      props.onAdd().accept(title.get().trim(), tag.get());
+                      title.set("");
+                  }}>
+                <input className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                       placeholder="What needs to be done?" value={title.get()}
+                       onInput={e -> title.set(e.value())} />
+                <select className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                        value={tag.get()} onChange={e -> tag.set(e.value())}>
+                    <option value="feature">Feature</option>
+                    <option value="bug">Bug</option>
+                    <option value="design">Design</option>
+                    <option value="docs">Docs</option>
+                </select>
+                <button type="submit"
+                        className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-40"
+                        disabled={title.get().isBlank()}>Add task</button>
+            </form>
+        );
+    }
+}
