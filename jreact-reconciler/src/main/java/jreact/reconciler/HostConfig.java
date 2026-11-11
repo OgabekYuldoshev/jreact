@@ -11,8 +11,14 @@ import jreact.Attrs;
  */
 public interface HostConfig<N> {
 
-    /** Creates a detached element and applies its initial attributes, event handlers are included. */
-    N createInstance(String tag, Attrs initial);
+    /** Creates a detached, empty element. Attributes come later in {@link #finalizeInitialChildren}. */
+    N createInstance(String tag);
+
+    /**
+     * Applies the initial attributes and event handlers. Called once per new element, after all its children
+     * were appended, so attributes that depend on children (a {@code <select>}'s value) work.
+     */
+    void finalizeInitialChildren(N instance, Attrs initial);
 
     N createTextInstance(String text);
 

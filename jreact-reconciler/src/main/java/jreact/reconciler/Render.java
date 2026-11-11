@@ -111,8 +111,9 @@ final class Render<N> {
                         if (prev.ref() != next.ref()) wip.flags |= Fiber.REF;
                     }
                 } else {
-                    N node = host.createInstance((String) wip.type, next);
+                    N node = host.createInstance((String) wip.type);
                     appendAllChildren(node, wip);
+                    host.finalizeInitialChildren(node, next);
                     wip.stateNode = node;
                     if (next.ref() != null) wip.flags |= Fiber.REF;
                 }

@@ -54,12 +54,10 @@ public final class ReconcilerTest {
     static final class Host implements jreact.reconciler.HostConfig<Node> {
         int created, removed;
 
-        public Node createInstance(String tag, Attrs initial) {
-            created++;
-            Node n = new Node(tag, null);
+        public Node createInstance(String tag) { created++; return new Node(tag, null); }
+        public void finalizeInitialChildren(Node n, Attrs initial) {
             n.attrs.putAll(initial.values());
             n.events.putAll(initial.events());
-            return n;
         }
         public Node createTextInstance(String text) { created++; return new Node(null, text); }
         public void appendInitialChild(Node p, Node c) { appendChild(p, c); }
