@@ -36,6 +36,7 @@ public class Counter extends Component<Counter.Props> {
 - [Hooks](#hooks)
 - [Context va memo](#context-va-memo)
 - [Eventlar](#eventlar)
+- [Stillar: CSS, Sass, Tailwind](#stillar-css-sass-tailwind)
 - [Error boundary](#error-boundary)
 - [Ilovani ishga tushirish va ustuvorlik](#ilovani-ishga-tushirish-va-ustuvorlik)
 - [JVM'da ishlatish (HTML render, test)](#jvmda-ishlatish-html-render-test)
@@ -334,6 +335,91 @@ Qo'llab-quvvatlanadi: `onClick`, `onDoubleClick`, `onContextMenu`, `onMouseDown/
 
 `onChange` React'dagi kabi: matn maydonida har bosishda (`input`), checkbox va select'da `change` da ishlaydi.
 
+## Stillar: CSS, Sass, Tailwind
+
+Ha, hammasini ishlatsa bo'ladi. JReact CSS'ni bilmaydi va unga tegmaydi: u faqat `className` va `style` ni DOM'ga beradi. CSS esa oddiy sahifa resursi, shuning uchun istalgan CSS vositasi ishlaydi.
+
+| Usul | Holat |
+|---|---|
+| Oddiy CSS | ishlaydi |
+| Sass / SCSS | ishlaydi (`sass` bilan `.css` ga yig'iladi) |
+| Tailwind CSS (v4) | ishlaydi (Tailwind CLI) |
+| Inline `style` | ishlaydi |
+| CSS Modules, CSS-in-JS | yo'q (JS bundler kerak, bu yerda bundler yo'q) |
+
+Sass va Tailwind'ni haqiqatan sinab ko'rdim: andoza ilovada `.scss` ning o'zgaruvchi va ichma-ich qoidalari to'g'ri `.css` ga aylandi, Tailwind CLI `.jsxj` dagi klasslarni topib CSS yaratdi, DOM'da klasslar to'g'ri qo'yildi va state o'zgarganda almashdi (jsdom'da; haqiqiy brauzerda tashqi ko'rinish ko'rilmagan).
+
+### Oddiy CSS
+
+`.css` faylni `src/main/webapp/` ga qo'ying (Maven shu papkani butunlay `target/web` ga ko'chiradi) va `index.html` ga ulang:
+
+```html
+<link rel="stylesheet" href="app.css">
+```
+
+```java
+<div className="card"> <h2 className="title">Salom</h2> </div>
+```
+
+`className` DOM'da `class` bo'ladi, `htmlFor` esa `for`. Shartli klass oddiy Java bilan: `className={done ? "todo done" : "todo"}`.
+
+### Inline style
+
+`style` ga `Map` bering. Nomlar camelCase yoziladi, sonlar `px` oladi (`0` va `opacity` kabilar yo'q), React kabi:
+
+```java
+<p style={Map.of("color", "tomato", "fontSize", 20)}>matn</p>
+// <p style="color: tomato; font-size: 20px;">
+```
+
+Satr ham ishlaydi: `style="color:red"` (u atribut sifatida qo'yiladi). Map ko'rinishi yangilanishda faqat o'zgargan xususiyatlarni almashtiradi, shuning uchun dinamik stil uchun Map afzal.
+
+### Sass / SCSS
+
+```bash
+npm install --save-dev sass
+npx sass src/main/styles/app.scss target/web/app.css          # bir marta
+npx sass --watch src/main/styles/app.scss target/web/app.css  # o'zgarsa o'zi
+```
+
+`index.html` ga `<link rel="stylesheet" href="app.css">` qo'shing. `.sass` (chekinish sintaksisi) ham shu buyruq bilan yig'iladi.
+
+### Tailwind CSS (v4)
+
+```bash
+npm install --save-dev tailwindcss @tailwindcss/cli
+```
+
+`src/main/styles/tw.css`:
+
+```css
+@import "tailwindcss";
+@source "../jsxj";
+```
+
+```bash
+npx @tailwindcss/cli -i src/main/styles/tw.css -o target/web/tw.css --minify
+npx @tailwindcss/cli -i src/main/styles/tw.css -o target/web/tw.css --watch    # ishlab chiqishda
+```
+
+```java
+<button className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600">Saqlash</button>
+```
+
+- Tailwind klass nomlarini manba fayldan **matn sifatida** qidiradi, shuning uchun `.jsxj` ham, `.java` ham ishlaydi (`@source` papkasini ko'rsatish kifoya).
+- JS'dagi kabi klass **to'liq satr** bo'lishi kerak: `cond ? "bg-blue-500" : "bg-red-500"` topiladi, `"bg-" + color` topilmaydi (CSS'ga tushmaydi).
+- Tailwind v3 uchun `tailwind.config.js` da `content: ["./src/main/jsxj/**/*.jsxj"]` beriladi (v3 sinab ko'rilmagan).
+
+### Build bilan birga ishlatish
+
+Sass/Tailwind Maven build'iga hali ulanmagan, ularni `mvn package` dan **keyin** yurgizing. `mvn clean package` `target/web` ni o'chiradi, CSS'ni undan keyin qayta yig'ing:
+
+```bash
+mvn -B -q clean package && npx sass src/main/styles/app.scss target/web/app.css
+```
+
+Maven ichiga olish uchun `exec-maven-plugin` yoki `frontend-maven-plugin` ishlatiladi. `./build.sh dev` (Todo namunasi) CSS'ni `index.html` ichidagi `<style>` dan oladi, unga Sass/Tailwind ulanmagan.
+
 ## Error boundary
 
 Bitta komponent render paytida xato tashlasa, butun ilova yiqilmasligi uchun `ErrorBoundary` ishlatiladi. U ichidagi bolalar xatosini tutadi va o'rniga `fallback` ko'rsatadi, qolgan ilova (aka-uka komponentlar va ularning state'i) tegmasdan qoladi:
@@ -615,6 +701,7 @@ jreact/
 - Brauzer build'i faqat jsdom'da sinalgan, haqiqiy brauzerda emas. Dev server'ning live reload'i va VS Code klienti ham haqiqiy muhitda hali ko'rilmagan (server protokoli `vscode-jsonrpc` bilan sinalgan).
 - Dev server faqat `examples/todo-web` uchun. Maven build'i `jsxj:compile` plagini o'rniga `exec-maven-plugin` bilan `jsxjc` ni chaqiradi.
 - JReact hali Maven Central'ga chiqarilmagan: o'z ilovangiz uchun `mvn install` bilan lokal o'rnatiladi.
+- CSS Modules va CSS-in-JS yo'q. Sass/Tailwind Maven build'iga ulanmagan, alohida buyruq bilan yig'iladi.
 - DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q.
 - Ustuvorlik root bo'yicha, update bo'yicha emas (lane yo'q): bitta render barcha kutayotgan update'larni oladi. Bo'laklab render faqat `LOW`/`IDLE` (`startTransition`) uchun, uni boshqa update to'xtatib qayta boshlamaydi, faqat tezroq tugatadi.
 - Error boundary render va `useEffect` xatolarini tutadi, event handler xatolarini tutmaydi (React'dagi kabi). `ServerRenderer` (SSR) boundary'da xatoni tutmaydi.
