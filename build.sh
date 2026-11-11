@@ -9,9 +9,11 @@ JAVAC="javac -encoding UTF-8 -Xlint:-options"
 # Browser build (needs Maven, downloads TeaVM): .jsxj -> .java -> .class -> app.js
 #   ./build.sh web        -> examples/todo-web/target/web/{index.html,app.js}
 #   ./build.sh web-test   -> same, then loads it in jsdom and clicks through the app (needs node + npm)
-#   ./build.sh dev [port] -> dev server with rebuild on change + live reload (http://localhost:5173)
+#   ./build.sh dev [port] [app...] -> dev server for todo, kanban, shop, dashboard, landing + gallery,
+#                             rebuild on change + live reload (http://localhost:5173)
 if [[ "${1:-}" == "dev" ]]; then
-  exec node examples/todo-web/dev/dev-server.js "${2:-5173}"
+  shift
+  exec node tools/dev-server.js "$@"
 fi
 
 if [[ "${1:-}" == "web" || "${1:-}" == "web-test" ]]; then

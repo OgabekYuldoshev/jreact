@@ -68,12 +68,12 @@ cd jreact
 
 ./build.sh          # kompilyator -> runtime -> .jsxj -> .java -> javac -> Todo namunasi HTML chiqaradi
 ./build.sh test     # barcha testlar (kompilyator 38, scheduler 14, reconciler 56, dom 19, language server 12)
-./build.sh dev      # Todo brauzerda: http://localhost:5173 (o'zgarsa o'zi qayta yig'iladi)
+./build.sh dev      # galereya + 5 ilova: http://localhost:5173 (o'zgarsa o'zi qayta yig'iladi)
 ```
 
 `./build.sh` Todo'ning HTML'ini terminalga chiqaradi (`<section class="todo-app"><h1>JReact Todo</h1>...`). Har ishga tushganda `build/` noldan yaratiladi.
 
-`./build.sh dev` birinchi marta Maven orqali TeaVM'ni yuklaydi (bir necha daqiqa), keyingi qayta yig'ishlar ~4 soniya. Brauzerda Todo ilovasi va "Xato chiqar" tugmasi (error boundary namunasi) chiqadi.
+`./build.sh dev` birinchi marta Maven orqali TeaVM'ni yuklaydi (bir necha daqiqa), keyingi qayta yig'ishlar ~4 soniya. `/` da galereya, `/todo/` da Todo ilovasi ("Xato chiqar" tugmasi error boundary namunasi), `/kanban/`, `/shop/`, `/dashboard/`, `/landing/` da Tailwind ilovalari.
 
 ## O'z ilovangizni yaratish
 
@@ -146,7 +146,7 @@ Natija: `target/web/{index.html, app.js}`. `app.js` ~120 KB (gzip bilan ~45 KB),
 
 **ErrorBoundary ishlatmoqchi bo'lsangiz:** uning `Props` yozuvi `jreact-core` manbasida, kompilyator uni indekslashi kerak. JReact'ni loyihangiz yoniga `jreact` nomli papkada klon qiling (yoki `mvn package -Djreact.home=/yo'l/jreact`). Papka topilmasa kompilyator uni jim o'tkazib yuboradi.
 
-> Dev server (`./build.sh dev`) hozircha faqat `examples/todo-web` uchun. O'z ilovangizda o'zgartirgach `mvn -B -q package` qilib sahifani yangilang.
+> Dev server (`./build.sh dev`) faqat `examples/` ilovalari uchun. O'z ilovangizda o'zgartirgach `mvn -B -q package` qilib sahifani yangilang.
 
 ## `.jsxj` sintaksisi
 
@@ -419,7 +419,7 @@ Sass/Tailwind Maven build'iga hali ulanmagan, ularni `mvn package` dan **keyin**
 mvn -B -q clean package && npx sass src/main/styles/app.scss target/web/app.css
 ```
 
-Maven ichiga olish uchun `exec-maven-plugin` yoki `frontend-maven-plugin` ishlatiladi. `./build.sh dev` (Todo namunasi) CSS'ni `index.html` ichidagi `<style>` dan oladi, unga Sass/Tailwind ulanmagan.
+Maven ichiga olish uchun `exec-maven-plugin` yoki `frontend-maven-plugin` ishlatiladi. Tailwind namunalarida (`examples/kanban` va boshqalar) `./build.sh dev` Maven'dan keyin Tailwind CLI'ni o'zi yurgizadi. Sass ulanmagan.
 
 ## Namunalar: Tailwind bilan 4 ta ilova
 
@@ -510,11 +510,12 @@ Brauzersiz ham ishlatish mumkin:
 ### Dev server
 
 ```bash
-./build.sh dev          # http://localhost:5173
-./build.sh dev 3000     # boshqa port
+./build.sh dev                    # hamma ilova: http://localhost:5173
+./build.sh dev 3000               # boshqa port
+./build.sh dev kanban shop        # faqat tanlangan ilovalar (tezroq boshlanadi)
 ```
 
-`examples/todo-web` ni yig'adi va ko'rsatadi. `.jsxj`, `.java` yoki `index.html` o'zgarsa Maven qayta yig'adi (~4 s) va sahifa o'zi yangilanadi. Build xatosi brauzerda qizil sahifa bo'lib chiqadi, tuzatsangiz o'zi tiklanadi.
+Bitta portda galereya (`/`) va ilovalarni (`/todo/`, `/kanban/`, `/shop/`, `/dashboard/`, `/landing/`) ko'rsatadi. Ilovaning `.jsxj`, `.java`, `.css` yoki `index.html` fayli o'zgarsa faqat shu ilova qayta yig'iladi (Maven + Tailwind, ~4 s) va uning sahifasi yangilanadi. `jreact-*` (framework) o'zgarsa hammasi qayta yig'iladi. Build xatosi brauzerda qizil sahifa bo'lib chiqadi, tuzatsangiz o'zi tiklanadi.
 
 ### VS Code
 
@@ -590,7 +591,7 @@ root.reconciler().setWarningHandler(msg -> log.warn(msg)); // default: System.er
 | `./build.sh test` | barcha testlar (bog'liqliksiz `main()` runner'lar, JUnit kerak emas) |
 | `./build.sh web` | Todo'ni brauzer uchun yig'adi: `examples/todo-web/target/web/{index.html,app.js}` (Maven + TeaVM) |
 | `./build.sh web-test` | shuni jsdom'da ochib, ilovada yozib/bosib tekshiradi (node + npm) |
-| `./build.sh dev [port]` | dev server, qayta yig'ish + sahifani yangilash |
+| `./build.sh dev [port] [ilova...]` | dev server (`tools/dev-server.js`): qayta yig'ish + sahifani yangilash |
 | `./build.sh examples` | Tailwind namunalari (kanban, shop, dashboard, landing) -> `examples/dist/` (Maven + node) |
 | `./build.sh examples-test` | shuni yig'ib, jsdom'da bosib tekshiradi |
 | `./build.sh lsp` | language server jar'i: `build/jsxj-lsp.jar` |
@@ -715,10 +716,11 @@ jreact/
 ├── jreact-lsp/                       # language server: Server, Analyzer, Features, Workspace, Json
 │   └── src/test/.../LspTest.java     # 12 ta test, haqiqiy JSON-RPC oqimi bilan
 ├── editors/vscode-jsxj/              # VS Code kengaytmasi: grammar + LSP klienti
+├── tools/dev-server.js               # dev server: hamma namuna ilovalar, live reload
 ├── templates/web-app/                # o'z ilovangiz uchun andoza (pom.xml, Counter, WebMain, index.html)
 └── examples/
     ├── todo/                         # namunaviy ilova (.jsxj), JVM'da HTML chiqaradi
-    ├── todo-web/                     # shu ilova brauzerda + dev server + jsdom smoke testi
+    ├── todo-web/                     # shu ilova brauzerda + jsdom smoke testi
     ├── kanban/ shop/ dashboard/ landing/   # Tailwind bilan 4 ta ilova (pom.xml, src/main/{jsxj,java,styles,webapp})
     ├── gallery/                      # to'rttasini bog'lovchi bosh sahifa
     ├── pom.xml, package.json         # umumiy Maven sozlamasi; Tailwind CLI + jsdom
@@ -728,7 +730,7 @@ jreact/
 ## Cheklovlar
 
 - Brauzer build'i faqat jsdom'da sinalgan, haqiqiy brauzerda emas. Dev server'ning live reload'i va VS Code klienti ham haqiqiy muhitda hali ko'rilmagan (server protokoli `vscode-jsonrpc` bilan sinalgan).
-- Dev server faqat `examples/todo-web` uchun. Maven build'i `jsxj:compile` plagini o'rniga `exec-maven-plugin` bilan `jsxjc` ni chaqiradi.
+- Dev server `examples/` ilovalari uchun qattiq yozilgan (`tools/dev-server.js` boshidagi ro'yxat). Maven build'i `jsxj:compile` plagini o'rniga `exec-maven-plugin` bilan `jsxjc` ni chaqiradi.
 - JReact hali Maven Central'ga chiqarilmagan: o'z ilovangiz uchun `mvn install` bilan lokal o'rnatiladi.
 - CSS Modules va CSS-in-JS yo'q. Sass/Tailwind Maven build'iga ulanmagan, alohida buyruq bilan yig'iladi.
 - DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q.
@@ -745,6 +747,6 @@ jreact/
 1. ~~Fiber reconciler: work loop, key'li diff, commit, hooks~~ (tayyor)
 2. ~~Scheduler: bo'laklab render, ustuvorlik~~ (tayyor, root darajasida). Qolgani: haqiqiy lane'lar (update bo'yicha ustuvorlik, render'ni to'xtatib qayta boshlash)
 3. ~~DOM host, event delegation, TeaVM orqali `jreact-web`~~ (tayyor)
-4. ~~TeaVM bilan `app.js`, dev server~~ (tayyor). Qolgani: `jsxj:compile` Maven plagini, Maven Central'ga chiqarish, dev server'ni o'z ilova uchun umumlashtirish
+4. ~~TeaVM bilan `app.js`, dev server~~ (tayyor). Qolgani: `jsxj:compile` Maven plagini, Maven Central'ga chiqarish, dev server'ni o'z ilovangiz uchun sozlanadigan qilish
 5. ~~`Context`, `memo`, error boundary, key ogohlantirishlari~~ (tayyor). Qolgani: boshqa ogohlantirishlar (masalan `value` bor, `onInput` yo'q)
 6. ~~VS Code: ranglash, language server~~ (tayyor). Qolgani: IntelliJ plagini, Java ifodalari uchun autocomplete (jdtls bilan birlashtirish), rename/find references
