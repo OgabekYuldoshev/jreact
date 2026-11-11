@@ -2,11 +2,14 @@ package jreact.reconciler;
 
 import jreact.Attrs;
 import jreact.Component;
+import jreact.Context;
 import jreact.Element;
 import jreact.Event;
 import jreact.EventHandler;
 import jreact.Jsx;
+import jreact.MemoComponent;
 import jreact.Ref;
+import jreact.ServerRenderer;
 import jreact.State;
 import jreact.scheduler.ManualSchedulerHost;
 import jreact.scheduler.Scheduler;
@@ -161,6 +164,76 @@ public final class ReconcilerTest {
         }
         static Element make() { return c(Page.class, Page::new, null, new Props()); }
         static String html(String label) { return "<div>" + ("<i>" + label + "</i>").repeat(10) + "</div>"; }
+    }
+
+    // ---- context and memo probes
+
+    static final Context<String> THEME = Context.create("light");
+    static final Context<Integer> SIZE = Context.create(1);
+    static int themedRenders, sizedRenders, midRenders, memoRenders, plainRenders;
+    static State<Integer> themedState, tickState;
+
+    static void resetCounts() { themedRenders = sizedRenders = midRenders = memoRenders = plainRenders = 0; }
+
+    static class Themed extends Component<Themed.Props> {
+        record Props() {}
+        public Element render(Props p) {
+            themedRenders++;
+            State<Integer> n = useState(0);
+            themedState = n;
+            return Jsx.el("p", null, null, useContext(THEME), "/", n.get());
+        }
+        static Element make() { return c(Themed.class, Themed::new, null, new Props()); }
+    }
+
+    static class Sized extends Component<Sized.Props> {
+        record Props() {}
+        public Element render(Props p) { sizedRenders++; return Jsx.el("s", null, null, useContext(SIZE)); }
+        static Element make() { return c(Sized.class, Sized::new, null, new Props()); }
+    }
+
+    /** Memo component between a provider and its consumers. */
+    static class Mid extends MemoComponent<Mid.Props> {
+        record Props(String x) {}
+        public Element render(Props p) { midRenders++; return Jsx.el("div", null, null, Themed.make(), Sized.make()); }
+        static Element make(String x) { return c(Mid.class, Mid::new, null, new Props(x)); }
+    }
+
+    static class MemoProbe extends MemoComponent<MemoProbe.Props> {
+        record Props(String label) {}
+        static State<Integer> own;
+        public Element render(Props p) {
+            memoRenders++;
+            State<Integer> n = useState(0);
+            own = n;
+            return Jsx.el("b", null, null, p.label(), n.get());
+        }
+        static Element make(String label) { return c(MemoProbe.class, MemoProbe::new, null, new Props(label)); }
+    }
+
+    static class PlainProbe extends Component<PlainProbe.Props> {
+        record Props(String label) {}
+        public Element render(Props p) { plainRenders++; return Jsx.el("i", null, null, p.label()); }
+        static Element make(String label) { return c(PlainProbe.class, PlainProbe::new, null, new Props(label)); }
+    }
+
+    /** Re-renders on `tick`, and passes the same props to a memo and a plain child. */
+    static class TickParent extends Component<TickParent.Props> {
+        record Props() {}
+        public Element render(Props p) {
+            State<Integer> tick = useState(0);
+            tickState = tick;
+            return Jsx.el("div", null, null, tick.get(), MemoProbe.make("a"), PlainProbe.make("a"));
+        }
+        static Element make() { return c(TickParent.class, TickParent::new, null, new Props()); }
+    }
+
+    /** Memo that only looks at `a`. */
+    static class CustomMemo extends MemoComponent<CustomMemo.Props> {
+        record Props(String a, String b) {}
+        @Override protected boolean arePropsEqual(Props prev, Props next) { return prev.a().equals(next.a()); }
+        public Element render(Props p) { memoRenders++; return Jsx.el("u", null, null, p.a(), p.b()); }
+        static Element make(String a, String b) { return c(CustomMemo.class, CustomMemo::new, null, new Props(a, b)); }
     }
 
     static class Memo extends Component<Memo.Props> {
@@ -443,6 +516,110 @@ public final class ReconcilerTest {
             Env e = new Env();
             e.root.renderSync(el("p", "now"));
             eq("<p>now</p>", e.html());
+        });
+
+        // ---------------------------------------------------------------- memo
+
+        test("memo component skips a render when props are equal, plain components do not", () -> {
+            Env e = new Env();
+            e.render(TickParent.make());
+            resetCounts();
+            tickState.set(1); e.flush();
+            eq("<div>1<b>a0</b><i>a</i></div>", e.html());
+            eq(0, memoRenders);
+            eq(1, plainRenders);
+        });
+
+        test("memo component re-renders when props change", () -> {
+            Env e = new Env();
+            e.render(MemoProbe.make("a"));
+            resetCounts();
+            e.render(MemoProbe.make("a"));
+            eq(0, memoRenders);
+            e.render(MemoProbe.make("b"));
+            eq(1, memoRenders);
+            eq("<b>b0</b>", e.html());
+        });
+
+        test("memo component still updates from its own state", () -> {
+            Env e = new Env();
+            e.render(TickParent.make());
+            resetCounts();
+            MemoProbe.own.set(5); e.flush();
+            eq("<div>0<b>a5</b><i>a</i></div>", e.html());
+            eq(1, memoRenders);
+            eq(0, plainRenders);
+        });
+
+        test("custom arePropsEqual decides what counts as changed", () -> {
+            Env e = new Env();
+            e.render(CustomMemo.make("a", "1"));
+            resetCounts();
+            e.render(CustomMemo.make("a", "2"));        // b ignored
+            eq(0, memoRenders);
+            eq("<u>a1</u>", e.html());
+            e.render(CustomMemo.make("x", "2"));
+            eq(1, memoRenders);
+            eq("<u>x2</u>", e.html());
+        });
+
+        // ---------------------------------------------------------------- context
+
+        test("context: default value without a provider", () -> {
+            Env e = new Env();
+            e.render(Themed.make());
+            eq("<p>light/0</p>", e.html());
+        });
+
+        test("context: provider value reaches nested consumers, a nested provider shadows it", () -> {
+            Env e = new Env();
+            e.render(THEME.provide("dark", el("div", Themed.make(), THEME.provide("blue", Themed.make()))));
+            eq("<div><p>dark/0</p><p>blue/0</p></div>", e.html());
+        });
+
+        test("context: a changed value reaches a consumer below a memo component that did not render", () -> {
+            Env e = new Env();
+            e.render(THEME.provide("a", Mid.make("x")));
+            eq("<div><p>a/0</p><s>1</s></div>", e.html());
+            resetCounts();
+            e.render(THEME.provide("b", Mid.make("x")));
+            eq("<div><p>b/0</p><s>1</s></div>", e.html());
+            eq(0, midRenders);
+            eq(1, themedRenders);
+            eq(0, sizedRenders);                        // reads another context: untouched
+        });
+
+        test("context: an equal value leaves the memoized subtree alone", () -> {
+            Env e = new Env();
+            e.render(THEME.provide("a", Mid.make("x")));
+            resetCounts();
+            e.render(THEME.provide("a", Mid.make("x")));
+            eq(0, midRenders + themedRenders + sizedRenders);
+        });
+
+        test("context: contexts are independent", () -> {
+            Env e = new Env();
+            e.render(SIZE.provide(2, THEME.provide("a", Mid.make("x"))));
+            eq("<div><p>a/0</p><s>2</s></div>", e.html());
+            resetCounts();
+            e.render(SIZE.provide(3, THEME.provide("a", Mid.make("x"))));
+            eq("<div><p>a/0</p><s>3</s></div>", e.html());
+            eq(1, sizedRenders);
+            eq(0, themedRenders);
+        });
+
+        test("context: a consumer keeps its state when the value changes", () -> {
+            Env e = new Env();
+            e.render(THEME.provide("a", Mid.make("x")));
+            themedState.set(5); e.flush();
+            e.render(THEME.provide("b", Mid.make("x")));
+            eq("<div><p>b/5</p><s>1</s></div>", e.html());
+        });
+
+        test("context: consumers also work with server rendering", () -> {
+            eq("<p>light/0</p>", ServerRenderer.renderToString(Themed.make()));
+            eq("<div><p>dark/0</p><p>blue/0</p><p>dark/0</p></div>", ServerRenderer.renderToString(
+                    THEME.provide("dark", el("div", Themed.make(), THEME.provide("blue", Themed.make()), Themed.make()))));
         });
 
         // ---------------------------------------------------------------- scheduling and priorities

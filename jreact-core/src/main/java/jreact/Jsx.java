@@ -21,6 +21,11 @@ public final class Jsx {
         return Element.fragment(key, list(children));
     }
 
+    /** What {@link Context#provide} compiles to. */
+    public static <T> Element provider(Context<T> context, T value, Object key, List<Object> children) {
+        return Element.provider(context, value, key, children);
+    }
+
     /** Value of a component's {@code List<Object> children} prop. Items may be null. */
     public static List<Object> children(Object... children) {
         return list(children);

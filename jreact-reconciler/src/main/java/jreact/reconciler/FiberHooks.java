@@ -1,10 +1,12 @@
 package jreact.reconciler;
 
+import jreact.Context;
 import jreact.Effect;
 import jreact.Hooks;
 import jreact.Ref;
 import jreact.State;
 
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -117,6 +119,22 @@ final class FiberHooks implements Hooks.Dispatcher {
         Hook h = next(Hook.Kind.REF);
         if (mount()) h.memoizedState = new Ref<>(initial);
         return (Ref<T>) h.memoizedState;
+    }
+
+    /**
+     * Walks up to the nearest provider of {@code context}. The render path is always the work-in-progress
+     * chain, so this is correct while a render is paused and with several roots (no global value stack).
+     * Takes no hook slot, so it may be called conditionally, like in React.
+     */
+    @Override
+    @SuppressWarnings("unchecked")
+    public <T> T useContext(Context<T> context) {
+        if (wip.contexts == null) wip.contexts = new ArrayList<>(2);
+        if (!wip.contexts.contains(context)) wip.contexts.add(context);
+        for (Fiber f = wip.ret; f != null; f = f.ret) {
+            if (f.tag == Fiber.Tag.PROVIDER && f.type == context) return (T) f.element.contextValue();
+        }
+        return context.defaultValue();
     }
 
     private static boolean depsEqual(Object[] a, Object[] b) {

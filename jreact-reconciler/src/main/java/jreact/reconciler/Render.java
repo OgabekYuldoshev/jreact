@@ -1,9 +1,11 @@
 package jreact.reconciler;
 
 import jreact.Attrs;
+import jreact.Context;
 import jreact.Element;
 import jreact.Hooks;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -37,12 +39,23 @@ final class Render<N> {
                     ? Objects.equals(wip.text, current.memoizedText)
                     : wip.element == current.memoizedElement;
             if (sameInput && !wip.hasUpdate) return bailout(wip);
+            // memo: new element but equal props, and nothing inside this component asked for a render
+            if (!sameInput && wip.tag == Fiber.Tag.COMPONENT && !wip.hasUpdate && wip.instance != null
+                    && wip.instance.propsEqualWith(current.memoizedElement.props(), wip.element.props())) {
+                return bailout(wip);
+            }
         }
         wip.hasUpdate = false;
         switch (wip.tag) {
             case ROOT -> reconcileChildren(current, wip, Arrays.asList(wip.element));
             case HOST, FRAGMENT -> reconcileChildren(current, wip, wip.element.children());
             case COMPONENT -> updateComponent(current, wip);
+            case PROVIDER -> {
+                if (current != null && !Objects.equals(current.memoizedElement.contextValue(), wip.element.contextValue())) {
+                    propagateContextChange(wip, wip.element.context());
+                }
+                reconcileChildren(current, wip, wip.element.children());
+            }
             case TEXT -> { return null; }
         }
         return wip.child;
@@ -50,6 +63,7 @@ final class Render<N> {
 
     private void updateComponent(Fiber current, Fiber wip) {
         if (wip.instance == null) wip.instance = wip.factory.get();
+        wip.contexts = null;            // re-registered by useContext during this render
         FiberHooks hooks = new FiberHooks(reconciler, wip, current);
         Hooks.Dispatcher prev = Hooks.swap(hooks);
         Element out;
@@ -60,6 +74,23 @@ final class Render<N> {
             Hooks.swap(prev);
         }
         reconcileChildren(current, wip, Arrays.asList(out));
+    }
+
+    /**
+     * The provider's value changed: flag every component below it that read this context (and the path to it),
+     * so bail-outs, including memo, still lead down to them. A nested provider of the same context shadows
+     * the value for its own subtree, so the search does not go into it.
+     */
+    private void propagateContextChange(Fiber provider, Context<?> context) {
+        ArrayDeque<Fiber> pending = new ArrayDeque<>();
+        if (provider.child != null) pending.push(provider.child);       // the committed children, not yet reconciled
+        while (!pending.isEmpty()) {
+            for (Fiber f = pending.pop(); f != null; f = f.sibling) {
+                if (f.tag == Fiber.Tag.PROVIDER && f.type == context) continue;
+                if (f.tag == Fiber.Tag.COMPONENT && f.contexts != null && f.contexts.contains(context)) Fiber.markUpdate(f);
+                if (f.child != null) pending.push(f.child);
+            }
+        }
     }
 
     private void reconcileChildren(Fiber current, Fiber wip, List<Object> children) {

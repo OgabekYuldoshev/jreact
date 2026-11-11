@@ -28,4 +28,17 @@ public abstract class Component<P> {
     protected final <T> T useMemo(Supplier<T> compute, Object... deps) { return Hooks.current().useMemo(compute, deps); }
 
     protected final <T> Ref<T> useRef(T initial) { return Hooks.current().useRef(initial); }
+
+    /** Value of the nearest {@code context.provide(...)} above this component, or the context's default. */
+    protected final <T> T useContext(Context<T> context) { return Hooks.current().useContext(context); }
+
+    /**
+     * Whether a render with {@code next} props can be skipped because it would give the same result as the
+     * one with {@code prev}. Default: never skip. See {@link MemoComponent}.
+     */
+    protected boolean arePropsEqual(P prev, P next) { return false; }
+
+    /** Untyped entry point for reconcilers, see {@link #renderWith}. */
+    @SuppressWarnings("unchecked")
+    public final boolean propsEqualWith(Object prev, Object next) { return arePropsEqual((P) prev, (P) next); }
 }

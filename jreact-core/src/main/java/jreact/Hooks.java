@@ -11,6 +11,7 @@ public final class Hooks {
         void useEffect(Effect effect, Object[] deps);
         <T> T useMemo(Supplier<T> compute, Object[] deps);
         <T> Ref<T> useRef(T initial);
+        <T> T useContext(Context<T> context);
     }
 
     private static Dispatcher current;

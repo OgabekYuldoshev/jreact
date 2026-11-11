@@ -122,6 +122,7 @@ final class ChildReconciler {
                 case HOST -> new Fiber(Fiber.Tag.HOST, keyOf(e), e.tag(), null);
                 case COMPONENT -> new Fiber(Fiber.Tag.COMPONENT, keyOf(e), e.type(), e.factory());
                 case FRAGMENT -> new Fiber(Fiber.Tag.FRAGMENT, keyOf(e), null, null);
+                case PROVIDER -> new Fiber(Fiber.Tag.PROVIDER, keyOf(e), e.context(), null);
             };
             f.element = e;
         } else {
@@ -138,6 +139,7 @@ final class ChildReconciler {
                 case HOST -> f.tag == Fiber.Tag.HOST && f.type.equals(e.tag());
                 case COMPONENT -> f.tag == Fiber.Tag.COMPONENT && f.type == e.type();
                 case FRAGMENT -> f.tag == Fiber.Tag.FRAGMENT;
+                case PROVIDER -> f.tag == Fiber.Tag.PROVIDER && f.type == e.context();
             };
         }
         return f.tag == Fiber.Tag.TEXT;

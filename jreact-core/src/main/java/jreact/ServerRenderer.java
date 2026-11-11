@@ -1,5 +1,6 @@
 package jreact;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -16,24 +17,31 @@ public final class ServerRenderer {
 
     public static String renderToString(Object node) {
         StringBuilder sb = new StringBuilder();
-        render(node, sb);
+        render(node, sb, new HashMap<>());
         return sb.toString();
     }
 
-    private static void render(Object node, StringBuilder sb) {
+    /** {@code provided}: the context values in scope at this point of the tree. */
+    private static void render(Object node, StringBuilder sb, Map<Context<?>, Object> provided) {
         if (node == null || node instanceof Boolean) return;
-        if (node instanceof Iterable<?> it) { for (Object o : it) render(o, sb); return; }
-        if (node instanceof Object[] arr) { for (Object o : arr) render(o, sb); return; }
+        if (node instanceof Iterable<?> it) { for (Object o : it) render(o, sb, provided); return; }
+        if (node instanceof Object[] arr) { for (Object o : arr) render(o, sb, provided); return; }
         if (!(node instanceof Element e)) { escape(String.valueOf(node), sb); return; }
 
         switch (e.kind()) {
-            case FRAGMENT -> render(e.children(), sb);
+            case FRAGMENT -> render(e.children(), sb, provided);
+            case PROVIDER -> {
+                boolean had = provided.containsKey(e.context());
+                Object prevValue = provided.put(e.context(), e.contextValue());
+                try { render(e.children(), sb, provided); }
+                finally { if (had) provided.put(e.context(), prevValue); else provided.remove(e.context()); }
+            }
             case COMPONENT -> {
                 Component<?> instance = e.factory().get();
-                Hooks.Dispatcher prev = Hooks.swap(new OneShotDispatcher());
+                Hooks.Dispatcher prev = Hooks.swap(new OneShotDispatcher(provided));
                 Element out;
                 try { out = instance.renderWith(e.props()); } finally { Hooks.swap(prev); }
-                render(out, sb);
+                render(out, sb, provided);
             }
             case HOST -> {
                 sb.append('<').append(e.tag());
@@ -45,7 +53,7 @@ public final class ServerRenderer {
                 }
                 sb.append('>');
                 if (VOID_TAGS.contains(e.tag())) return;
-                render(e.children(), sb);
+                render(e.children(), sb, provided);
                 sb.append("</").append(e.tag()).append('>');
             }
         }
@@ -72,6 +80,15 @@ public final class ServerRenderer {
     }
 
     private static final class OneShotDispatcher implements Hooks.Dispatcher {
+        private final Map<Context<?>, Object> provided;
+
+        OneShotDispatcher(Map<Context<?>, Object> provided) { this.provided = provided; }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> T useContext(Context<T> context) {
+            return provided.containsKey(context) ? (T) provided.get(context) : context.defaultValue();
+        }
         @Override public <T> State<T> useState(T initial) {
             return new State<>() {
                 public T get() { return initial; }

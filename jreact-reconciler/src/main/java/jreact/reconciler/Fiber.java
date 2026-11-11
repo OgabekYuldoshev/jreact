@@ -1,6 +1,7 @@
 package jreact.reconciler;
 
 import jreact.Component;
+import jreact.Context;
 import jreact.Element;
 
 import java.util.ArrayList;
@@ -14,7 +15,7 @@ import java.util.function.Supplier;
  */
 final class Fiber {
 
-    enum Tag { ROOT, HOST, TEXT, COMPONENT, FRAGMENT }
+    enum Tag { ROOT, HOST, TEXT, COMPONENT, FRAGMENT, PROVIDER }
 
     // flags: work this fiber needs in the commit phase
     static final int PLACEMENT = 1;       // insert or move host nodes
@@ -26,7 +27,7 @@ final class Fiber {
 
     final Tag tag;
     final String key;
-    final Object type;                                  // HOST: String tag, COMPONENT: Class<?>
+    final Object type;                                  // HOST: String tag, COMPONENT: Class<?>, PROVIDER: Context<?>
     final Supplier<? extends Component<?>> factory;     // COMPONENT
 
     int index;                                          // position among siblings
@@ -41,6 +42,7 @@ final class Fiber {
     Component<?> instance;      // COMPONENT
     Hook hooks;                 // COMPONENT: head of the hook list, committed state
     List<HookEffect> effects;   // COMPONENT: effects to run after this commit
+    List<Context<?>> contexts;  // COMPONENT: contexts read by the last render (React's dependencies)
     AttrsDiff updatePayload;    // HOST
 
     int flags, subtreeFlags;
@@ -78,11 +80,28 @@ final class Fiber {
         w.memoizedElement = current.memoizedElement;
         w.memoizedText = current.memoizedText;
         w.hooks = current.hooks;
+        w.contexts = current.contexts;
         w.instance = current.instance;
         w.index = current.index;
         w.hasUpdate = current.hasUpdate;
         w.childHasUpdate = current.childHasUpdate;
         return w;
+    }
+
+    /**
+     * Flags the fiber and every ancestor, on both alternates, so the next render can find its way down.
+     * Returns the top-most fiber reached (the ROOT fiber for a mounted tree).
+     */
+    static Fiber markUpdate(Fiber fiber) {
+        fiber.hasUpdate = true;
+        if (fiber.alternate != null) fiber.alternate.hasUpdate = true;
+        Fiber node = fiber;
+        for (Fiber parent = node.ret; parent != null; parent = node.ret) {
+            parent.childHasUpdate = true;
+            if (parent.alternate != null) parent.alternate.childHasUpdate = true;
+            node = parent;
+        }
+        return node;
     }
 
     @Override public String toString() { return tag + (type == null ? "" : "(" + type + ")") + (key == null ? "" : "#" + key); }

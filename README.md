@@ -23,6 +23,7 @@
   - [Komponentlar va props](#komponentlar-va-props)
     - [Children](#children)
   - [Hooks](#hooks)
+  - [Context va memo](#context-va-memo)
   - [Eventlar](#eventlar)
   - [Kompilyator (`jsxjc`)](#kompilyator-jsxjc)
   - [O'z loyihangizda ishlatish](#oz-loyihangizda-ishlatish)
@@ -40,7 +41,7 @@ git clone <repo-url> jreact
 cd jreact
 
 ./build.sh        # kompilyator → runtime → .jsxj → .java → javac → namunani ishga tushiradi
-./build.sh test   # kompilyator (38), scheduler (14), reconciler (31) va dom (19) testlari
+./build.sh test   # kompilyator (38), scheduler (14), reconciler (42) va dom (19) testlari
 
 ./build.sh web        # Todo'ni brauzer uchun yig'adi: examples/todo-web/target/web/{index.html,app.js}
 ./build.sh web-test   # shuni jsdom'da ochib, ilovada bosib/yozib tekshiradi
@@ -241,6 +242,7 @@ Hooks `Component` ichidagi `protected` metodlar. Ular `render()` ichida, **shart
 | `void useEffect(Effect effect, Object... deps)` | Cleanup qaytaradigan effekt: `() -> { sub(); return () -> unsub(); }` |
 | `T useMemo(Supplier<T> compute, Object... deps)` | Qimmat hisobni eslab qolish |
 | `Ref<T> useRef(T initial)` | O'zgaruvchan quti: `ref.current` |
+| `T useContext(Context<T> ctx)` | Eng yaqin provider qiymati, bo'lmasa default. Hook tartibiga kirmaydi, shartli chaqirsa bo'ladi |
 
 ```java
 State<Integer> count = useState(0);
@@ -253,6 +255,44 @@ return <button onClick={e -> count.update(c -> c + 1)}>+1 ({count.get()})</butto
 > **Hozirgi holat:** hooks `jreact-reconciler` ichida to'liq ishlaydi. `ServerRenderer` esa bir martalik render qiladi: `useState` boshlang'ich qiymatini qaytaradi, `set/update` hech narsa qilmaydi, effektlar ishlamaydi.
 >
 > Ba'zi qoidalar: `deps` berilmasa effekt (va `useMemo`) har renderda ishlaydi, `deps` bo'lsa `equals` bilan solishtiriladi. `State.get()` render paytidagi qiymatni qaytaradi (React closure kabi). Render paytida `set` chaqirish xato. Bir xil qiymatga `set` qilish render'ni ishga tushirmaydi.
+
+## Context va memo
+
+**Context** props'ni har bir darajadan o'tkazmasdan qiymat berish uchun. Bir marta e'lon qilinadi, tepada `provide` qilinadi, pastda `useContext` bilan o'qiladi. Provider oddiy komponent, shuning uchun `.jsxj` da ham ishlaydi:
+
+```java
+public static final Context<Theme> THEME = Context.create(Theme.LIGHT);
+
+public class ThemeProvider extends Component<ThemeProvider.Props> {
+    public record Props(Theme value, List<Object> children) {}
+
+    @Override
+    public Element render(Props p) { return THEME.provide(p.value(), p.children()); }
+}
+```
+
+```java
+<ThemeProvider value={Theme.DARK}>
+    <Page />
+</ThemeProvider>
+```
+
+```java
+Theme theme = useContext(THEME);   // Page ichidagi istalgan komponentda
+```
+
+Provider qiymati o'zgarsa (`equals`), uni o'qigan komponentlar qayta render bo'ladi, oraliqdagi `MemoComponent` render bo'lmasa ham. Ichma-ich provider o'z ichki daraxti uchun qiymatni almashtiradi.
+
+**memo.** `MemoComponent<P>` dan meros oling: props oldingisiga teng bo'lsa render o'tkazib yuboriladi. Props record bo'lgani uchun `equals` maydonma-maydon solishtiradi.
+
+```java
+public class Row extends MemoComponent<Row.Props> {
+    public record Props(String title, int count) {}
+    ...
+}
+```
+
+React'dagi kabi: har renderda yangi obyekt bo'ladigan props (inline lambda, `children`) taqqoslashni buzadi, barqaror qiymat bering. Boshqacha solishtirish uchun `arePropsEqual(prev, next)` ni override qiling. Memo komponent o'z state'i va o'qigan context'i o'zgarganda baribir render bo'ladi.
 
 ## Eventlar
 
@@ -372,7 +412,7 @@ jreact/
 │       │   ├── FiberHooks.java       # hooks dispatcher (mount/update)
 │       │   └── AttrsDiff.java        # atribut/event o'zgarishi
 │       └── test/java/jreact/reconciler/
-│           └── ReconcilerTest.java   # 31 ta test (xotiradagi test host)
+│           └── ReconcilerTest.java   # 42 ta test (xotiradagi test host)
 ├── jreact-dom/                       # DOM host (paket jreact.dom), TeaVM'siz qismi
 │   └── src/
 │       ├── main/java/jreact/dom/
@@ -406,7 +446,7 @@ jreact/
 - Ustuvorlik root bo'yicha, update bo'yicha emas (lane yo'q): bitta render barcha kutayotgan update'larni oladi. Bo'laklab render faqat `LOW`/`IDLE` (`startTransition`) uchun, uni boshqa update to'xtatib qayta boshlamaydi, faqat tezroq tugatadi.
 - Error boundary yo'q: render xatosi `flush()` dan chiqadi, commit qilingan daraxt buzilmaydi.
 - Brauzer uchun `app.js` build'i yo'q (TeaVM hali ulanmagan).
-- `Context` va `memo` hali yo'q. `key` reconciler'da ishlaydi.
+- `useContext` provider'ni `ret` zanjiri bo'ylab qidiradi (chuqurlikka mutanosib), alohida qiymatlar stekidan foydalanmaydi. `key` reconciler'da ishlaydi.
 - `{...spread}` komponentlarda qo'llab-quvvatlanmaydi.
 - Bir xil nomli komponentlar turli paketlarda bo'lsa indeks adashadi.
 - IDE qo'llab-quvvatlashi (sintaksis bo'yash, autocomplete) JSX qismlari uchun yo'q.
@@ -418,5 +458,5 @@ jreact/
 2. ~~**`jreact-scheduler`:** bo'laklab render qilish, ustuvorlik~~ (tayyor, root darajasida). Qolgani: haqiqiy lane'lar (update bo'yicha ustuvorlik, render'ni to'xtatib qayta boshlash)
 3. ~~**`jreact-dom`:** DOM host config, event delegation, TeaVM JSO orqali `jreact-web`~~ (tayyor)
 4. **Build:** ~~TeaVM bilan `app.js`~~ (tayyor, `./build.sh web`). Qolgani: alohida Maven plagini (`jsxj:compile`), minifikatsiya va hajmni kamaytirish
-5. `Context`, `memo`, dev-mode ogohlantirishlar, bundle hajmini optimallashtirish
+5. ~~`Context`, `memo`~~ (tayyor). Qolgani: dev-mode ogohlantirishlar, bundle hajmini optimallashtirish
 6. IDE plagini (JSX sintaksisini bo'yash va xatolarni ko'rsatish

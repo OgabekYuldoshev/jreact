@@ -103,18 +103,10 @@ public final class Reconciler<N> {
         root.scheduledTask = scheduler.scheduleCallback(priority, didTimeout -> performConcurrentWork(root, didTimeout));
     }
 
-    /** Flags the fiber and every ancestor, on both alternates, so the next render can find its way down. */
     @SuppressWarnings("unchecked")
     private Root<N> markUpdateFromFiberToRoot(Fiber fiber) {
-        fiber.hasUpdate = true;
-        if (fiber.alternate != null) fiber.alternate.hasUpdate = true;
-        Fiber node = fiber;
-        for (Fiber parent = node.ret; parent != null; parent = node.ret) {
-            parent.childHasUpdate = true;
-            if (parent.alternate != null) parent.alternate.childHasUpdate = true;
-            node = parent;
-        }
-        return node.tag == Fiber.Tag.ROOT ? (Root<N>) node.stateNode : null;
+        Fiber top = Fiber.markUpdate(fiber);
+        return top.tag == Fiber.Tag.ROOT ? (Root<N>) top.stateNode : null;
     }
 
     // ---------------------------------------------------------------- work loops
