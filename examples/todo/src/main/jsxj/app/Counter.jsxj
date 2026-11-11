@@ -1,0 +1,15 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+
+public class Counter extends Component<Counter.Props> {
+
+    public record Props(String label, int value, boolean highlight) {}
+
+    @Override
+    public Element render(Props props) {
+        String cls = props.highlight() ? "counter counter--hot" : "counter";
+        return <span className={cls}>{props.label()}: <b>{props.value()}</b></span>;
+    }
+}

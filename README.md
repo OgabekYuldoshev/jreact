@@ -1,0 +1,356 @@
+# JReact
+
+**Java'da React.** UI'ni Java klasslari va JSX'ga o'xshash `.jsxj` sintaksisi bilan yozasiz. Kompilyator `.jsxj` fayllarni oddiy Java'ga aylantiradi, `javac` esa qolganini bajaradi. Maqsad: React'ning ichki mexanizmini (Fiber, reconciler, hooks) Java OOP asosida qayta qurish va oxirida brauzer uchun `app.js` olish.
+
+```
+.jsxj ──jsxjc──▶ .java ──javac──▶ .class ──TeaVM──▶ app.js
+      (shu repo)                          (rejada)
+```
+
+> **Holat: erta bosqich.** Hozir ishlaydiganlari: `.jsxj` kompilyatori, runtime API (komponent, hooks API, element daraxti) va bir martalik HTML render (`ServerRenderer`). Brauzerda state o'zgarganda qayta render qiluvchi Fiber reconciler va TeaVM orqali `app.js` build'i hali yozilmagan. Batafsil: [Yo'l xaritasi](#yol-xaritasi).
+
+## Mundarija
+
+- [Tez boshlash](#tez-boshlash)
+- [Qanday ishlaydi](#qanday-ishlaydi)
+- [Birinchi komponent](#birinchi-komponent)
+- [`.jsxj` sintaksisi](#jsxj-sintaksisi)
+- [Komponentlar va props](#komponentlar-va-props)
+- [Hooks](#hooks)
+- [Eventlar](#eventlar)
+- [Kompilyator (`jsxjc`)](#kompilyator-jsxjc)
+- [O'z loyihangizda ishlatish](#oz-loyihangizda-ishlatish)
+- [Xatolar](#xatolar)
+- [Loyiha tuzilmasi](#loyiha-tuzilmasi)
+- [Hozirgi cheklovlar](#hozirgi-cheklovlar)
+- [Yo'l xaritasi](#yol-xaritasi)
+
+## Tez boshlash
+
+**Talablar:** JDK 17 yoki yangiroq (record, switch expression va text block ishlatilgan). JDK 21 va 26'da sinalgan. Maven yoki Gradle shart emas. macOS, Linux va Windows'da (Git Bash yoki WSL) ishlaydi.
+
+```bash
+git clone <repo-url> jreact
+cd jreact
+
+./build.sh        # kompilyator → runtime → .jsxj → .java → javac → namunani ishga tushiradi
+./build.sh test   # kompilyator testlari (38 ta)
+```
+
+`./build.sh` Todo namunasini kompilyatsiya qilib, uning HTML'ini terminalga chiqaradi:
+
+```html
+<section class="todo-app"><h1>JReact Todo</h1><form>...</form><ul><li class="todo done">...</li>...</ul>...</section>
+```
+
+Har ishga tushganda `build/` papkasi noldan qayta yaratiladi.
+
+## Qanday ishlaydi
+
+Loyiha uchta qismdan iborat:
+
+| Modul | Vazifasi |
+|---|---|
+| `jreact-compiler` | `.jsxj` → `.java` kompilyatori (`jsxjc`) |
+| `jreact-core` | Runtime: `Component`, `Element`, `Attrs`, hooks API, `Jsx`, `ServerRenderer` |
+| `examples/todo` | `.jsxj` bilan yozilgan namunaviy ilova |
+
+### 1. Kompilyatsiya
+
+`.jsxj` fayl oddiy Java faylga JSX qo'shilgan holat. Kompilyator Java kodini o'zgartirmay nusxalaydi (Java'ni haqiqatan `javac` tekshiradi), faqat JSX ifodalarini topib, runtime chaqiruvlariga aylantiradi. Babel JSX'ni JS'ga aylantirishi bilan bir xil.
+
+`.jsxj` (kirish):
+
+```java
+return <span className={cls}>{props.label()}: <b>{props.value()}</b></span>;
+```
+
+`.java` (chiqish):
+
+```java
+return jreact.Jsx.el("span", null, new jreact.Attrs().attr("className", cls),
+        props.label(), ": ", jreact.Jsx.el("b", null, null, props.value()));
+```
+
+Kompilyator ikki o'tishda ishlaydi:
+
+1. **Indekslash.** Barcha `.jsxj` va `.java` fayllardan komponentlarning `record Props(...)` e'lonlari yig'iladi.
+2. **Generatsiya.** Har bir `.jsxj` fayl `.java` ga yoziladi. `<TodoItem todo={t} />` yozuvi Props indeksi bo'yicha tipli `new TodoItem.Props(t, ...)` chaqiruviga aylanadi.
+
+### 2. Runtime
+
+- `Jsx.el(...)` oddiy HTML element (`div`, `span`...) tavsifini yaratadi.
+- `Jsx.c(...)` komponent elementini yaratadi. Komponent `TodoItem.class` bilan aniqlanadi: reconciler fiber'ni qayta ishlatish mumkinmi yoki yo'qligini shu orqali hal qiladi.
+- `Jsx.fragment(...)` `<>...</>` uchun.
+- `Element` o'zgarmas (immutable) daraxt tugunidir. UI har render'da shunday daraxt sifatida qaytariladi.
+- `ServerRenderer.renderToString(element)` daraxtni HTML satriga aylantiradi.
+
+### 3. Qatorlar mosligi
+
+`.jsxj` faylning N-qatori generatsiya qilingan `.java` faylda ham N-qator bo'lib qoladi (sarlavha izohi birinchi qatorda, yangi qatorsiz yoziladi). Shu sababli `javac` xatolari va stack trace'lar asl `.jsxj` faylning to'g'ri qatorini ko'rsatadi.
+
+## Birinchi komponent
+
+`examples/todo/src/main/jsxj/app/Greeting.jsxj` fayl yarating:
+
+```java
+package app;
+
+import jreact.Component;
+import jreact.Element;
+
+public class Greeting extends Component<Greeting.Props> {
+
+    public record Props(String name, int age) {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <div className="greeting">
+                <h2>Salom, {props.name()}!</h2>
+                {props.age() >= 18 ? <p>Xush kelibsiz</p> : <p>Kattalar bilan keling</p>}
+            </div>
+        );
+    }
+}
+```
+
+`Main.jsxj` ichida ishlating:
+
+```java
+Element app = <Greeting name="Ali" age={20} />;
+System.out.println(ServerRenderer.renderToString(app));
+```
+
+Keyin `./build.sh` ni qayta ishga tushiring.
+
+## `.jsxj` sintaksisi
+
+JSX ifoda yozish mumkin bo'lgan joyda yoziladi. Aniqrog'i, `<` quyidagilardan keyin kelsa JSX deb o'qiladi: `=`, `(`, `,`, `?`, `:`, `{`, `[`, `&`, `|`, `->`, `return`, `yield`. Boshqa joyda ko'p qatorli JSX'ni qavs ichiga oling: `return ( <div>...</div> );`.
+
+`List<String>`, `a < b`, satr va izohlar ichidagi `<` JSX hisoblanmaydi.
+
+| Yozuv | Ma'nosi |
+|---|---|
+| `<div className="a">` | Oddiy atribut (satr qiymati) |
+| `<div title={expr}>` | Atribut qiymati Java ifodasi |
+| `<input disabled />` | Qiymatsiz atribut, ya'ni `true` |
+| `<li key={item.id()}>` | `key`: ro'yxat elementlarini aniqlash uchun |
+| `<div ref={ref}>` | `Ref` ni elementga bog'lash |
+| `<div {...attrs}>` | `Attrs` ni yoyish (faqat oddiy HTML elementlarda) |
+| `<>...</>` | Fragment |
+| `{expr}` | Bola sifatida Java ifodasi (satr, element, `List`, `null`) |
+| `{/* izoh */}` | JSX izohi, natijaga tushmaydi |
+| `&lt; &gt; &amp; &quot; &apos; &nbsp; &times; &copy; &hellip; &mdash; &ndash; &middot; &laquo; &raquo; &larr; &rarr; &#65; &#x41;` | HTML entity'lar dekodlanadi |
+
+**Shartli render va ro'yxatlar** oddiy Java bilan:
+
+```java
+{todos.isEmpty()
+    ? <p>Hozircha vazifa yo'q</p>
+    : <ul>
+        {todos.stream().map(t -> <TodoItem key={t.id()} todo={t} />).toList()}
+      </ul>}
+
+{left == 0 ? <em>Hammasi bajarildi</em> : null}
+```
+
+**Bo'sh joy qoidasi React'dagi kabi:** matn qatorlari trim qilinadi, bo'sh qatorlar tashlanadi, qolgan qatorlar bitta probel bilan birlashtiriladi. Qator ichidagi probellar saqlanadi (`a <b>b</b> c`).
+
+## Komponentlar va props
+
+Komponent `Component<P>` dan meros oladi va `render(P props)` ni yozadi. Props **komponent klassi ichidagi `public record Props(...)`** bo'lishi shart. Kompilyator shu e'londan prop nomlari va tiplarini oladi.
+
+```java
+public class TodoItem extends Component<TodoItem.Props> {
+
+    public record Props(Todo todo, Consumer<Long> onToggle, Consumer<Long> onDelete) {}
+
+    @Override
+    public Element render(Props props) { ... }
+}
+```
+
+Ishlatilishi:
+
+```java
+<TodoItem key={t.id()} todo={t}
+          onToggle={id -> toggle(id)}
+          onDelete={id -> remove(id)} />
+```
+
+Qoidalar:
+
+- Propslar record konstruktoriga **e'lon tartibida** uzatiladi. Berilmagan propga default qiymat qo'yiladi (`null`, `0`, `false`...).
+- Prop tipi noto'g'ri bo'lsa (masalan `value={"uch"}` `int` o'rniga), buni `javac` tutadi. Xabardagi qator raqami `.jsxj` fayldagi qator bilan bir xil bo'ladi.
+- Komponentda **argumentsiz konstruktor** bo'lishi kerak (kompilyator `TodoItem::new` ishlatadi). Maxsus konstruktor yozmasangiz, bu o'z-o'zidan bajariladi.
+- `key` va `{...spread}` props'ga kirmaydi. `{...spread}` komponentlarda qo'llab-quvvatlanmaydi, propslarni aniq yozing.
+
+### Children
+
+Ichma-ich JSX qabul qilish uchun Props'ga `List<Object> children` nomli maydon qo'shing:
+
+```java
+public class Card extends Component<Card.Props> {
+
+    public record Props(String title, List<Object> children) {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <div className="card">
+                <h2>{props.title()}</h2>
+                <div className="card-body">{props.children()}</div>
+            </div>
+        );
+    }
+}
+```
+
+```java
+<Card title="Statistika">
+    <Counter label="Jami" value={3} />
+    <em>Salom</em>
+</Card>
+```
+
+Props'da `children` bo'lmasa va komponentga bola berilsa, kompilyator xato beradi.
+
+## Hooks
+
+Hooks `Component` ichidagi `protected` metodlar. Ular `render()` ichida, **shartsiz va har safar bir xil tartibda** chaqirilishi kerak (React qoidasi bilan bir xil).
+
+| Hook | Tavsif |
+|---|---|
+| `State<T> useState(T initial)` | State. O'qish: `get()`, yozish: `set(v)`, funksiya bilan: `update(old -> new)` |
+| `void useEffect(Runnable effect, Object... deps)` | Effekt. `deps` bo'lmasa har renderda ishlaydi |
+| `void useEffect(Effect effect, Object... deps)` | Cleanup qaytaradigan effekt: `() -> { sub(); return () -> unsub(); }` |
+| `T useMemo(Supplier<T> compute, Object... deps)` | Qimmat hisobni eslab qolish |
+| `Ref<T> useRef(T initial)` | O'zgaruvchan quti: `ref.current` |
+
+```java
+State<Integer> count = useState(0);
+
+useEffect(() -> System.out.println("count = " + count.get()), count.get());
+
+return <button onClick={e -> count.update(c -> c + 1)}>+1 ({count.get()})</button>;
+```
+
+> **Hozirgi holat:** `ServerRenderer` bir martalik render qiladi: `useState` boshlang'ich qiymatini qaytaradi, `set/update` hech narsa qilmaydi, effektlar ishlamaydi. Hooks'ning haqiqiy dispatcher'i Fiber reconciler bilan keladi.
+
+## Eventlar
+
+`on` + bosh harf bilan boshlanadigan atributlar event handler hisoblanadi (`onClick`, `onChange`, `onInput`, `onSubmit`...). Qiymati lambda bo'lishi shart (`EventHandler`). Satr yozsangiz (`onClick="go()"`) kompilyator xato beradi.
+
+```java
+<button onClick={e -> save()}>Saqlash</button>
+<input onInput={e -> draft.set(e.value())} />
+<form onSubmit={e -> { e.preventDefault(); add(); }}> ... </form>
+```
+
+Handlerga beriladigan `Event`:
+
+| Metod | Ma'nosi |
+|---|---|
+| `type()` | Event turi |
+| `value()` | Target input'ning joriy qiymati (yoki `null`) |
+| `checked()` | Checkbox holati |
+| `preventDefault()` | Standart xatti-harakatni to'xtatish |
+| `stopPropagation()` | Yuqoriga tarqalishni to'xtatish |
+
+## Kompilyator (`jsxjc`)
+
+```bash
+java -cp build/compiler jreact.compiler.JsxjCompiler <chiqish-papka> <manba-papka> [<manba-papka>...]
+```
+
+- Har bir manba papkasi rekursiv o'qiladi. `.jsxj` va `.java` fayllari komponent indeksiga kiradi, faqat `.jsxj` fayllar `.java` ga aylantiriladi.
+- Chiqish fayllari paket yo'lini saqlaydi: `src/app/Card.jsxj` → `<chiqish>/app/Card.java`.
+- Xato bo'lsa chiqish kodi `1`, hammasi joyida bo'lsa `0`.
+
+Komponent faqat kompilyatorga berilgan manba papkalarida bo'lsa topiladi. Indeks klassning **oddiy nomi** bo'yicha ishlaydi, shuning uchun turli paketlarda bir xil nomli ikki komponent yozmang.
+
+## O'z loyihangizda ishlatish
+
+`build.sh` faqat namunani yig'adi. O'z loyihangiz uchun zanjirni qo'lda ishlating:
+
+```bash
+# 1. Kompilyator va runtime (bir marta)
+javac -encoding UTF-8 -d build/compiler $(find jreact-compiler/src/main/java -name '*.java')
+javac -encoding UTF-8 -d build/core     $(find jreact-core/src/main/java -name '*.java')
+
+# 2. .jsxj → .java
+java -cp build/compiler jreact.compiler.JsxjCompiler build/gen src/main/jsxj src/main/java
+
+# 3. Java → .class
+javac -encoding UTF-8 -cp build/core -d build/app $(find build/gen src/main/java -name '*.java')
+
+# 4. Ishga tushirish
+java -cp build/core:build/app app.Main        # Windows'da ':' o'rniga ';'
+```
+
+**IDE (IntelliJ IDEA):** *Settings → Editor → File Types → Java* ga `*.jsxj` naqshini qo'shing. Java qismlari rangli bo'ladi. JSX qismlarini IDE xato deb ko'rsatishi mumkin, chunki bu format uchun hali plagin yo'q. Haqiqiy xatolarni `jsxjc` va `javac` beradi.
+
+## Xatolar
+
+`jsxjc` xatolarni `javac` uslubida, fayl, qator va ustun bilan chiqaradi:
+
+```
+app/Bad.jsxj:3:1: error: expected </ul> to close <ul> opened at 1:5, but found </ol>
+    </ol>;
+    ^
+```
+
+Kompilyator topadigan xatolar: noto'g'ri yopilgan yoki yopilmagan teg, noma'lum prop, noma'lum komponent, bola qabul qilmaydigan komponentga bola berish, takrorlangan prop, satr ko'rinishidagi event handler, bo'sh `{}` atribut qiymati, JSX matnidagi yakka `}`, yopilmagan `{`.
+
+Tip xatolari (masalan `int` o'rniga `String`) `javac`dan keladi. U generatsiya qilingan `.java` faylni ko'rsatadi, lekin qator raqami `.jsxj` fayldagi bilan bir xil, shuning uchun xatoni darhol topasiz:
+
+```
+build/gen/app/TodoApp.java:43: error: incompatible types: String cannot be converted to int
+```
+
+## Loyiha tuzilmasi
+
+```
+jreact/
+├── build.sh                          # build va test skripti
+├── jreact-compiler/                  # .jsxj kompilyatori
+│   └── src/
+│       ├── main/java/jreact/compiler/
+│       │   ├── JsxjCompiler.java     # CLI, 2 o'tishni boshqaradi
+│       │   ├── PropsIndex.java       # 1-o'tish: komponent Props indeksi
+│       │   ├── JsxTranspiler.java    # 2-o'tish: JSX → Java
+│       │   └── CompileError.java     # fayl:qator:ustun xatolari
+│       └── test/java/jreact/compiler/
+│           └── TranspilerTest.java   # 38 ta test (bog'liqliksiz)
+├── jreact-core/                      # runtime
+│   └── src/main/java/jreact/
+│       ├── Component.java            # asosiy klass + hooks metodlari
+│       ├── Element.java              # o'zgarmas UI daraxti
+│       ├── Attrs.java                # HTML element atributlari/eventlari
+│       ├── Jsx.java                  # kompilyator chiqishining nishoni
+│       ├── Hooks.java                # joriy renderning hook dispatcher'i
+│       ├── State.java, Ref.java, Effect.java
+│       ├── Event.java, EventHandler.java
+│       └── ServerRenderer.java       # Element → HTML satr
+└── examples/todo/                    # namunaviy ilova (.jsxj)
+```
+
+## Hozirgi cheklovlar
+
+- Faqat bir martalik HTML render ishlaydi. Interaktivlik (state o'zgarganda qayta render) yo'q.
+- Brauzer uchun `app.js` build'i yo'q (TeaVM hali ulanmagan).
+- `Context` va `memo` hali yo'q. `key` kompilyatordan o'tadi, lekin faqat reconciler yozilgach ishlaydi.
+- `{...spread}` komponentlarda qo'llab-quvvatlanmaydi.
+- Bir xil nomli komponentlar turli paketlarda bo'lsa indeks adashadi.
+- IDE qo'llab-quvvatlashi (sintaksis bo'yash, autocomplete) JSX qismlari uchun yo'q.
+- Litsenziya hali tanlanmagan.
+
+## Yo'l xaritasi
+
+1. **`jreact-reconciler`:** Fiber daraxti (`child`/`sibling`/`return`, `alternate`), work loop, key'li diff, commit fazasi, hooks'ning haqiqiy dispatcher'i
+2. **`jreact-scheduler`:** bo'laklab render qilish, ustuvorlik (lane) tizimi
+3. **`jreact-dom`:** TeaVM JSO orqali DOM host config, event delegation
+4. **Build:** Maven plagini (`jsxj:compile`) va TeaVM bilan `app.js` hosil qilish
+5. `Context`, `memo`, dev-mode ogohlantirishlar, bundle hajmini optimallashtirish
+6. IDE plagini (JSX sintaksisini bo'yash va xatolarni ko'rsatish)

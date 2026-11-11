@@ -1,0 +1,21 @@
+package app;
+
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+
+/** A component that takes nested JSX as children. */
+public class Card extends Component<Card.Props> {
+
+    public record Props(String title, List<Object> children) {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <div className="card">
+                <h2 className="card-title">{props.title()}</h2>
+                <div className="card-body">{props.children()}</div>
+            </div>
+        );
+    }
+}

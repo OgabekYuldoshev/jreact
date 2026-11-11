@@ -1,0 +1,23 @@
+package app;
+
+import java.util.function.Consumer;
+import jreact.Component;
+import jreact.Element;
+
+public class TodoItem extends Component<TodoItem.Props> {
+
+    public record Props(Todo todo, Consumer<Long> onToggle, Consumer<Long> onDelete) {}
+
+    @Override
+    public Element render(Props props) {
+        Todo todo = props.todo();
+        return (
+            <li className={todo.done() ? "todo done" : "todo"}>
+                <input type="checkbox" checked={todo.done()}
+                       onChange={e -> props.onToggle().accept(todo.id())} />
+                <span>{todo.title()}</span>
+                <button title="O'chirish" onClick={e -> props.onDelete().accept(todo.id())}>&times;</button>
+            </li>
+        );
+    }
+}

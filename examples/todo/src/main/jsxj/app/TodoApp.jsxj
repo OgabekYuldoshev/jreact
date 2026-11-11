@@ -1,0 +1,71 @@
+package app;
+
+import java.util.ArrayList;
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+public class TodoApp extends Component<TodoApp.Props> {
+
+    public record Props(String title, List<Todo> initial) {}
+
+    @Override
+    public Element render(Props props) {
+        State<List<Todo>> todos = useState(props.initial());
+        State<String> draft = useState("");
+        long left = todos.get().stream().filter(t -> !t.done()).count();
+
+        useEffect(() -> System.out.println("[effect] qolgan vazifalar: " + left), left);
+
+        return (
+            <section className="todo-app">
+                {/* Sarlavha */}
+                <h1>{props.title()}</h1>
+
+                <form onSubmit={e -> { e.preventDefault(); add(todos, draft); }}>
+                    <input value={draft.get()} placeholder="Yangi vazifa..."
+                           onInput={e -> draft.set(e.value())} />
+                    <button type="submit" disabled={draft.get().isBlank()}>Qo'shish</button>
+                </form>
+
+                {todos.get().isEmpty()
+                    ? <p className="empty">Hozircha vazifa yo'q</p>
+                    : <ul>
+                        {todos.get().stream().map(t ->
+                            <TodoItem key={t.id()} todo={t}
+                                      onToggle={id -> todos.update(list -> toggle(list, id))}
+                                      onDelete={id -> todos.update(list -> remove(list, id))} />
+                        ).toList()}
+                      </ul>}
+
+                <Card title="Statistika">
+                    <Counter label="Jami" value={todos.get().size()} />
+                    <>
+                        {" · "}
+                        <Counter label="Qolgan" value={(int) left} highlight={left > 0} />
+                    </>
+                    {left == 0 ? <em>Hammasi bajarildi &#127881;</em> : null}
+                </Card>
+            </section>
+        );
+    }
+
+    private static void add(State<List<Todo>> todos, State<String> draft) {
+        String title = draft.get().trim();
+        if (title.isEmpty()) return;
+        long id = todos.get().stream().mapToLong(Todo::id).max().orElse(0) + 1;
+        List<Todo> next = new ArrayList<>(todos.get());
+        next.add(new Todo(id, title, false));
+        todos.set(next);
+        draft.set("");
+    }
+
+    private static List<Todo> toggle(List<Todo> list, long id) {
+        return list.stream().map(t -> t.id() == id ? t.toggled() : t).toList();
+    }
+
+    private static List<Todo> remove(List<Todo> list, long id) {
+        return list.stream().filter(t -> t.id() != id).toList();
+    }
+}
