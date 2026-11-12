@@ -71,7 +71,7 @@ git clone <repo-url> jreact
 cd jreact
 
 ./build.sh          # kompilyator -> runtime -> .jsxj -> .java -> javac -> Todo namunasi HTML chiqaradi
-./build.sh test     # barcha testlar (kompilyator 41, scheduler 14, reconciler 57, dom 24, router 20 + 28 (data router), language server 12)
+./build.sh test     # barcha testlar (kompilyator 41, scheduler 14, reconciler 57, dom 24, router 20 + 31 (data router), language server 12)
 ./build.sh dev      # galereya + 5 ilova: http://localhost:5173 (o'zgarsa o'zi qayta yig'iladi)
 ```
 
@@ -518,9 +518,17 @@ Qoidalar:
 - **Tashqi bog'lanish:** `Event.formData()` formaning maydonlarini URL-kodlangan qilib beradi (fayl yo'q). Brauzerda `FormData`, JVM'da testda o'zingiz berasiz.
 - **Tarix:** URL navigatsiya tugaganda yoziladi; redirect eski sahifani tarixda qoldirmaydi.
 
-Misol: `examples/contacts` (`/contacts/`): qidiruv (GET forma, tarixni to'ldirmaydi), yurakcha (fetcher, optimistik), tahrirlash (action + redirect), yaratish (ildiz action), o'chirish, `errorElement` bilan 404, yuklanayotganda xira sahifa. `./build.sh test` da `DataRouterTest` (28 ta, DOM'siz `DataRouter` va soxta DOM'da `RouterProvider`) va `examples-test` da contacts uchun 23 jsdom tekshiruvi.
+Misol: `examples/contacts` (`/contacts/`): qidiruv (GET forma, tarixni to'ldirmaydi), yurakcha (fetcher, optimistik), tahrirlash (action + redirect), yaratish (ildiz action), o'chirish, `errorElement` bilan 404, yuklanayotganda xira sahifa. `./build.sh test` da `DataRouterTest` (31 ta, DOM'siz `DataRouter` va soxta DOM'da `RouterProvider`) va `examples-test` da contacts uchun 23 jsdom tekshiruvi.
 
-**Hali yo'q:** `defer`/`<Await>`/Suspense (loader'ning bir qismini kutmay chizish), `lazy` marshrutlar, orqaga tugmasini bloklash (`useBlocker` faqat ilova ichidagini ushlaydi), `Location.state` / `key` (`Link state`), `caseSensitive`, ixtiyoriy param (`:id?`), `useFormAction`, fayl yuklash formalari. Scroll tiklash joyni URL bo'yicha saqlaydi (bir URL'ga ikki marta kirsangiz bir xil joy).
+### Lazy marshrutlar va bundle hajmi
+
+`RouteObject.of("reports").lazy(() -> Promise.resolved(Reports.route()))` (yoki `<Route lazy={...}>`): marshrutning `element`, `loader`, `action`, `errorElement`, `handle`, `shouldRevalidate` qismlari marshrut birinchi marta mos kelganda olinadi (bir marta ishlaydi, natija saqlanadi). Kutish paytida `useNavigation()` `LOADING`. O'zida bor xossa lazy'dagidan ustun; `path`, `index`, `id`, `children` lazy'dan kelmaydi (router URL moslash uchun daraxt shaklini oldindan bilishi kerak).
+
+**Bu bundle hajmini kamaytirmaydi.** TeaVM bitta `app.js` chiqaradi (chunk'larga bo'lib, kerak bo'lganda yuklash yo'q), lazy marshrut kodi ham hamma narsa bilan birga yuklanadi. Foyda: og'ir qismlarni yasashni yoki asinxron olishni kechiktirish. Haqiqiy kod bo'lish uchun faqat sahifalarni alohida TeaVM dastur qilib `<script>` bilan yuklash qoladi, lekin har biri o'z runtime'ini (~150 KB) olib keladi va ular orasida obyekt almashib bo'lmaydi, shuning uchun qo'shilmadi.
+
+**Tree shaking** avtomatik: TeaVM butun dasturni tahlil qilib ishlatilmagan sinf va metodlarni tashlaydi (`optimizationLevel=FULL`, `minifying=true`). Hajmga ta'sir qiladigan narsa: `String.split`/`replaceAll`/`matches` (regex, ~100 KB), `getBytes`/`new String(bytes, charset)` (charset'lar, ~50 KB), `String.format` (TeaVM'da yo'q). Router shularsiz yozilgan: router bor ilova (blog, contacts) ~310 KB, routersiz (kanban) ~164 KB. O'z kodingizda ham shulardan qoching.
+
+**Hali yo'q:** `defer`/`<Await>`/Suspense (loader'ning bir qismini kutmay chizish), orqaga tugmasini bloklash (`useBlocker` faqat ilova ichidagini ushlaydi), `Location.state` / `key` (`Link state`), `caseSensitive`, ixtiyoriy param (`:id?`), `useFormAction`, fayl yuklash formalari. Scroll tiklash joyni URL bo'yicha saqlaydi (bir URL'ga ikki marta kirsangiz bir xil joy).
 
 ## Stillar: CSS, Sass, Tailwind
 

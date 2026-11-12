@@ -21,7 +21,7 @@ import java.util.List;
  * }</pre>
  */
 public record RouteObject(String id, String path, boolean index, Element element, Element errorElement, Loader loader,
-                          Action action, ShouldRevalidate shouldRevalidate, Object handle, List<RouteObject> children) {
+                          Action action, ShouldRevalidate shouldRevalidate, Object handle, Lazy lazy, List<RouteObject> children) {
 
     public RouteObject {
         children = children == null ? List.of() : List.copyOf(children);
@@ -29,7 +29,7 @@ public record RouteObject(String id, String path, boolean index, Element element
 
     /** A plain route (what v1 had). */
     public RouteObject(String path, boolean index, Element element, List<RouteObject> children) {
-        this(null, path, index, element, null, null, null, null, null, children);
+        this(null, path, index, element, null, null, null, null, null, null, children);
     }
 
     /** A route at {@code path}. */
@@ -41,21 +41,24 @@ public record RouteObject(String id, String path, boolean index, Element element
     /** An index route: renders at the path of its parent. */
     public static RouteObject indexRoute() { return new RouteObject(null, true, null, List.of()); }
 
-    public RouteObject id(String v) { return new RouteObject(v, path, index, element, errorElement, loader, action, shouldRevalidate, handle, children); }
+    public RouteObject id(String v) { return new RouteObject(v, path, index, element, errorElement, loader, action, shouldRevalidate, handle, lazy, children); }
 
-    public RouteObject element(Element v) { return new RouteObject(id, path, index, v, errorElement, loader, action, shouldRevalidate, handle, children); }
+    public RouteObject element(Element v) { return new RouteObject(id, path, index, v, errorElement, loader, action, shouldRevalidate, handle, lazy, children); }
 
-    public RouteObject errorElement(Element v) { return new RouteObject(id, path, index, element, v, loader, action, shouldRevalidate, handle, children); }
+    public RouteObject errorElement(Element v) { return new RouteObject(id, path, index, element, v, loader, action, shouldRevalidate, handle, lazy, children); }
 
-    public RouteObject loader(Loader v) { return new RouteObject(id, path, index, element, errorElement, v, action, shouldRevalidate, handle, children); }
+    public RouteObject loader(Loader v) { return new RouteObject(id, path, index, element, errorElement, v, action, shouldRevalidate, handle, lazy, children); }
 
-    public RouteObject action(Action v) { return new RouteObject(id, path, index, element, errorElement, loader, v, shouldRevalidate, handle, children); }
+    public RouteObject action(Action v) { return new RouteObject(id, path, index, element, errorElement, loader, v, shouldRevalidate, handle, lazy, children); }
 
-    public RouteObject shouldRevalidate(ShouldRevalidate v) { return new RouteObject(id, path, index, element, errorElement, loader, action, v, handle, children); }
+    public RouteObject shouldRevalidate(ShouldRevalidate v) { return new RouteObject(id, path, index, element, errorElement, loader, action, v, handle, lazy, children); }
 
-    public RouteObject handle(Object v) { return new RouteObject(id, path, index, element, errorElement, loader, action, shouldRevalidate, v, children); }
+    public RouteObject handle(Object v) { return new RouteObject(id, path, index, element, errorElement, loader, action, shouldRevalidate, v, lazy, children); }
+
+    /** See {@link Lazy}: the route's parts are produced when it is first matched. */
+    public RouteObject lazy(Lazy v) { return new RouteObject(id, path, index, element, errorElement, loader, action, shouldRevalidate, handle, v, children); }
 
     public RouteObject children(RouteObject... v) { return children(List.of(v)); }
 
-    public RouteObject children(List<RouteObject> v) { return new RouteObject(id, path, index, element, errorElement, loader, action, shouldRevalidate, handle, v); }
+    public RouteObject children(List<RouteObject> v) { return new RouteObject(id, path, index, element, errorElement, loader, action, shouldRevalidate, handle, lazy, v); }
 }

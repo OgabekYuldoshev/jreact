@@ -22,7 +22,7 @@ final class RouteObjects {
             if (e.kind() == Element.Kind.FRAGMENT) { add(e.children(), out); return; }
             if (e.kind() == Element.Kind.COMPONENT && e.type() == Route.class) {
                 Route.Props p = (Route.Props) e.props();
-                out.add(new RouteObject(p.id(), p.path(), p.index(), p.element(), p.errorElement(), p.loader(), p.action(), p.shouldRevalidate(), p.handle(),
+                out.add(new RouteObject(p.id(), p.path(), p.index(), p.element(), p.errorElement(), p.loader(), p.action(), p.shouldRevalidate(), p.handle(), p.lazy(),
                         fromChildren(p.children() == null ? List.of() : p.children())));
                 return;
             }

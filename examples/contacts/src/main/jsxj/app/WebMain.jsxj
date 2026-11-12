@@ -31,13 +31,16 @@ public class WebMain {
                                 Contacts.update(a.params().get("id"), c -> c.withFavorite(on));
                                 return on;
                             }),
-                        RouteObject.of("contacts/:id/edit").id("edit").element(<EditContact />)
+                        // lazy: the element and the action are produced the first time this route is visited
+                        // (it saves no download, see the Lazy javadoc, but the work is deferred)
+                        RouteObject.of("contacts/:id/edit").id("edit")
                             .loader(a -> contactOrFail(a))
-                            .action(a -> {
-                                SearchParams f = a.request().form();
-                                Contacts.update(a.params().get("id"), c -> c.with(f.get("first", ""), f.get("last", ""), f.get("notes", "")));
-                                return Redirect.to("/contacts/" + a.params().get("id"));
-                            }),
+                            .lazy(() -> Promise.resolved(RouteObject.layout().element(<EditContact />)
+                                .action(a -> {
+                                    SearchParams f = a.request().form();
+                                    Contacts.update(a.params().get("id"), c -> c.with(f.get("first", ""), f.get("last", ""), f.get("notes", "")));
+                                    return Redirect.to("/contacts/" + a.params().get("id"));
+                                }))),
                         RouteObject.of("contacts/:id/destroy")
                             .action(a -> { Contacts.delete(a.params().get("id")); return Redirect.to("/"); }))));
 

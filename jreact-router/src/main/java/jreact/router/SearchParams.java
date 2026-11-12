@@ -19,7 +19,11 @@ public final class SearchParams {
         Map<String, List<String>> map = new LinkedHashMap<>();
         String s = search == null ? "" : search;
         if (s.startsWith("?")) s = s.substring(1);
-        for (String pair : s.split("&")) {
+        // no String.split: it is a regex and drags java.util.regex (~100 KB) into the browser bundle
+        for (int start = 0; start <= s.length(); ) {
+            int amp = s.indexOf('&', start);
+            String pair = s.substring(start, amp < 0 ? s.length() : amp);
+            start = amp < 0 ? s.length() + 1 : amp + 1;
             if (pair.isEmpty()) continue;
             int eq = pair.indexOf('=');
             String name = Uri.decode(eq < 0 ? pair : pair.substring(0, eq), true);

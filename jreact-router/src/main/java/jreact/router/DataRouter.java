@@ -69,6 +69,8 @@ public final class DataRouter {
     private AbortSignal navSignal;
     private boolean revalidateAfter;
     private final List<Runnable> afterCommit = new ArrayList<>();
+    private final Map<String, RouteObject> lazyDone = new HashMap<>();          // route id -> the route with its lazy parts merged in
+    private final Map<String, Promise<RouteObject>> lazyRunning = new HashMap<>();
     private boolean disposed;
 
     /**
@@ -167,11 +169,15 @@ public final class DataRouter {
         int run = beginFetcher(key);
         AbortSignal signal = fetcherSignals.get(key);
         if (matches == null) { fetcherDone(key, run, null, new ErrorResponse(404, "Not Found", target.pathname())); return; }
-        RouteMatch leaf = matches.get(matches.size() - 1);
         setFetcher(new FetcherState(key, NavigationState.LOADING, fetcherData(key), null, null, null));
-        if (leaf.route().loader() == null) { fetcherDone(key, run, null, new ErrorResponse(400, "Bad Request", "route " + leaf.route().id() + " has no loader")); return; }
-        call(leaf.route().loader(), new DataArgs(leaf.params(), new Request("GET", target, ""), signal))
-                .whenDone((v, e) -> fetcherFinished(key, run, target, v, e, false));
+        resolveLazy(matches).whenDone((resolved, lazyError) -> {
+            if (fetcherRuns.getOrDefault(key, 0) != run || disposed) return;
+            if (lazyError != null) { fetcherDone(key, run, null, lazyError); return; }
+            RouteMatch leaf = resolved.get(resolved.size() - 1);
+            if (leaf.route().loader() == null) { fetcherDone(key, run, null, new ErrorResponse(400, "Bad Request", "route " + leaf.route().id() + " has no loader")); return; }
+            call(leaf.route().loader(), new DataArgs(leaf.params(), new Request("GET", target, ""), signal))
+                    .whenDone((v, e) -> fetcherFinished(key, run, target, v, e, false));
+        });
     }
 
     /** Submits to the action of the route at {@code to}, then reloads the page's loaders. The result is the fetcher's data. */
@@ -183,11 +189,15 @@ public final class DataRouter {
         int run = beginFetcher(key);
         AbortSignal signal = fetcherSignals.get(key);
         if (matches == null) { fetcherDone(key, run, null, new ErrorResponse(404, "Not Found", target.pathname())); return; }
-        RouteMatch leaf = actionLeaf(matches, target);
         setFetcher(new FetcherState(key, NavigationState.SUBMITTING, fetcherData(key), null, m, body));
-        if (leaf.route().action() == null) { fetcherDone(key, run, null, new ErrorResponse(405, "Method Not Allowed", "route " + leaf.route().id() + " has no action")); return; }
-        call(leaf.route().action(), new DataArgs(leaf.params(), new Request(m, withoutIndex(target), body == null ? "" : body), signal))
-                .whenDone((v, e) -> fetcherFinished(key, run, target, v, e, true));
+        resolveLazy(matches).whenDone((resolved, lazyError) -> {
+            if (fetcherRuns.getOrDefault(key, 0) != run || disposed) return;
+            if (lazyError != null) { fetcherDone(key, run, null, lazyError); return; }
+            RouteMatch leaf = actionLeaf(resolved, target);
+            if (leaf.route().action() == null) { fetcherDone(key, run, null, new ErrorResponse(405, "Method Not Allowed", "route " + leaf.route().id() + " has no action")); return; }
+            call(leaf.route().action(), new DataArgs(leaf.params(), new Request(m, withoutIndex(target), body == null ? "" : body), signal))
+                    .whenDone((v, e) -> fetcherFinished(key, run, target, v, e, true));
+        });
     }
 
     /** Forgets a fetcher (it cancels what it runs). {@code useFetcher} does this when its component goes away. */
@@ -274,6 +284,21 @@ public final class DataRouter {
             return;
         }
 
+        Promise<List<RouteMatch>> ready = resolveLazy(matches);
+        if (!ready.isDone() && !revalidationOnly && sub == null) update(withNavigation(new Navigation(NavigationState.LOADING, to, null, null, null)));
+        ready.whenDone((resolved, lazyError) -> {
+            if (id != navId || disposed) return;
+            if (lazyError != null) {
+                int at = lazyFailure(matches);
+                commit(id, to, action, matches, keepData(matches, at), Map.of(), Map.of(boundary(matches, at), lazyError), writeHistory);
+                return;
+            }
+            continueNavigation(id, signal, to, action, resolved, sub, writeHistory, force, initial, revalidationOnly);
+        });
+    }
+
+    private void continueNavigation(int id, AbortSignal signal, Location to, HistoryAction action, List<RouteMatch> matches, Submission sub,
+                                    boolean writeHistory, boolean force, boolean initial, boolean revalidationOnly) {
         if (revalidationOnly) update(new Snapshot(state.location(), state.historyAction(), state.matches(), state.initialized(), state.loaderData(),
                 state.actionData(), state.errors(), state.navigation(), true, state.fetchers(), state.blockers(), state.version() + 1));
         else if (sub != null) update(withNavigation(new Navigation(NavigationState.SUBMITTING, to, sub.method(), sub.action(), sub.body())));
@@ -422,6 +447,61 @@ public final class DataRouter {
         setFetcher(new FetcherState(key, NavigationState.LOADING, value, null, f == null ? null : f.formMethod(), f == null ? null : f.formData()));
         afterCommit.add(() -> fetcherDone(key, run, value, null));
         revalidate();
+    }
+
+    // ---------------------------------------------------------------- lazy routes
+
+    /** The matches with every lazy route's parts merged in; the promise is already done when nothing is lazy (or all were loaded before). */
+    private Promise<List<RouteMatch>> resolveLazy(List<RouteMatch> matches) {
+        List<Promise<?>> waiting = new ArrayList<>();
+        for (RouteMatch m : matches) {
+            RouteObject r = m.route();
+            if (r.lazy() != null && !lazyDone.containsKey(r.id())) waiting.add(runLazy(r));
+        }
+        Promise<List<Object>> all = waiting.isEmpty() ? Promise.resolved(List.of()) : Promise.all(waiting);
+        return all.then(ignored -> {
+            List<RouteMatch> out = new ArrayList<>();
+            for (RouteMatch m : matches) {
+                RouteObject merged = lazyDone.get(m.route().id());
+                out.add(merged == null ? m : new RouteMatch(merged, m.params(), m.pathname(), m.pathnameBase()));
+            }
+            return out;
+        });
+    }
+
+    private Promise<RouteObject> runLazy(RouteObject r) {
+        Promise<RouteObject> running = lazyRunning.get(r.id());
+        if (running != null) return running;
+        Promise<RouteObject> out = Promise.pending();
+        lazyRunning.put(r.id(), out);
+        try {
+            r.lazy().load().whenDone((loaded, error) -> {
+                lazyRunning.remove(r.id());
+                if (error != null) { out.reject(error); return; }
+                if (loaded == null) { out.reject(new IllegalStateException("the lazy() of route \"" + r.id() + "\" returned no route")); return; }
+                // what the route defines itself wins; lazy fills the gaps. Its own lazy is spent.
+                RouteObject merged = new RouteObject(r.id(), r.path(), r.index(),
+                        r.element() != null ? r.element() : loaded.element(), r.errorElement() != null ? r.errorElement() : loaded.errorElement(),
+                        r.loader() != null ? r.loader() : loaded.loader(), r.action() != null ? r.action() : loaded.action(),
+                        r.shouldRevalidate() != null ? r.shouldRevalidate() : loaded.shouldRevalidate(),
+                        r.handle() != null ? r.handle() : loaded.handle(), null, r.children());
+                lazyDone.put(r.id(), merged);
+                out.resolve(merged);
+            });
+        } catch (Throwable t) {
+            lazyRunning.remove(r.id());
+            out.reject(t);
+        }
+        return out;
+    }
+
+    /** Which match failed to load: the first lazy one that is still not loaded. */
+    private int lazyFailure(List<RouteMatch> matches) {
+        for (int i = 0; i < matches.size(); i++) {
+            RouteObject r = matches.get(i).route();
+            if (r.lazy() != null && !lazyDone.containsKey(r.id())) return i;
+        }
+        return matches.size() - 1;
     }
 
     // ---------------------------------------------------------------- helpers

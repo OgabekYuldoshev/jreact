@@ -183,6 +183,41 @@ public final class DataRouterTest {
             check(router.state().initialized() && router.state().errors().isEmpty(), String.valueOf(router.state().errors()));
         });
 
+        test("lazy: the route's parts arrive when it is first matched; the navigation is LOADING meanwhile; it runs once", () -> {
+            List<Promise<RouteObject>> gate = new ArrayList<>();
+            int[] runs = {0};
+            DataRouter router = Routers.createMemoryRouter(List.of(r("/").id("root").children(
+                    RouteObject.indexRoute().id("home"),
+                    r("reports").id("reports").lazy(() -> { runs[0]++; Promise<RouteObject> p = Promise.pending(); gate.add(p); return p; }))), "/");
+            router.navigate("/reports", false);
+            eq("LOADING", router.state().navigation().state());
+            eq("/", path(router));
+            gate.get(0).resolve(RouteObject.layout().loader(a -> "report-data"));
+            eq("/reports", path(router));
+            eq("report-data", data(router, "reports"));
+            router.navigate("/", false);
+            router.navigate("/reports", false);
+            eq("report-data", data(router, "reports"));
+            eq(1, runs[0]);
+        });
+
+        test("lazy: what the route defines itself wins; a failing lazy lands on the error boundary", () -> {
+            DataRouter router = Routers.createMemoryRouter(List.of(r("/").id("root").children(
+                    r("a").id("a").loader(x -> "mine").lazy(() -> Promise.resolved(RouteObject.layout().loader(x -> "lazy"))),
+                    r("b").id("b").lazy(() -> { throw new IllegalStateException("nope"); }))), "/a");
+            eq("mine", data(router, "a"));
+            router.navigate("/b", false);
+            eq("nope", ((Throwable) router.state().errors().get("root")).getMessage());
+        });
+
+        test("lazy: a fetcher can call the loader of a lazy route", () -> {
+            DataRouter router = Routers.createMemoryRouter(List.of(r("/").id("root").children(
+                    RouteObject.indexRoute().id("home"),
+                    r("x").id("x").lazy(() -> Promise.resolved(RouteObject.layout().loader(a -> "from-lazy"))))), "/");
+            router.fetchLoad("f", "/x");
+            eq("from-lazy", router.state().fetchers().get("f").data());
+        });
+
         test("a pathless layout between does not hide the action of the route above it", () -> {
             List<String> seen = new ArrayList<>();
             DataRouter router = Routers.createMemoryRouter(List.of(r("/").id("root").action(a -> { seen.add("root"); return null; }).children(
