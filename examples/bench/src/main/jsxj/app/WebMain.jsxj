@@ -1,0 +1,13 @@
+package app;
+
+import jreact.dom.DomRoot;
+import jreact.web.JReactWeb;
+import jreact.web.JsNode;
+
+public class WebMain {
+    public static void main(String[] args) {
+        DomRoot<JsNode> root = JReactWeb.createRoot("root");
+        root.reconciler().setDevMode(Native.devMode());
+        Native.publish(new Bench(root).runAll());
+    }
+}

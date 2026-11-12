@@ -27,6 +27,8 @@ const ALL = {
 };
 const args = process.argv.slice(2);
 const port = Number(args.find(a => /^\d+$/.test(a)) || process.env.PORT || 5173);
+// localhost only: the server hands out build output and would otherwise be open to everyone on the network (HOST=0.0.0.0 to allow)
+const host = process.env.HOST || '127.0.0.1';
 const wanted = args.filter(a => !/^\d+$/.test(a));
 for (const w of wanted) if (!ALL[w]) { console.error(`unknown app "${w}". apps: ${Object.keys(ALL).join(', ')}`); process.exit(2); }
 const names = wanted.length ? wanted : Object.keys(ALL);
@@ -137,7 +139,8 @@ setInterval(() => {
 }, 500);
 
 http.createServer((req, res) => {
-  const url = decodeURIComponent(req.url.split('?')[0]);
+  let url;
+  try { url = decodeURIComponent(req.url.split('?')[0]); } catch { res.writeHead(400); res.end('bad request'); return; }
   if (url === '/__reload') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
     res.write('\n'); clients.add(res); req.on('close', () => clients.delete(res)); return;
@@ -165,11 +168,11 @@ http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': types['.html'] }); res.end(errorPage(app.name, app.error)); return;
   }
   const file = path.join(app.web, rel);
-  if (!file.startsWith(app.web) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return notFound();
+  if ((file !== app.web && !file.startsWith(app.web + path.sep)) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return notFound();
   res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
   if (path.extname(file) === '.html') res.end(fs.readFileSync(file, 'utf8').replace('</body>', reloadSnippet(app.name) + '</body>'));
   else fs.createReadStream(file).pipe(res);
-}).listen(port, () => {
+}).listen(port, host, () => {
   console.log(`[dev] http://localhost:${port}   apps: ${names.join(', ')}   (Ctrl+C to stop)`);
   for (const n of names) console.log(`[dev]   http://localhost:${port}/${n}/`);
 });

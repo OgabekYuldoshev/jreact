@@ -23,6 +23,7 @@
         <module>shop</module>
         <module>dashboard</module>
         <module>landing</module>
+        <module>bench</module>
     </modules>
 
     <properties>

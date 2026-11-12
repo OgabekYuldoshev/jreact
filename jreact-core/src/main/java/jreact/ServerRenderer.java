@@ -44,11 +44,23 @@ public final class ServerRenderer {
                 render(out, sb, provided);
             }
             case HOST -> {
+                if (!Safety.isValidTagName(e.tag()) || Safety.isBlockedTag(e.tag())) {
+                    throw new IllegalArgumentException("<" + e.tag() + "> cannot be rendered: "
+                            + (Safety.isBlockedTag(e.tag()) ? "script elements are not supported" : "not a valid tag name"));
+                }
                 sb.append('<').append(e.tag());
                 for (Map.Entry<String, Object> a : e.attrs().values().entrySet()) {
+                    String name = a.getKey();
                     Object v = a.getValue();
                     if (v == null || Boolean.FALSE.equals(v)) continue;
-                    sb.append(' ').append(htmlName(a.getKey()));
+                    if (!Safety.isValidAttributeName(name) || Safety.isInlineHandlerAttribute(name)) continue;
+                    if (name.equals("style") && !(v instanceof CharSequence)) {
+                        v = Css.toDeclarations(v);
+                        if (((String) v).isEmpty()) continue;
+                    } else if (Safety.isUrlAttribute(name) && Safety.isDangerousUrl(v)) {
+                        v = Safety.BLOCKED_URL;
+                    }
+                    sb.append(' ').append(htmlName(name));
                     if (!Boolean.TRUE.equals(v)) { sb.append("=\""); escape(String.valueOf(v), sb); sb.append('"'); }
                 }
                 sb.append('>');

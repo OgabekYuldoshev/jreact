@@ -19,17 +19,19 @@ public final class DomRoot<N> {
 
     private final Reconciler<N> reconciler;
     private final Root<N> root;
+    private final DomHost<N> host;
 
-    private DomRoot(Reconciler<N> reconciler, Root<N> root) {
+    private DomRoot(Reconciler<N> reconciler, Root<N> root, DomHost<N> host) {
         this.reconciler = reconciler;
         this.root = root;
+        this.host = host;
     }
 
     public static <N> DomRoot<N> create(DomOps<N> ops, N container, SchedulerHost schedulerHost) {
         DomHost<N> host = new DomHost<>(ops, container);
         Reconciler<N> reconciler = new Reconciler<>(host, new Scheduler(schedulerHost));
         host.setUpdateRunner(reconciler::runWithPriority);
-        return new DomRoot<>(reconciler, reconciler.createRoot(container));
+        return new DomRoot<>(reconciler, reconciler.createRoot(container), host);
     }
 
     /** Schedules {@code element} as the new UI (batched, async). */
@@ -43,6 +45,9 @@ public final class DomRoot<N> {
 
     /** Updates made inside {@code body} are non-urgent: rendered in slices, never blocking input. */
     public void startTransition(Runnable body) { reconciler.startTransition(body); }
+
+    /** The DOM host, e.g. to route its warnings ({@link DomHost#setWarningHandler}). */
+    public DomHost<N> host() { return host; }
 
     public Reconciler<N> reconciler() { return reconciler; }
 

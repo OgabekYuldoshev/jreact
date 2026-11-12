@@ -40,11 +40,13 @@
       "properties": {
         "jsxj.server.jar": {
           "type": "string",
+          "scope": "machine",
           "default": "",
           "description": "Path to jsxj-lsp.jar. Empty: the jar bundled with the extension (server/jsxj-lsp.jar)."
         },
         "jsxj.javaPath": {
           "type": "string",
+          "scope": "machine",
           "default": "java",
           "description": "The java executable that runs the server (JDK 17+; javac diagnostics need a JDK, not a JRE)."
         },

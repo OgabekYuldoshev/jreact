@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Vanilla DOM benchmark</title></head>
+<body>
+<pre id="result"></pre><div id="root"></div>
+<script src="harness.js"></script>
+<script>
+  // Hand-written DOM code that knows which scenario it is in: the lower bound for any framework.
+  var table = document.createElement('table'); table.className = 'table';
+  var tbody = document.createElement('tbody'); table.appendChild(tbody);
+  document.getElementById('root').appendChild(table);
+  function makeRow(item) {
+    var tr = document.createElement('tr');
+    var id = document.createElement('td'); id.className = 'id'; id.textContent = item.id;
+    var label = document.createElement('td'); label.className = 'label';
+    var a = document.createElement('a'); a.textContent = item.label; label.appendChild(a);
+    var remove = document.createElement('td'); remove.className = 'remove';
+    var x = document.createElement('span'); x.textContent = 'x'; remove.appendChild(x);
+    tr.appendChild(id); tr.appendChild(label); tr.appendChild(remove);
+    return tr;
+  }
+  runBench({ set: function (rows, kind, prev) {
+    if (kind === 'update') {
+      for (var i = 0; i < rows.length; i += 10) tbody.children[i].children[1].firstChild.textContent = rows[i].label;
+    } else if (kind === 'swap') {
+      var a = tbody.children[1], b = tbody.children[998], after = b.nextSibling;
+      tbody.insertBefore(b, a); tbody.insertBefore(a, after);
+    } else if (kind === 'remove') {
+      tbody.removeChild(tbody.children[500]);
+    } else if (kind === 'append') {
+      var frag = document.createDocumentFragment();
+      for (var j = prev.length; j < rows.length; j++) frag.appendChild(makeRow(rows[j]));
+      tbody.appendChild(frag);
+    } else {
+      tbody.textContent = '';
+      var f = document.createDocumentFragment();
+      for (var k = 0; k < rows.length; k++) f.appendChild(makeRow(rows[k]));
+      tbody.appendChild(f);
+    }
+  } });
+</script>
+</body></html>

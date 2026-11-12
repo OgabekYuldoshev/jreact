@@ -53,6 +53,14 @@ if [[ "${1:-}" == "examples" || "${1:-}" == "examples-test" ]]; then
   exit 0
 fi
 
+# Benchmark (js-framework-benchmark scenarios in headless Brave/Chrome): JReact vs React 18 vs vanilla DOM
+#   ./build.sh bench [rounds]   -> table on stdout and examples/bench/target/results.md (needs Maven, node, Brave or Chrome)
+if [[ "${1:-}" == "bench" ]]; then
+  mvn -B -q -pl examples/bench -am package
+  (cd examples && npm install --silent --no-audit --no-fund && cd bench && node run.js "${2:-3}")
+  exit 0
+fi
+
 # Language server for .jsxj (diagnostics, completion, hover, definition): build/jsxj-lsp.jar
 #   ./build.sh lsp        -> build/jsxj-lsp.jar (used by editors/vscode-jsxj/install.sh)
 if [[ "${1:-}" == "lsp" ]]; then

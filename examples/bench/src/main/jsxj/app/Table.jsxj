@@ -1,0 +1,21 @@
+package app;
+
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+
+public class Table extends Component<Table.Props> {
+
+    public record Props(List<Data.Item> rows) {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <table className="table">
+                <tbody>
+                    {props.rows().stream().map(r -> <Row key={r.id()} item={r} />).toList()}
+                </tbody>
+            </table>
+        );
+    }
+}

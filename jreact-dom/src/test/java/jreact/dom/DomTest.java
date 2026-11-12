@@ -167,6 +167,71 @@ public final class DomTest {
             eq("<div></div>", e.html());
         });
 
+        // ---------------------------------------------------------------- security
+
+        test("javascript: URLs are blocked, also with hidden control characters and capitals", () -> {
+            Env e = new Env();
+            List<String> warnings = new ArrayList<>();
+            e.root.host().setWarningHandler(warnings::add);
+            e.render(el("div", null,
+                    el("a", new Attrs().attr("href", "javascript:alert(1)"), "a"),
+                    el("a", new Attrs().attr("href", "  JaVa\tScRiPt:alert(1)"), "b"),
+                    el("a", new Attrs().attr("href", "vbscript:x"), "c"),
+                    el("form", new Attrs().attr("action", "javascript:x")),
+                    el("button", new Attrs().attr("formAction", "javascript:x"), "d"),
+                    el("a", new Attrs().attr("href", "https://example.com/?q=javascript:1"), "ok"),
+                    el("a", new Attrs().attr("href", "/relative#x"), "ok2")));
+            String html = e.html();
+            check(!html.replace("https://example.com/?q=javascript:1", "").toLowerCase().contains("script:"), "dangerous URL survived: " + html);
+            check(html.contains("href=\"https://example.com/?q=javascript:1\"") && html.contains("href=\"/relative#x\""), "safe URLs changed: " + html);
+            eq(5, html.split("about:blank", -1).length - 1);   // 3 hrefs, action, formaction
+            check(!warnings.isEmpty(), "no warning");
+            // updates are checked too
+            e.render(el("div", null, el("a", new Attrs().attr("href", "/safe"), "x")));
+            e.render(el("div", null, el("a", new Attrs().attr("href", "javascript:evil()"), "x")));
+            check(e.html().contains("about:blank"), "update bypassed the check: " + e.html());
+        });
+
+        test("inline handler attributes and bad attribute names are ignored", () -> {
+            Env e = new Env();
+            List<String> warnings = new ArrayList<>();
+            e.root.host().setWarningHandler(warnings::add);
+            e.render(el("img", new Attrs().attr("src", "x.png").attr("onerror", "alert(1)").attr("onclick", "x()")
+                    .attr("x\" onmouseover=\"alert(1)", "v").attr("bad name", "v").attr("", "v").attr("data-ok", "1")));
+            eq("<img src=\"x.png\" data-ok=\"1\"></img>", e.html());
+            eq(5, warnings.size());   // onerror, onclick, the injected name, "bad name", ""
+        });
+
+        test("script elements and invalid tag names are refused", () -> {
+            Env e = new Env();
+            boolean threw = false;
+            try { e.render(el("script", null, "alert(1)")); } catch (RuntimeException ex) { threw = true; }
+            check(threw, "<script> was created");
+            check(e.container.children.isEmpty() || !e.html().contains("script"), "script in DOM: " + e.html());
+            Env f = new Env();
+            threw = false;
+            try { f.render(el("img src=x onerror=alert(1)", null)); } catch (RuntimeException ex) { threw = true; }
+            check(threw, "invalid tag name accepted");
+        });
+
+        test("text children and attribute values are never HTML", () -> {
+            Env e = new Env();
+            e.render(el("p", new Attrs().attr("title", "\"><img src=x onerror=alert(1)>"), "<img src=x onerror=alert(1)>"));
+            check(e.first().children.size() == 1 && e.first().children.get(0).tag == null, "text became an element");
+        });
+
+        test("ServerRenderer escapes text and attributes, blocks javascript: URLs, refuses bad tags", () -> {
+            String html = jreact.ServerRenderer.renderToString(el("div", new Attrs().attr("title", "\"><script>x</script>")
+                    .attr("onclick", "x()").attr("bad name", "1").attr("style", Map.of("color", "red; position: fixed")),
+                    "<b>&</b>", el("a", new Attrs().attr("href", "javascript:alert(1)"), "go"),
+                    el("i", new Attrs().attr("style", Map.of("backgroundColor", "#fff", "width", 10)))));
+            eq("<div title=\"&quot;&gt;&lt;script&gt;x&lt;/script&gt;\">&lt;b&gt;&amp;&lt;/b&gt;<a href=\"about:blank\">go</a>"
+                    + "<i style=\"background-color: #fff; width: 10px;\"></i></div>", html);
+            boolean threw = false;
+            try { jreact.ServerRenderer.renderToString(el("script", null, "x")); } catch (IllegalArgumentException ex) { threw = true; }
+            check(threw, "SSR rendered <script>");
+        });
+
         test("style string goes to the style attribute", () -> {
             Env e = new Env();
             e.render(el("div", new Attrs().attr("style", "color: red")));

@@ -44,6 +44,8 @@ public class Counter extends Component<Counter.Props> {
 - [Ishlab chiqish jarayoni](#ishlab-chiqish-jarayoni): dev server, VS Code, xatolar, dev ogohlantirishlar
 - [Buyruqlar ma'lumotnomasi](#buyruqlar-malumotnomasi)
 - [Qanday ishlaydi](#qanday-ishlaydi)
+- [Xavfsizlik (XSS)](#xavfsizlik-xss)
+- [Unumdorlik (benchmark)](#unumdorlik-benchmark)
 - [Maven Central'ga chiqarish](#maven-centralga-chiqarish)
 - [Muammolarni hal qilish](#muammolarni-hal-qilish)
 - [Loyiha tuzilmasi](#loyiha-tuzilmasi)
@@ -68,7 +70,7 @@ git clone <repo-url> jreact
 cd jreact
 
 ./build.sh          # kompilyator -> runtime -> .jsxj -> .java -> javac -> Todo namunasi HTML chiqaradi
-./build.sh test     # barcha testlar (kompilyator 38, scheduler 14, reconciler 57, dom 19, language server 12)
+./build.sh test     # barcha testlar (kompilyator 38, scheduler 14, reconciler 57, dom 24, language server 12)
 ./build.sh dev      # galereya + 5 ilova: http://localhost:5173 (o'zgarsa o'zi qayta yig'iladi)
 ```
 
@@ -616,6 +618,7 @@ root.reconciler().setWarningHandler(msg -> log.warn(msg)); // default: System.er
 | `./build.sh dev [port] [ilova...]` | dev server (`tools/dev-server.js`): qayta yig'ish + sahifani yangilash |
 | `./build.sh examples` | Tailwind namunalari (kanban, shop, dashboard, landing) -> `examples/dist/` (Maven + node) |
 | `./build.sh examples-test` | shuni yig'ib, jsdom'da bosib tekshiradi |
+| `./build.sh bench [n]` | brauzerda benchmark: JReact vs React 18 vs vanilla (Maven, node, Brave/Chrome) |
 | `./build.sh lsp` | language server jar'i: `build/jsxj-lsp.jar` |
 | `./editors/vscode-jsxj/install.sh` | VS Code kengaytmasini o'rnatadi (jar, npm, symlink) |
 | `mvn -B -q -pl jreact-web,jreact-compiler -am install` | JReact modullarini lokal Maven repoga qo'yadi (o'z ilovangiz uchun) |
@@ -685,6 +688,56 @@ Ikki o'tish: (1) barcha `.jsxj`/`.java` fayllardan komponentlarning `record Prop
 ### 3. Qatorlar mosligi
 
 `.jsxj` faylning N-qatori generatsiya qilingan `.java` faylda ham N-qator bo'lib qoladi (sarlavha izohi birinchi qatorda, yangi qatorsiz yoziladi). Shu sababli `javac` xatolari va stack trace'lar asl `.jsxj` faylning to'g'ri qatorini ko'rsatadi.
+
+## Xavfsizlik (XSS)
+
+Foydalanuvchi ma'lumotini (`<p>{comment}</p>`, `<a href={url}>`) ishonchli chiqarish uchun qoidalar bir joyda: `jreact.Safety` (DOM host va `ServerRenderer` ikkalasi ishlatadi).
+
+**Kafolatlanadi:**
+
+| Xavf | Himoya |
+|---|---|
+| Matn ichida HTML (`<img onerror=...>`) | Matn hech qachon HTML sifatida o'qilmaydi: brauzerda `createTextNode`, `ServerRenderer`'da escape |
+| Atribut qiymatidan chiqib ketish (`"><script>`) | `setAttribute` / escape (`& < > "`) |
+| `javascript:` va `vbscript:` URL | `href`, `src`, `action`, `formaction`, `poster`, `cite`, `data`... atributlarida `about:blank` ga almashtiriladi (`"java\tscript:"`, bosh bo'shliq, bosh/kichik harf ham tutiladi), ogohlantirish chiqadi |
+| `onclick="..."` kabi satr handler | Ignor qilinadi (handler funksiya bo'lishi kerak: `onClick={e -> ...}`) |
+| `<script>` element | `IllegalArgumentException` (skriptni sahifaning HTML'iga qo'ying). `ErrorBoundary` tutadi |
+| Noto'g'ri tag/atribut nomi (`"x onmouseover=..."`) | Tag: xato, atribut: ignor + ogohlantirish |
+| `style` obyekti orqali qiymat ichiga yangi qoida (`"red; position: fixed"`) | Brauzerda `style.setProperty`, `ServerRenderer`'da shunday deklaratsiya tashlab yuboriladi |
+| `dangerouslySetInnerHTML` / `innerHTML` | Umuman yo'q |
+
+**Kafolatlanmaydi (o'zingiz javobgarsiz):** `style="..."` **satr** qiymati (CSS), `srcdoc`, `<iframe src>`/`<object data>` manzili, `Ref` orqali olgan DOM tuguniga yozganingiz, o'zingiz yozgan `href` ichidagi `data:` URL.
+
+Ogohlantirishlarni ushlash: `root.host().setWarningHandler(msg -> ...)`.
+
+**Audit (2026-11-12)** quyidagilarni topdi va tuzatdi: (1) `javascript:` URL tekshirilmagan edi; (2) `onclick` satr atributi va noto'g'ri atribut nomlari o'tkazib yuborilardi; (3) `<script>`/noto'g'ri tag nomi yaratilardi; (4) `ServerRenderer` `style` obyektini `{color=red}` deb chiqarardi (xato, endi CSS); (5) dev server hamma tarmoq interfeyslarida tinglardi va noto'g'ri URL (`/%E0`) uni qulatardi: endi `127.0.0.1` (boshqasi uchun `HOST=0.0.0.0`) va 400; (6) VS Code'da `jsxj.javaPath`/`jsxj.server.jar` ni begona reponing `.vscode/settings.json` i orqali o'zgartirib ixtiyoriy fayl ishga tushirish mumkin edi: endi `machine` doirasi.
+
+**Tekshirilgan va xavfsiz:** matn va atribut yo'llari, kompilyatorning satr literallari (`\u0022` kabi kiritma qochadi), LSP'ning `javac` chaqiruvi (`-proc:none`, annotatsiya protsessorlari ishlamaydi), `npm audit` (examples, smoke, VS Code kengaytmasi: 0 zaiflik).
+
+**Qilinmagan:** Maven bog'liqliklari uchun CVE skaneri (masalan OWASP dependency-check), fuzzing, haqiqiy brauzerda XSS testi (himoya mantig'i Java'da, testlar soxta DOM va `ServerRenderer` bilan: `DomTest`).
+
+## Unumdorlik (benchmark)
+
+`./build.sh bench [aylanishlar]` js-framework-benchmark'dagi jadval senariylarini (1000 qator yaratish, almashtirish, har 10-sini yangilash, 2 qator o'rnini almashtirish, o'chirish, 1000 qo'shish, tozalash, 10 000 yaratish) haqiqiy brauzerda (headless Brave/Chrome) yurgizadi va JReact'ni React 18 (production) hamda qo'lda yozilgan vanilla DOM bilan solishtiradi. Vaqt `performance.now()` bilan o'lchanadi, har o'lchovdan keyin layout majburlanadi (`offsetHeight`), har senariy 3 isitish + 10 o'lchov, jadvalda 3 sahifa yuklash medianasi. Qatorlar `key` bilan, `memo`siz, shuning uchun hamma qator har yangilanishda qayta render qilinadi (ikkala freymvorkda ham).
+
+Natija (Apple M5, Brave/Chrome 157, ms, kam = yaxshi):
+
+| senariy | vanilla DOM | React 18 | JReact | JReact / React | JReact dev rejimi |
+|---|---:|---:|---:|---:|---:|
+| create1k | 8.3 | 10.2 | 18.5 | 1.81x | 18.7 |
+| replace1k | 8.3 | 13.6 | 19.5 | 1.43x | 21.2 |
+| update10th | 1.9 | 2.5 | 5.1 | 2.04x | 8.3 |
+| swap | 0.5 | 9 | 12.8 | 1.42x | 16.6 |
+| remove | 0.4 | 1 | 5.8 | 5.80x | 3.9 |
+| append1k | 9.4 | 11.2 | 27.1 | 2.42x | 25.7 |
+| clear | 0.7 | 1.6 | 1.1 | 0.69x | 1 |
+| create10k | 79.1 | 226.6 | 305.1 | 1.35x | 321.7 |
+
+Bundle: JReact (TeaVM, shu jadval ilovasi) `app.js` 166 KB, gzip 58 KB. React 18 `react` + `react-dom` 139 KB, gzip 46 KB (ilovasiz). Kichik ilovada (Todo) `app.js` ~120 KB (gzip ~45 KB).
+
+Xulosa: JReact shu jadvalda React 18'dan taxminan 1.4 dan 2.4 baravargacha sekinroq (`remove` da ~6x; sababi o'rganilmagan, ikkalasi ham 999 ta o'zgarmagan qatorni qayta render qiladi). Qo'lda yozilgan vanilla DOM'dan 2 dan 30 baravargacha sekin (`swap`, `remove` da eng katta farq). 60 FPS uchun kadr 16 ms: oddiy ilovada (yuzlab qator) bu yetarli, 10 000 qatorli jadvalda (300 ms) emas. Dev rejimi (`setDevMode(true)`, standart) ishlashga sezilarli ta'sir qilmaydi, lekin ishlab chiqarishda `root.reconciler().setDevMode(false)` qiling (ogohlantirishlar kerak emas).
+
+Qanday o'qish kerak: bu bitta mashina va bitta jadval, shuning uchun mutlaq raqamlarga emas, nisbatlarga qarang; ikkala tomonda ham `memo` ishlatilmagan (`React.memo`, `MemoComponent`), shuning uchun ularning ta'siri o'lchanmagan. Profil qilinmagan va optimallashtirilmagan: sekinlikning aniq sababi (fiber ajratish, `Attrs` farqlash, TeaVM JSO chaqiruvlari) hali ma'lum emas.
 
 ## Maven Central'ga chiqarish
 
@@ -770,7 +823,8 @@ jreact/
 - Dev server `examples/` ilovalari uchun qattiq yozilgan (`tools/dev-server.js` boshidagi ro'yxat).
 - JReact hali Maven Central'ga chiqarilmagan: o'z ilovangiz uchun `mvn install` bilan lokal o'rnatiladi.
 - CSS Modules va CSS-in-JS yo'q. Sass/Tailwind Maven build'iga ulanmagan, alohida buyruq bilan yig'iladi.
-- DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q.
+- DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q (xavfsizlik uchun ham, qarang [Xavfsizlik](#xavfsizlik-xss)).
+- Tezlik: React 18'dan 1.4-2.4x sekinroq (qarang [Unumdorlik](#unumdorlik-benchmark)), profil qilinmagan.
 - Ustuvorlik root bo'yicha, update bo'yicha emas (lane yo'q): bitta render barcha kutayotgan update'larni oladi. Bo'laklab render faqat `LOW`/`IDLE` (`startTransition`) uchun, uni boshqa update to'xtatib qayta boshlamaydi, faqat tezroq tugatadi.
 - Error boundary render va `useEffect` xatolarini tutadi, event handler xatolarini tutmaydi (React'dagi kabi). `ServerRenderer` (SSR) boundary'da xatoni tutmaydi.
 - `{...spread}` komponentlarda qo'llab-quvvatlanmaydi.

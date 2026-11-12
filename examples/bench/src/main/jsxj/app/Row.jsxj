@@ -1,0 +1,20 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+
+public class Row extends Component<Row.Props> {
+
+    public record Props(Data.Item item) {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <tr>
+                <td className="id">{props.item().id()}</td>
+                <td className="label"><a>{props.item().label()}</a></td>
+                <td className="remove"><span>x</span></td>
+            </tr>
+        );
+    }
+}

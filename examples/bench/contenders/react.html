@@ -1,0 +1,22 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>React 18 benchmark</title></head>
+<body>
+<pre id="result"></pre><div id="root"></div>
+<script src="react.production.min.js"></script>
+<script src="react-dom.production.min.js"></script>
+<script src="harness.js"></script>
+<script>
+  var h = React.createElement;
+  function Row(props) {
+    return h('tr', null,
+      h('td', { className: 'id' }, props.item.id),
+      h('td', { className: 'label' }, h('a', null, props.item.label)),
+      h('td', { className: 'remove' }, h('span', null, 'x')));
+  }
+  function Table(props) {
+    return h('table', { className: 'table' }, h('tbody', null, props.rows.map(function (r) { return h(Row, { key: r.id, item: r }); })));
+  }
+  var root = ReactDOM.createRoot(document.getElementById('root'));
+  runBench({ set: function (rows) { ReactDOM.flushSync(function () { root.render(h(Table, { rows: rows })); }); } });
+</script>
+</body></html>

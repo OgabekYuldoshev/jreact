@@ -3,6 +3,7 @@ package jreact.dom;
 import jreact.Attrs;
 import jreact.Event;
 import jreact.EventHandler;
+import jreact.Safety;
 import jreact.reconciler.AttrsDiff;
 import jreact.reconciler.HostConfig;
 import jreact.scheduler.Priority;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * The DOM host config: applies what the reconciler decided to a DOM (through {@link DomOps}) and routes events.
@@ -36,6 +38,8 @@ public final class DomHost<N> implements HostConfig<N> {
     private final N container;
     private final Set<String> listening = new HashSet<>();
     private BiConsumer<Priority, Runnable> updateRunner = (priority, body) -> body.run();
+    private Consumer<String> warn = System.err::println;
+    private final Set<String> warned = new HashSet<>();
 
     public DomHost(DomOps<N> ops, N container) {
         this.ops = ops;
@@ -45,9 +49,21 @@ public final class DomHost<N> implements HostConfig<N> {
     /** How event handlers are run at a priority: {@code reconciler::runWithPriority}. Default: run directly. */
     public void setUpdateRunner(BiConsumer<Priority, Runnable> runner) { this.updateRunner = runner; }
 
+    /** Where refused input (a blocked URL, an {@code onclick} string...) is reported, once per distinct message. Default: stderr. */
+    public void setWarningHandler(Consumer<String> handler) { this.warn = handler; }
+
+    private void warnOnce(String message) { if (warned.add(message)) warn.accept("Warning: " + message); }
+
     // ---------------------------------------------------------------- HostConfig
 
-    @Override public N createInstance(String tag) { return ops.createElement(tag); }
+    @Override
+    public N createInstance(String tag) {
+        if (Safety.isBlockedTag(tag)) {
+            throw new IllegalArgumentException("<script> elements are not supported: add the script to the page's HTML");
+        }
+        if (!Safety.isValidTagName(tag)) throw new IllegalArgumentException("not a valid tag name: " + tag);
+        return ops.createElement(tag);
+    }
 
     @Override public N createTextInstance(String text) { return ops.createTextNode(text); }
 
@@ -84,6 +100,18 @@ public final class DomHost<N> implements HostConfig<N> {
             return;
         }
         String attribute = DomAttributes.attributeName(name);
+        if (!Safety.isValidAttributeName(attribute)) {
+            warnOnce("attribute name \"" + name + "\" is not a valid HTML attribute name and was ignored");
+            return;
+        }
+        if (Safety.isInlineHandlerAttribute(attribute)) {
+            warnOnce("\"" + name + "\" was ignored: event handlers are functions (onClick={e -> ...}), not attribute strings");
+            return;
+        }
+        if (value != null && Safety.isUrlAttribute(attribute) && Safety.isDangerousUrl(value)) {
+            warnOnce("a javascript: URL in \"" + name + "\" was blocked");
+            value = Safety.BLOCKED_URL;
+        }
         boolean isBoolean = DomAttributes.isBooleanAttribute(attribute);
         if (value == null || (isBoolean && Boolean.FALSE.equals(value))) {
             ops.removeAttribute(node, attribute);
