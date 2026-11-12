@@ -1,0 +1,23 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+
+/** Reached through a lazy route: this page is produced the first time /stats is visited. */
+public class Stats extends Component<Stats.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        int total = Contacts.search("").size();
+        long favorites = Contacts.search("").stream().filter(Contact::favorite).count();
+        return (
+            <div id="stats" className="mx-auto mt-16 max-w-md">
+                <h1 className="text-2xl font-bold">Stats</h1>
+                <p id="stats-total" className="mt-3 text-stone-600">{total + " contacts, " + favorites + " favorites"}</p>
+                <p className="mt-6 text-sm text-stone-400">This page was loaded lazily.</p>
+            </div>
+        );
+    }
+}

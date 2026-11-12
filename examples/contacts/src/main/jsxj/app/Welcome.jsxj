@@ -2,6 +2,7 @@ package app;
 
 import jreact.Component;
 import jreact.Element;
+import jreact.router.Link;
 
 public class Welcome extends Component<Welcome.Props> {
 
@@ -13,6 +14,7 @@ public class Welcome extends Component<Welcome.Props> {
             <div id="welcome" className="mx-auto mt-24 max-w-md text-center">
                 <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
                 <p className="mt-3 text-stone-500">A data router demo: loaders fetch before a page renders, actions change data and everything reloads, and the address bar is always right.</p>
+                <p className="mt-6"><Link to="/stats" id="stats-link" className="text-indigo-600 underline">Stats</Link> <span className="text-xs text-stone-400">(a lazy route)</span></p>
             </div>
         );
     }

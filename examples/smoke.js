@@ -381,6 +381,21 @@ async function contacts() {
   await sleep(150);
   check('contacts', 'delete runs the action and redirects home', path() === '/contacts/' && !!t.$('#welcome') && names().length === 5 && !names().includes('Newcomer'), path() + ' ' + names());
 
+  // lazy route: the first visit waits for the route itself, the second is instant
+  await t.click(t.$('#stats-link'));
+  await sleep(60);
+  check('contacts', 'lazy: while the route is being fetched the old page stays and the app is LOADING', !!t.$('#welcome') && t.text('#nav-state') === 'LOADING' && path() === '/contacts/', t.text('#nav-state') + path());
+  await sleep(350);
+  check('contacts', 'lazy: then the page appears', t.text('#stats-total') === '5 contacts, 3 favorites' && path() === '/contacts/stats' && t.text('#nav-state') === 'IDLE', t.text('#stats-total') + path());
+  await t.click(t.$('#contact-1'));
+  await settle();
+  t.w.history.back();
+  await sleep(60);
+  check('contacts', 'lazy: a second visit does not fetch again (instant)', !!t.$('#stats') && t.text('#nav-state') === 'IDLE', t.text('#nav-state'));
+  t.w.history.pushState(null, '', '/contacts/');
+  t.w.dispatchEvent(new t.w.PopStateEvent('popstate'));
+  await sleep(120);
+
   // errors
   t.w.history.pushState(null, '', '/contacts/contacts/99');
   t.w.dispatchEvent(new t.w.PopStateEvent('popstate'));

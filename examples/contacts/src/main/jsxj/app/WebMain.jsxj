@@ -41,6 +41,10 @@ public class WebMain {
                                     Contacts.update(a.params().get("id"), c -> c.with(f.get("first", ""), f.get("last", ""), f.get("notes", "")));
                                     return Redirect.to("/contacts/" + a.params().get("id"));
                                 }))),
+                        // lazy and really asynchronous: the route arrives 250 ms after the first visit (a stand-in for a
+                        // network request); the old page stays and useNavigation() says LOADING meanwhile. Visited again, it is instant
+                        RouteObject.of("stats").id("stats")
+                            .lazy(() -> Contacts.later(250, () -> RouteObject.layout().element(<Stats />)).then(r -> (RouteObject) r)),
                         RouteObject.of("contacts/:id/destroy")
                             .action(a -> { Contacts.delete(a.params().get("id")); return Redirect.to("/"); }))));
 
