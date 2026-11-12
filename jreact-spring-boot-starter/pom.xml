@@ -32,6 +32,23 @@
 
     <dependencies>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-web</artifactId></dependency>
+        <dependency><groupId>dev.jreact</groupId><artifactId>jreact-api</artifactId><version>${project.version}</version></dependency>
         <dependency><groupId>org.springframework.boot</groupId><artifactId>spring-boot-starter-test</artifactId><scope>test</scope></dependency>
+        <!-- the tests declare a @ServerApi: the processor generates its dispatcher (test scope also orders the reactor) -->
+        <dependency><groupId>dev.jreact</groupId><artifactId>jreact-processor</artifactId><version>${project.version}</version><scope>test</scope></dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.14.0</version>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path><groupId>dev.jreact</groupId><artifactId>jreact-processor</artifactId><version>${project.version}</version></path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -1,35 +1,26 @@
 package {{package}}.client;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import jreact.router.*;
-import jreact.web.Http;
 import jreact.web.JReactWeb;
 import jreact.web.Routers;
-import {{package}}.shared.Todo;
+import {{package}}.shared.TodoApiClient;
 
 public class WebMain {
-
-    static List<Todo> todos(Object json) {
-        List<Todo> out = new ArrayList<>();
-        for (Object o : (List<?>) json) out.add(Todo.fromJson(o));
-        return out;
-    }
 
     public static void main(String[] args) {
         List<RouteObject> routes = List.of(
             RouteObject.of("/").id("todos").element(<TodoPage />).errorElement(<ErrorPage />)
-                // runs in the browser before the page renders: asks the Spring Boot server
-                .loader(a -> Http.get("/api/todos").then(WebMain::todos))
+                // runs in the browser before the page renders. TodoApiClient is generated from the TodoApi interface in shared/:
+                // it calls the Spring Boot bean and returns a Promise<List<Todo>>, already converted from JSON
+                .loader(a -> TodoApiClient.list())
                 // every <Form method="post"> on the page lands here; after it, the loader runs again
                 .action(a -> {
                     SearchParams f = a.request().form();
-                    String id = f.get("id", "");
                     switch (f.get("intent", "")) {
-                        case "add": return Http.post("/api/todos", Map.of("title", f.get("title", "")));
-                        case "toggle": return Http.patch("/api/todos/" + id, Map.of("done", "true".equals(f.get("done"))));
-                        case "delete": return Http.delete("/api/todos/" + id);
+                        case "add": return TodoApiClient.add(f.get("title", ""));
+                        case "toggle": return TodoApiClient.setDone(Long.parseLong(f.get("id", "0")), "true".equals(f.get("done")));
+                        case "delete": return TodoApiClient.remove(Long.parseLong(f.get("id", "0")));
                         default: throw new ErrorResponse(400, "Bad Request", "unknown intent");
                     }
                 }));

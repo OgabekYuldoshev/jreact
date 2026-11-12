@@ -10,8 +10,9 @@ pom.xml
 README.md
 server/pom.xml
 server/src/main/java/__pkg__/server/Application.java
-server/src/main/java/__pkg__/server/TodoController.java
+server/src/main/java/__pkg__/server/TodoService.java
 server/src/main/resources/application.properties
 server/src/test/java/__pkg__/server/TodoApiTest.java
 shared/pom.xml
 shared/src/main/java/__pkg__/shared/Todo.java
+shared/src/main/java/__pkg__/shared/TodoApi.java

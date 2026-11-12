@@ -551,9 +551,9 @@ jreact dev                                            # http://localhost:8080
 ```
 shop/
 ├── jreact.properties        # loyiha ildizi belgisi (port va modul papkalari)
-├── shared/                  # ikki tomon ishlatadigan tiplar (oddiy Java, bog'liqliksiz): Todo
+├── shared/                  # ikki tomon ishlatadigan tiplar va @ServerApi interfeyslar: Todo, TodoApi
 ├── client/                  # UI: src/main/jrx, src/main/styles/app.css (Tailwind), src/main/webapp/index.html
-└── server/                  # Spring Boot: API (TodoController) va tayyor UI'ni beradi
+└── server/                  # Spring Boot: API (TodoService implements TodoApi) va tayyor UI'ni beradi
 ```
 
 | Buyruq | Vazifasi |
@@ -571,10 +571,10 @@ Tailwind mustaqil binary sifatida `~/.jreact/` ga bir marta yuklab olinadi (Node
 
 ### So'rov qanday o'tadi
 
-1. Brauzer `/` ni ochadi. Spring Boot `index.html` beradi. `/api/...` bo'lmagan har bir sahifa URL'i ham shuni oladi (`createBrowserRouter` uchun SPA fallback), `/api/yoq` esa 404.
-2. `app.js` ishga tushadi, router URL'ni topadi va route'ning loader'ini chaqiradi: `Http.get("/api/todos")`.
-3. Spring Boot'dagi `TodoController` JSON qaytaradi, loader natijasi sahifaga aylanadi.
-4. `<Form method="post">` route'ning action'ini ishga tushiradi (`Http.post(...)`), keyin loader'lar qayta ishlaydi va sahifa yangi ma'lumotni ko'rsatadi.
+1. Brauzer `/` ni ochadi. Spring Boot `index.html` beradi. `/api/...` va `/_rpc/...` bo'lmagan har bir sahifa URL'i ham shuni oladi (`createBrowserRouter` uchun SPA fallback), `/api/yoq` esa 404.
+2. `app.js` ishga tushadi, router URL'ni topadi va route'ning loader'ini chaqiradi: `TodoApiClient.list()`.
+3. Klient `POST /_rpc/TodoApi/list` yuboradi, Spring Boot'dagi `TodoService.list()` chaqiriladi, JSON javob loader natijasiga (`List<Todo>`) aylanadi.
+4. `<Form method="post">` route'ning action'ini ishga tushiradi (`TodoApiClient.add(...)`), keyin loader'lar qayta ishlaydi va sahifa yangi ma'lumotni ko'rsatadi.
 
 Brauzer va server bitta origin'da, shuning uchun CORS sozlash kerak emas; cookie va Spring Security'ning CSRF tokeni ishlayveradi
 (`Http` `XSRF-TOKEN` cookie'sini `X-XSRF-TOKEN` sarlavhasi bilan qaytaradi).
@@ -593,6 +593,44 @@ Http.request("GET", url, null)                         // Promise<Http.Response>
 Server o'chiq bo'lsa `ErrorResponse(0, "Network Error")`. `jreact.Json` (`parse`, `stringify`) reflection'siz, JVM va brauzerda bir xil ishlaydi;
 `Json.Writable` bilan o'z klassingizning JSON shaklini berasiz. Chiqish `<`, `>`, `&` ni `\uXXXX` qiladi (`<script>` ichida xavfsiz).
 
+### Tip-xavfsiz server chaqiruv: `@ServerApi`
+
+Interfeys `shared/` da bir marta yoziladi; server uni oddiy Spring bean qilib amalga oshiradi, brauzer generatsiya qilingan klient orqali chaqiradi:
+
+```java
+// shared/TodoApi.java
+@ServerApi
+public interface TodoApi {
+    List<Todo> list();
+    Todo add(String title);
+    void remove(long id);
+}
+
+// server/TodoService.java: oddiy bean (tranzaksiya, @PreAuthorize, repository ishlaydi)
+@Service class TodoService implements TodoApi { ... throw new RpcException(404, "no todo " + id); }
+
+// client: loader va action'lar Promise qaytaradigan klientni chaqiradi
+.loader(a -> TodoApiClient.list())                 // Promise<List<Todo>>, JSON'dan allaqachon o'tgan
+.action(a -> TodoApiClient.add(f.get("title", "")))
+```
+
+Kompilyatsiya paytida `jreact-processor` har bir `@ServerApi` uchun `TodoApiClient` (brauzer), `TodoApiDispatcher` (server) va `TodoApiWire` (JSON o'tkazish) yozadi.
+Reflection yo'q, shuning uchun brauzerda (TeaVM) ham ishlaydi. Nima ketadi: `POST /_rpc/TodoApi/<metod>` tanasi argumentlar massivi: `["milk"]`.
+
+| Qoida | Ma'nosi |
+|---|---|
+| Ruxsat etilgan tiplar | `boolean`, `int`, `long`, `double` (va o'ramlari), `String`, enum, `List<T>`, `Map<String,T>`, shularning record'lari (o'zini o'zi ichiga olgan record ham) |
+| Boshqa tip | kompilyatsiya xatosi, nima ruxsat etilganini aytadi |
+| Overload, generik metod/record, `Map<Integer,..>` | kompilyatsiya xatosi |
+| Noto'g'ri argument | 400, joyi ko'rsatiladi: `title: expected a string, got a number`, `numbers[1]: expected an integer` |
+| `RpcException(status, xabar)` | brauzerda `ErrorResponse(status, ..., xabar)`: route'ning `errorElement`'iga tushadi |
+| Boshqa exception | 500 va `Internal error` (tafsilot faqat server logida) |
+| `AccessDeniedException` / `AuthenticationException` (Spring Security) | 403 / 401 |
+| Faqat `POST` + `application/json` | cross-site HTML forma boshqa tur yubora olmaydi (415); CSRF tokeni va Spring Security zanjiri odatdagidek ishlaydi |
+
+Har bir metod ochiq HTTP endpoint: ruxsatni serverda tekshiring (`@PreAuthorize`), argumentlarni validatsiya qiling. Interfeysga bitta bean mos kelishi kerak, aks holda server ishga tushmaydi (aniq xabar bilan).
+`JReactWeb.createRoot` HTTP transportni o'zi o'rnatadi; testda `Rpc.transport(...)` bilan soxta transport berish mumkin. Maven'da `maven-compiler-plugin` ning `annotationProcessorPaths` ida `jreact-processor` ko'rsatiladi (shablon shunday: JDK 23+ processor'ni classpath'dan o'zi topmaydi).
+
 ### `jreact-spring-boot-starter`
 
 Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
@@ -607,7 +645,7 @@ Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
 Maven plagini `jrx:bundle` ham beradi (client modulida avtomatik): TeaVM natijasini hash'lab `target/classes/jreact/` ga qo'yadi, `index.html` ni yangilaydi, `manifest.json` yozadi.
 Spring Security ishlatsangiz va `/` ni ochiq qilmasangiz, UI ham login talab qiladi: starter filtr emas, oddiy resource handler.
 
-**Hozircha yo'q** (reja): tip-xavfsiz server chaqiruv (`@ServerApi` + generatsiya, hozir `Http` + `Json`), SSR + hydration, Gradle plagini, `context-path` bilan ishlash (asset yo'llari `/` dan boshlanadi), `shared/` o'zgarganda tezroq qayta yig'ish.
+**Hozircha yo'q** (reja): `@ServerApi` da `Optional`, sana/vaqt va generik tiplar, SSR + hydration, Gradle plagini, `context-path` bilan ishlash (asset yo'llari `/` dan boshlanadi), `shared/` o'zgarganda tezroq qayta yig'ish.
 
 ## Stillar: CSS, Sass, Tailwind
 
@@ -1055,7 +1093,9 @@ jreact/
 ├── jreact-dom/                       # DOM host (paket jreact.dom), TeaVM'siz qismi
 │   └── src/test/.../DomTest.java     # 19 ta test (soxta DOM)
 ├── jreact-web/                       # brauzer bog'lamalari (TeaVM JSO): JReactWeb, JsDomOps, JsTimers...
-├── jreact-spring-boot-starter/       # Spring Boot starter: hash'li assetlar, SPA fallback, dev reload (11 ta JUnit testi)
+├── jreact-spring-boot-starter/       # Spring Boot starter: hash'li assetlar, SPA fallback, dev reload (19 ta JUnit testi, RPC bilan)
+├── jreact-api/                       # @ServerApi, Rpc, RpcException, Wire: generatsiya qilingan kod ishlatadigan runtime (JVM va TeaVM)
+├── jreact-processor/                 # @ServerApi annotation processor: Client, Dispatcher, Wire generatsiyasi (11 ta test)
 ├── jreact-cli/                       # `jreact` buyrug'i (picocli): new, dev, build, start, test, doctor, docker; shablon resources/templates/spring
 ├── bin/jreact                        # CLI ishga tushiruvchisi
 ├── jreact-lsp/                       # language server: Server, Analyzer, Features, Workspace, Json

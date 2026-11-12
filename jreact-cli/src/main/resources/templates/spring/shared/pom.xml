@@ -11,5 +11,23 @@
 
     <artifactId>{{name}}-shared</artifactId>
     <name>{{name}}-shared</name>
-    <description>Types used by both sides. Compiled for the JVM (server) and for the browser (TeaVM): plain Java only, no dependencies.</description>
+    <description>Types and @ServerApi interfaces used by both sides. Compiled for the JVM (server) and for the browser (TeaVM).</description>
+
+    <dependencies>
+        <dependency><groupId>dev.jreact</groupId><artifactId>jreact-api</artifactId><version>${jreact.version}</version></dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <!-- generates TodoApiClient (browser), TodoApiDispatcher (server) and the JSON conversion from every @ServerApi interface -->
+                    <annotationProcessorPaths>
+                        <path><groupId>dev.jreact</groupId><artifactId>jreact-processor</artifactId><version>${jreact.version}</version></path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

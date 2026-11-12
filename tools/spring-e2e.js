@@ -2,6 +2,7 @@
 const path = require('path');
 const { JSDOM } = require(path.join(__dirname, '..', 'examples', 'node_modules', 'jsdom'));
 const base = process.argv[2];
+const rpc = async (method, args) => (await (await fetch(base + '/_rpc/TodoApi/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(args) })).json());
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   let fails = 0;
@@ -17,7 +18,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const w = dom.window, d = w.document;
   await sleep(1200);
   const items = () => [...d.querySelectorAll('#todos li span')].map(s => s.textContent);
-  check('the loader fetched /api/todos and the page rendered the list', items().length >= 3 && items().includes('Read the README'), items());
+  check('the loader called TodoApiClient.list() and the page rendered the list', items().length >= 3 && items().includes('Read the README'), items());
   check('the page is styled by Tailwind (a stylesheet link with a hashed name)', !!d.querySelector('link[rel=stylesheet][href^="/assets/app."]'), '');
 
   // add a todo through the form (an action: POST /api/todos, then the loader runs again)
@@ -33,13 +34,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(800);
   const li2 = [...d.querySelectorAll('#todos li')].find(l => l.textContent.includes('from jsdom'));
   check('toggling is saved on the server and shown (line-through)', li2.querySelector('span').className.includes('line-through'), li2.innerHTML);
-  const server = await (await fetch(base + '/api/todos')).json();
+  const server = await rpc('list', []);
   check('the server really has it done', server.find(t => t.title === 'from jsdom')?.done === true, JSON.stringify(server));
 
   // delete it
   [...li2.querySelectorAll('form')].pop().dispatchEvent(new w.Event('submit', { bubbles: true, cancelable: true }));
   await sleep(800);
-  check('deleting removes it from the page and the server', !items().includes('from jsdom') && !(await (await fetch(base + '/api/todos')).json()).some(t => t.title === 'from jsdom'), items());
+  check('deleting removes it from the page and the server', !items().includes('from jsdom') && !(await rpc('list', [])).some(t => t.title === 'from jsdom'), items());
   check('no script errors', errors.length === 0, errors);
   w.close();
   console.log(fails ? fails + ' FAILED' : 'all passed');

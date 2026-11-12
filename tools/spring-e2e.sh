@@ -25,7 +25,7 @@ echo "built $JAR"
 echo "== run the jar on port $PORT"
 java -jar "$JAR" --server.port="$PORT" > "$WORK/server.log" 2>&1 &
 SERVER=$!
-for i in $(seq 1 60); do curl -s -o /dev/null "http://localhost:$PORT/api/todos" && break; sleep 1; done
+for i in $(seq 1 60); do curl -s -o /dev/null -X POST -H 'Content-Type: application/json' -d '[]' "http://localhost:$PORT/_rpc/TodoApi/list" && break; sleep 1; done
 
 echo "== HTTP checks"
 fail() { echo "FAIL $1"; exit 1; }
@@ -36,6 +36,11 @@ JS="$(curl -s "http://localhost:$PORT/" | grep -o 'assets/app\.[a-f0-9]*\.js' | 
 curl -s -D - -o /dev/null -H 'Accept-Encoding: gzip' "http://localhost:$PORT/$JS" | grep -qi 'cache-control: .*immutable' || fail "hashed asset is not immutable"
 curl -s -D - -o /dev/null -H 'Accept-Encoding: gzip' "http://localhost:$PORT/$JS" | grep -qi 'content-encoding: gzip' || fail "no gzip"
 [ "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:$PORT/__jreact/version")" = 404 ] || fail "dev endpoints must not exist in production"
+rpc() { curl -s -X POST -H 'Content-Type: application/json' -d "$2" -w ' [%{http_code}]' "http://localhost:$PORT/_rpc/TodoApi/$1"; }
+rpc add '["from curl"]' | grep -q '"title":"from curl".*\[200\]' || fail "rpc add"
+rpc add '[5]' | grep -q 'title: expected a string, got a number.*\[400\]' || fail "rpc type error must be a 400 that names the parameter"
+rpc add '[" "]' | grep -q '\[422\]' || fail "rpc RpcException must keep its status"
+[ "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: text/plain' -d '[]' "http://localhost:$PORT/_rpc/TodoApi/list")" = 415 ] || fail "rpc must refuse non-JSON bodies"
 echo "ok   HTTP checks"
 
 echo "== the app in jsdom"

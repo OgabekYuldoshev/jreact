@@ -21,10 +21,17 @@ server/   Spring Boot: the API, and it serves the built UI
 
 ## How a request flows
 
-1. The browser opens `/`. Spring Boot answers with `index.html` (every URL that is a page, not `/api/...`, gets it).
-2. `app.js` starts, the router matches the URL and runs the route's loader: `Http.get("/api/todos")`.
-3. Spring Boot's `TodoController` answers with JSON, the loader's result becomes the page.
-4. A `<Form method="post">` runs the route's action (`Http.post(...)`), then the loaders run again and the page shows the new data.
+1. The browser opens `/`. Spring Boot answers with `index.html` (every URL that is a page, not `/api/...` or `/_rpc/...`, gets it).
+2. `app.js` starts, the router matches the URL and runs the route's loader: `TodoApiClient.list()`.
+3. `TodoApiClient` is generated from the `TodoApi` interface in `shared/`. It sends `POST /_rpc/TodoApi/list`; Spring Boot calls `TodoService.list()` and answers with JSON; the loader's result (a `List<Todo>`) becomes the page.
+4. A `<Form method="post">` runs the route's action (`TodoApiClient.add(...)`), then the loaders run again and the page shows the new data.
+
+### Adding a server method
+
+Add it to `shared/.../TodoApi.java`, implement it in `server/.../TodoService.java`, call it as `TodoApiClient.yourMethod(...)` (returns a `Promise`).
+Allowed in parameters and results: `boolean`, `int`, `long`, `double` (and boxes), `String`, enums, `List<T>`, `Map<String,T>`, and records of these.
+Anything else is a compile error that says so. Throw `RpcException(status, message)` on the server for a 4xx; the page's `errorElement` gets it.
+Every method is a public endpoint: check permissions on the server (`@PreAuthorize` on the bean) and validate arguments.
 
 The browser and the server share one origin, so there is no CORS setup, and cookies and Spring Security's CSRF token just work
-(`Http` sends the `XSRF-TOKEN` cookie back as the `X-XSRF-TOKEN` header).
+(the generated client sends the `XSRF-TOKEN` cookie back as the `X-XSRF-TOKEN` header).

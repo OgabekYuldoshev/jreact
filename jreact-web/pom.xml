@@ -16,6 +16,7 @@
     <dependencies>
         <dependency><groupId>dev.jreact</groupId><artifactId>jreact-dom</artifactId></dependency>
         <dependency><groupId>dev.jreact</groupId><artifactId>jreact-router</artifactId></dependency>
+        <dependency><groupId>dev.jreact</groupId><artifactId>jreact-api</artifactId></dependency>
         <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso</artifactId></dependency>
     </dependencies>
 

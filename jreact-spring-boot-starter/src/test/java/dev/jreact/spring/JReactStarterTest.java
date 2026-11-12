@@ -24,6 +24,9 @@ class JReactStarterTest {
     @Configuration
     @EnableAutoConfiguration
     static class App {
+        @org.springframework.context.annotation.Bean
+        dev.jreact.spring.sample.GreetApi greetApi() { return new dev.jreact.spring.sample.GreetService(); }
+
         @RestController
         static class Hello {
             @GetMapping("/api/hello") String hello() { return "hi"; }

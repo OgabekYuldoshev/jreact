@@ -40,6 +40,8 @@
         <module>jreact-reconciler</module>
         <module>jreact-router</module>
         <module>jreact-dom</module>
+        <module>jreact-api</module>
+        <module>jreact-processor</module>
         <module>jreact-web</module>
         <module>jreact-spring-boot-starter</module>
         <module>jreact-cli</module>
@@ -117,6 +119,8 @@
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-reconciler</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-router</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-dom</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-api</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-processor</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-web</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso</artifactId><version>${teavm.version}</version></dependency>
             <dependency><groupId>org.teavm</groupId><artifactId>teavm-classlib</artifactId><version>${teavm.version}</version></dependency>

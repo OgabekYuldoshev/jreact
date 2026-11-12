@@ -66,6 +66,13 @@ public class JReactAutoConfiguration {
         };
     }
 
+    /** The server side of {@code @ServerApi}: POST /_rpc/Api/method. */
+    @Bean
+    @ConditionalOnProperty(prefix = "jreact.rpc", name = "enabled", matchIfMissing = true)
+    RpcController jreactRpcController(org.springframework.context.ApplicationContext context) throws java.io.IOException {
+        return new RpcController(context);
+    }
+
     @Bean
     @ConditionalOnProperty(prefix = "jreact", name = "dev-dir")
     DevReloadController jreactDevReloadController(JReactProperties props) { return new DevReloadController(props); }
