@@ -187,5 +187,6 @@ public final class DomHost<N> implements HostConfig<N> {
         @Override public void preventDefault() { source.preventDefault(); }
         @Override public void stopPropagation() { stopped = true; }
         @Override public boolean modified() { return source.modified(); }
+        @Override public String formData() { return source.formData(); }
     }
 }

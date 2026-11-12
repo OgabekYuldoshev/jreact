@@ -23,4 +23,7 @@ public interface NativeEvent<N> {
 
     /** Ctrl/Cmd/Shift/Alt held or a non-primary button. */
     default boolean modified() { return false; }
+
+    /** URL-encoded fields of the form around the target (see {@code Event.formData}). */
+    default String formData() { return ""; }
 }

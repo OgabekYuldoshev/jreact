@@ -1,0 +1,47 @@
+package app;
+
+import java.util.List;
+import jreact.router.*;
+import jreact.web.JReactWeb;
+import jreact.web.Routers;
+
+public class WebMain {
+
+    static Contact contactOrFail(DataArgs a) {
+        Contact c = Contacts.find(a.params().get("id"));
+        if (c == null) throw new ErrorResponse(404, "Not Found", "There is no contact " + a.params().get("id") + ".");
+        return c;
+    }
+
+    public static void main(String[] args) {
+        List<RouteObject> routes = List.of(
+            RouteObject.of("/").id("root").element(<Root />).errorElement(<ErrorPage />)
+                // the sidebar list; reruns when the query changes and after every action
+                .loader(a -> Contacts.search(a.request().searchParams().get("q")))
+                // "New": make an empty contact and go edit it
+                .action(a -> Redirect.to("/contacts/" + Contacts.create().id() + "/edit"))
+                .children(
+                    // an error in a contact page shows inside the layout, the sidebar stays
+                    RouteObject.layout().errorElement(<ErrorPage />).children(
+                        RouteObject.indexRoute().element(<Welcome />),
+                        RouteObject.of("contacts/:id").id("contact").element(<ContactPage />)
+                            .loader(a -> Contacts.later(150, () -> contactOrFail(a)))
+                            .action(a -> {          // the star: a fetcher submits here and nothing navigates
+                                boolean on = "true".equals(a.request().form().get("favorite"));
+                                Contacts.update(a.params().get("id"), c -> c.withFavorite(on));
+                                return on;
+                            }),
+                        RouteObject.of("contacts/:id/edit").id("edit").element(<EditContact />)
+                            .loader(a -> contactOrFail(a))
+                            .action(a -> {
+                                SearchParams f = a.request().form();
+                                Contacts.update(a.params().get("id"), c -> c.with(f.get("first", ""), f.get("last", ""), f.get("notes", "")));
+                                return Redirect.to("/contacts/" + a.params().get("id"));
+                            }),
+                        RouteObject.of("contacts/:id/destroy")
+                            .action(a -> { Contacts.delete(a.params().get("id")); return Redirect.to("/"); }))));
+
+        // createBrowserRouter: real paths, needs the server to answer every path with index.html. The app lives under /contacts
+        JReactWeb.createRoot("root").render(<RouterProvider router={Routers.createBrowserRouter(routes, "/contacts")} fallbackElement={<p className="p-8 text-stone-500">Loading...</p>} />);
+    }
+}

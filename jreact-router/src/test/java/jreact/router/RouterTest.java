@@ -24,11 +24,11 @@ public final class RouterTest {
     // ================================================================ element helpers
 
     static Element route(String path, Element element, Object... children) {
-        return Jsx.c(Route.class, Route::new, null, new Route.Props(path, false, element, Jsx.children(children)));
+        return Jsx.c(Route.class, Route::new, null, new Route.Props(path, false, element, null, null, null, null, null, null, Jsx.children(children)));
     }
-    static Element index(Element element) { return Jsx.c(Route.class, Route::new, null, new Route.Props(null, true, element, Jsx.children())); }
+    static Element index(Element element) { return Jsx.c(Route.class, Route::new, null, new Route.Props(null, true, element, null, null, null, null, null, null, Jsx.children())); }
     static Element routes(Object... children) { return Jsx.c(Routes.class, Routes::new, null, new Routes.Props(Jsx.children(children))); }
-    static Element outlet() { return Jsx.c(Outlet.class, Outlet::new, null, new Outlet.Props()); }
+    static Element outlet() { return Jsx.c(Outlet.class, Outlet::new, null, new Outlet.Props(null)); }
     static Element router(History h, String basename, Object... children) {
         return Jsx.c(Router.class, Router::new, null, new Router.Props(h, basename, Jsx.children(children)));
     }

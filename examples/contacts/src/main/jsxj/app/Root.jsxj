@@ -1,0 +1,63 @@
+package app;
+
+import java.util.List;
+import java.util.Map;
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+import jreact.router.*;
+import static jreact.router.RouterHooks.*;
+
+/** Sidebar (search, list, New) and the page of the selected contact in the Outlet. */
+public class Root extends Component<Root.Props> {
+
+    public record Props() {}
+
+    private static final String ITEM = "flex items-center justify-between rounded-lg px-3 py-2 text-sm hover:bg-stone-200/70";
+    private static final String CURRENT = "bg-indigo-600 text-white hover:bg-indigo-600";
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Element render(Props props) {
+        List<Contact> contacts = (List<Contact>) useLoaderData();
+        DataRouter.Navigation navigation = useNavigation();
+        Submitter submit = useSubmit();
+        String q = useSearchParams().params().get("q", "");
+        State<String> typed = useState(q);
+        boolean loading = navigation.state() == DataRouter.NavigationState.LOADING;
+
+        return (
+            <div className="flex min-h-screen">
+                <aside className="flex w-80 shrink-0 flex-col border-r border-stone-200 bg-white">
+                    <div className="flex items-center gap-2 border-b border-stone-200 p-4">
+                        <input id="q" type="search" placeholder="Search" value={typed.get()}
+                               className="min-w-0 flex-1 rounded-lg border border-stone-300 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+                               onInput={e -> {
+                                   typed.set(e.value());
+                                   // a search box must not fill the back button: replace the entry
+                                   submit.submit(Map.of("q", e.value()), new Submitter.Options("get", "/", true));
+                               }} />
+                        <Form method="post" id="new-form">
+                            <button type="submit" className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700">New</button>
+                        </Form>
+                    </div>
+                    <nav className="flex-1 overflow-y-auto p-2">
+                        {contacts.isEmpty()
+                            ? <p id="no-contacts" className="p-3 text-sm text-stone-400">No contacts</p>
+                            : <ul>{contacts.stream().map(c -> (
+                                <li key={String.valueOf(c.id())}>
+                                    <NavLink to={"/contacts/" + c.id()} className={ITEM} activeClassName={CURRENT} id={"contact-" + c.id()}>
+                                        <span>{c.fullName()}</span>
+                                        {c.favorite() ? <span className="fav">★</span> : null}
+                                    </NavLink>
+                                </li>)).toList()}</ul>}
+                    </nav>
+                </aside>
+                <main id="detail" className={"flex-1 p-10 transition-opacity " + (loading ? "opacity-40" : "opacity-100")}>
+                    <Outlet />
+                </main>
+                <span id="nav-state" className="hidden">{navigation.state().name()}</span>
+            </div>
+        );
+    }
+}

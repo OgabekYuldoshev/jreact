@@ -42,9 +42,15 @@ public class Routes extends Component<Routes.Props> {
     }
 
     /** The element of {@code matches[index]}, with the route context set (an element-less route renders its child via {@code <Outlet/>}). */
-    static Element renderMatch(List<RouteMatch> matches, int index) {
-        Element element = matches.get(index).route().element();
-        if (element == null) element = jreact.Jsx.c(Outlet.class, Outlet::new, null, new Outlet.Props());
-        return RouterContext.ROUTE.provide(new RouteState(matches, index), element);
+    static Element renderMatch(List<RouteMatch> matches, int index) { return renderMatch(matches, index, null); }
+
+    /** Same; when {@code error} is not null and this is the last match, the route's errorElement is shown instead of its element. */
+    static Element renderMatch(List<RouteMatch> matches, int index, Object error) {
+        RouteObject route = matches.get(index).route();
+        Element element;
+        if (error != null && index == matches.size() - 1) element = route.errorElement() != null ? route.errorElement() : DefaultError.element();
+        else element = route.element();
+        if (element == null) element = jreact.Jsx.c(Outlet.class, Outlet::new, null, new Outlet.Props(null));
+        return RouterContext.ROUTE.provide(new RouteState(matches, index, error), element);
     }
 }

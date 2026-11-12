@@ -38,7 +38,7 @@ public class Counter extends Component<Counter.Props> {
 - [Eventlar](#eventlar)
 - [Router](#router)
 - [Stillar: CSS, Sass, Tailwind](#stillar-css-sass-tailwind)
-- [Namunalar: Tailwind bilan 5 ta ilova](#namunalar-tailwind-bilan-5-ta-ilova)
+- [Namunalar: Tailwind bilan 6 ta ilova](#namunalar-tailwind-bilan-5-ta-ilova)
 - [Error boundary](#error-boundary)
 - [Ilovani ishga tushirish va ustuvorlik](#ilovani-ishga-tushirish-va-ustuvorlik)
 - [JVM'da ishlatish (HTML render, test)](#jvmda-ishlatish-html-render-test)
@@ -71,13 +71,13 @@ git clone <repo-url> jreact
 cd jreact
 
 ./build.sh          # kompilyator -> runtime -> .jsxj -> .java -> javac -> Todo namunasi HTML chiqaradi
-./build.sh test     # barcha testlar (kompilyator 41, scheduler 14, reconciler 57, dom 24, router 20, language server 12)
+./build.sh test     # barcha testlar (kompilyator 41, scheduler 14, reconciler 57, dom 24, router 20 + 28 (data router), language server 12)
 ./build.sh dev      # galereya + 5 ilova: http://localhost:5173 (o'zgarsa o'zi qayta yig'iladi)
 ```
 
 `./build.sh` Todo'ning HTML'ini terminalga chiqaradi (`<section class="todo-app"><h1>JReact Todo</h1>...`). Har ishga tushganda `build/` noldan yaratiladi.
 
-`./build.sh dev` birinchi marta Maven orqali TeaVM'ni yuklaydi (bir necha daqiqa), keyingi qayta yig'ishlar ~4 soniya. `/` da galereya, `/todo/` da Todo ilovasi ("Xato chiqar" tugmasi error boundary namunasi), `/kanban/`, `/shop/`, `/dashboard/`, `/landing/`, `/blog/` da Tailwind ilovalari.
+`./build.sh dev` birinchi marta Maven orqali TeaVM'ni yuklaydi (bir necha daqiqa), keyingi qayta yig'ishlar ~4 soniya. `/` da galereya, `/todo/` da Todo ilovasi ("Xato chiqar" tugmasi error boundary namunasi), `/kanban/`, `/shop/`, `/dashboard/`, `/landing/`, `/blog/`, `/contacts/` da Tailwind ilovalari.
 
 ## O'z ilovangizni yaratish
 
@@ -462,7 +462,65 @@ Login'dan keyin `go.navigate(useSearchParams().params().get("next", "/account"),
 
 JVM'da (SSR, test): `ServerRenderer.renderToString(<Router history={new MemoryHistory("/posts/7")}>...</Router>)`. Effektlar ishlamagani uchun `<Navigate>` SSR'da yo'naltirmaydi.
 
-**Hali yo'q** (react-router v6.4+ ga nisbatan): data router (`loader`/`action`), `useMatch`, `useOutletContext`, scroll tiklash (navigatsiyada sahifa tepaga qaytmaydi), `Link` da `state`, `lazy` marshrutlar, `caseSensitive`, ixtiyoriy param (`:id?`), `<Prompt>` (chiqishni bloklash). `Location` da `state`/`key` yo'q.
+### Data router: `createBrowserRouter`, loader, action
+
+Yuqoridagi `<Routes>` sahifani avval chizadi, ma'lumotni keyin yuklaydi (spinner, bo'sh holat). **Data router** teskari: marshrutning `loader`'i sahifa chizilishidan *oldin* ma'lumotni olib keladi, forma `action`'ga boradi, action tugagach loader'lar qayta ishlaydi. Eski sahifa ekranda turadi va URL faqat yangi ma'lumot tayyor bo'lganda o'zgaradi. API react-router v6.4+ ga o'xshash.
+
+```java
+import jreact.router.*;
+import jreact.web.Routers;
+
+List<RouteObject> routes = List.of(
+    RouteObject.of("/").element(<Root />).errorElement(<ErrorPage />)
+        .loader(a -> Contacts.search(a.request().searchParams().get("q")))     // useLoaderData()
+        .action(a -> Redirect.to("/contacts/" + Contacts.create().id() + "/edit"))
+        .children(
+            RouteObject.indexRoute().element(<Welcome />),
+            RouteObject.of("contacts/:id").element(<ContactPage />)
+                .loader(a -> Contacts.find(a.params().get("id")))
+                .action(a -> { Contacts.update(a.params().get("id"), a.request().form()); return null; })));
+
+JReactWeb.createRoot("root").render(<RouterProvider router={Routers.createBrowserRouter(routes)} />);
+```
+
+JSX'ni yoqtirsangiz: `Routers.createRoutesFromElements(<Route path="/" loader={...} ...>...</Route>)`. `<Route>`ga `id`, `loader`, `action`, `errorElement`, `shouldRevalidate`, `handle` berish mumkin.
+
+| Nima | Vazifasi |
+|---|---|
+| `Routers.createBrowserRouter(routes[, basename])`, `createHashRouter(routes)` | `jreact-web`: brauzer manzili. JVM'da va testda: `Routers.createMemoryRouter(routes, "/start")` |
+| `<RouterProvider router fallbackElement>` | Router'ni chizadi. Birinchi sahifa loader'lari tugaguncha `fallbackElement` |
+| `Loader` / `Action` | `a -> ...`: `a.params()`, `a.request()` (`method`, `url`, `searchParams()`, `form()`), `a.signal()`. Qiymat, `Promise`, `Redirect` qaytaradi yoki istisno tashlaydi |
+| `Promise<T>` | Kutadigan loader uchun: `Promise.pending()`, keyin `resolve(v)` / `reject(e)` (timer yoki fetch ichidan). `then`, `thenCompose`, `recover`, `all` |
+| `Redirect.to("/login")` | Loader/action'dan qaytarilsa yoki tashlansa navigatsiya o'sha yerda tugaydi, yo'naltirgan sahifa tarixda qolmaydi |
+| `ErrorResponse(404, "Not Found", data)` | "Topilmadi", "Ruxsat yo'q" sahifalari. Router o'zi 404 (marshrut yo'q) va 405 (action yo'q) beradi |
+| `errorElement` | Marshrut, bolasi yoki ularning loader/action'i xato qilsa elementi o'rniga chiqadi. Eng yaqin `errorElement` olinadi, yo'q bo'lsa ildiz marshrut. Ota-ona ma'lumoti saqlanadi, tartibsiz qismlar chizilmaydi |
+| `<Form method="post" action>` | Sahifasiz yuboradi. `post/put/patch/delete` action'ni ishlatib, keyin loader'larni qayta yuklaydi. `get` (standart) maydonlarni query'ga qo'yib o'tadi (qidiruv formasi). `action` Link kabi nisbiy |
+
+Hook'lar (`import static jreact.router.RouterHooks.*;`):
+
+| Hook | Qaytaradi |
+|---|---|
+| `useLoaderData()`, `useRouteLoaderData(id)`, `useActionData()` | Joriy marshrutning loader/action natijasi; boshqa marshrutniki `id` bilan |
+| `useRouteError()` | `errorElement` ichida: tashlangan narsa (`ErrorResponse` yoki istisno) |
+| `useNavigation()` | `state()`: `IDLE`, `LOADING`, `SUBMITTING`, `location()`: qayerga ketayapti. "Yuklanmoqda" belgisi uchun |
+| `useSubmit()` | Koddan forma yuborish: `submit.submit(Map.of("q", v), new Submitter.Options("get", "/", true))` |
+| `useFetcher()` | Navigatsiyasiz `load(to)` / `submit(fields, action, method)`: yurakcha, "bajarildi" belgisi. `data()`, `state()`, `formData()` (optimistik UI). `<Form fetcher={f}>` bilan ham ishlaydi |
+| `useRevalidator()` | `revalidate()`: hamma loader'larni qayta yuklash |
+| `useBlocker(shouldBlock)` | Saqlanmagan o'zgarishda chiqishni ushlaydi: `blocked()`, `proceed()`, `reset()`. Faqat ilovadagi navigatsiya (`Link`, `navigate`, forma); brauzerning orqaga tugmasini to'xtatib bo'lmaydi |
+| `useMatches()`, `useNavigationType()`, `useMatch(pattern)`, `useOutletContext()` | Mos kelganlar (`handle` bilan: breadcrumb), `POP/PUSH/REPLACE`, naqsh bo'yicha moslash, `<Outlet context={...}/>` qiymati |
+| `<ScrollRestoration />` | Ildiz layout'ga bitta: yangi sahifada tepaga (yoki `#hash` elementiga), orqaga/oldinga o'tganda eski joyga |
+
+Qoidalar:
+
+- **Qayta yuklash:** navigatsiyada marshrut loader'i faqat yangi bo'lsa, param'lari yoki query'si o'zgarsa ishlaydi, o'zgarmagan ota marshrutlar eski ma'lumotni saqlaydi. Har bir action'dan keyin (va action'dan redirect qilingan sahifada ham) hammasi qayta ishlaydi. `shouldRevalidate(a -> false)` bilan oldini olish mumkin.
+- **Bekor qilish:** yangi navigatsiya eskisini to'xtatadi (`a.signal().onAbort(...)`), kech kelgan natija e'tiborga olinmaydi.
+- **Action kimga boradi:** URL'ga mos eng chuqur marshrutga, lekin index marshrut faqat `?index` bilan (`/` ga POST ota layout'ning action'iga boradi, react-router kabi; `<Form>` index marshrut ichida o'zi `?index` qo'shadi). Marshrutda action bo'lmasa va tepada yo'lsiz layout'lar bo'lsa, shu yo'ldagi eng yaqin action topiladi.
+- **Tashqi bog'lanish:** `Event.formData()` formaning maydonlarini URL-kodlangan qilib beradi (fayl yo'q). Brauzerda `FormData`, JVM'da testda o'zingiz berasiz.
+- **Tarix:** URL navigatsiya tugaganda yoziladi; redirect eski sahifani tarixda qoldirmaydi.
+
+Misol: `examples/contacts` (`/contacts/`): qidiruv (GET forma, tarixni to'ldirmaydi), yurakcha (fetcher, optimistik), tahrirlash (action + redirect), yaratish (ildiz action), o'chirish, `errorElement` bilan 404, yuklanayotganda xira sahifa. `./build.sh test` da `DataRouterTest` (28 ta, DOM'siz `DataRouter` va soxta DOM'da `RouterProvider`) va `examples-test` da contacts uchun 23 jsdom tekshiruvi.
+
+**Hali yo'q:** `defer`/`<Await>`/Suspense (loader'ning bir qismini kutmay chizish), `lazy` marshrutlar, orqaga tugmasini bloklash (`useBlocker` faqat ilova ichidagini ushlaydi), `Location.state` / `key` (`Link state`), `caseSensitive`, ixtiyoriy param (`:id?`), `useFormAction`, fayl yuklash formalari. Scroll tiklash joyni URL bo'yicha saqlaydi (bir URL'ga ikki marta kirsangiz bir xil joy).
 
 ## Stillar: CSS, Sass, Tailwind
 
@@ -549,7 +607,7 @@ mvn -B -q clean package && npx sass src/main/styles/app.scss target/web/app.css
 
 Maven ichiga olish uchun `exec-maven-plugin` yoki `frontend-maven-plugin` ishlatiladi. Tailwind namunalarida (`examples/kanban` va boshqalar) `./build.sh dev` Maven'dan keyin Tailwind CLI'ni o'zi yurgizadi. Sass ulanmagan.
 
-## Namunalar: Tailwind bilan 5 ta ilova
+## Namunalar: Tailwind bilan 6 ta ilova
 
 `examples/` ichida Tailwind CSS v4 bilan yozilgan 5 ta real ilova bor. Hammasi `.jsxj`, brauzerda TeaVM orqali ishlaydi.
 
@@ -564,7 +622,7 @@ Yig'ish va ko'rish:
 
 ```bash
 ./build.sh examples        # Maven + TeaVM, keyin Tailwind CLI -> examples/dist/
-./build.sh examples-test   # shuni yig'ib, 5 ilovani jsdom'da bosib tekshiradi (105 tekshiruv)
+./build.sh examples-test   # shuni yig'ib, 6 ilovani jsdom'da bosib tekshiradi (128 tekshiruv)
 python3 -m http.server -d examples/dist 8080     # http://localhost:8080
 ```
 
@@ -643,7 +701,7 @@ Brauzersiz ham ishlatish mumkin:
 ./build.sh dev kanban shop        # faqat tanlangan ilovalar (tezroq boshlanadi)
 ```
 
-Bitta portda galereya (`/`) va ilovalarni (`/todo/`, `/kanban/`, `/shop/`, `/dashboard/`, `/landing/`, `/blog/`) ko'rsatadi. Ilovaning `.jsxj`, `.java`, `.css` yoki `index.html` fayli o'zgarsa faqat shu ilova qayta yig'iladi (Maven + Tailwind, ~4 s) va uning sahifasi yangilanadi. `jreact-*` (framework) o'zgarsa hammasi qayta yig'iladi. Build xatosi brauzerda qizil sahifa bo'lib chiqadi, tuzatsangiz o'zi tiklanadi.
+Bitta portda galereya (`/`) va ilovalarni (`/todo/`, `/kanban/`, `/shop/`, `/dashboard/`, `/landing/`, `/blog/`, `/contacts/`) ko'rsatadi. Ilovaning `.jsxj`, `.java`, `.css` yoki `index.html` fayli o'zgarsa faqat shu ilova qayta yig'iladi (Maven + Tailwind, ~4 s) va uning sahifasi yangilanadi. `jreact-*` (framework) o'zgarsa hammasi qayta yig'iladi. Build xatosi brauzerda qizil sahifa bo'lib chiqadi, tuzatsangiz o'zi tiklanadi.
 
 ### VS Code
 
@@ -720,7 +778,7 @@ root.reconciler().setWarningHandler(msg -> log.warn(msg)); // default: System.er
 | `./build.sh web` | Todo'ni brauzer uchun yig'adi: `examples/todo-web/target/web/{index.html,app.js}` (Maven + TeaVM) |
 | `./build.sh web-test` | shuni jsdom'da ochib, ilovada yozib/bosib tekshiradi (node + npm) |
 | `./build.sh dev [port] [ilova...]` | dev server (`tools/dev-server.js`): qayta yig'ish + sahifani yangilash |
-| `./build.sh examples` | Tailwind namunalari (kanban, shop, dashboard, landing, blog) -> `examples/dist/` (Maven + node) |
+| `./build.sh examples` | Tailwind namunalari (kanban, shop, dashboard, landing, blog, contacts) -> `examples/dist/` (Maven + node) |
 | `./build.sh examples-test` | shuni yig'ib, jsdom'da bosib tekshiradi |
 | `./build.sh bench [n]` | brauzerda benchmark: JReact vs React 18 vs vanilla (Maven, node, Brave/Chrome) |
 | `./build.sh lsp` | language server jar'i: `build/jsxj-lsp.jar` |
@@ -756,12 +814,12 @@ java -cp build/core:build/app app.Main        # Windows'da ':' o'rniga ';'
 | `jreact-scheduler` | Vazifalar navbati: ustuvorlik, muddat (timeout), `shouldYield`, delay |
 | `jreact-reconciler` | Fiber reconciler: work loop, key'li diff, commit, hooks dispatcher, `HostConfig` |
 | `jreact-dom` | DOM host: `DomHost`, `DomRoot`, event delegation, atribut/style qoidalari (JSO'siz) |
-| `jreact-router` | Router: `Routes`, `Route`, `Link`, `NavLink`, `Outlet`, `Navigate`, hooks, `MemoryHistory` (DOM'siz) |
-| `jreact-web` | Brauzer bog'lamalari (TeaVM JSO): `JsDomOps`, `JsTimers`, `JReactWeb.createRoot`, `BrowserRouter`, `HashRouter` |
+| `jreact-router` | Router: `Routes`, `Route`, `Link`, `NavLink`, `Outlet`, `Navigate`, hooks, `MemoryHistory` (DOM'siz); data router: `DataRouter`, `RouterProvider`, loader/action, `Form`, fetcher |
+| `jreact-web` | Brauzer bog'lamalari (TeaVM JSO): `JsDomOps`, `JsTimers`, `JReactWeb.createRoot`, `BrowserRouter`, `HashRouter`, `Routers.createBrowserRouter` |
 | `jreact-maven-plugin` | Maven plagini: `jsxj:compile` |
 | `jreact-lsp` | `.jsxj` language server (LSP) |
 | `examples/todo`, `examples/todo-web` | namunaviy ilova: JVM'da HTML va brauzerda |
-| `examples/{kanban,shop,dashboard,landing,blog}` | Tailwind bilan 5 ta real ilova + `gallery` (blog: router) |
+| `examples/{kanban,shop,dashboard,landing,blog}` | Tailwind bilan 6 ta real ilova + `gallery` (blog: router) |
 | `templates/web-app` | o'z brauzer ilovangiz uchun andoza |
 | `editors/vscode-jsxj` | VS Code kengaytmasi |
 
@@ -917,7 +975,7 @@ jreact/
 └── examples/
     ├── todo/                         # namunaviy ilova (.jsxj), JVM'da HTML chiqaradi
     ├── todo-web/                     # shu ilova brauzerda + jsdom smoke testi
-    ├── kanban/ shop/ dashboard/ landing/ blog/   # Tailwind bilan 5 ta ilova (pom.xml, src/main/{jsxj,java,styles,webapp})
+    ├── kanban/ shop/ dashboard/ landing/ blog/ contacts/   # Tailwind bilan 6 ta ilova (pom.xml, src/main/{jsxj,java,styles,webapp})
     ├── gallery/                      # to'rttasini bog'lovchi bosh sahifa
     ├── pom.xml, package.json         # umumiy Maven sozlamasi; Tailwind CLI + jsdom
     └── smoke.js                      # 4 ilova uchun jsdom testi

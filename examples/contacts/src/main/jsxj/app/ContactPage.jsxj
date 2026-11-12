@@ -1,0 +1,38 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+import static jreact.router.RouterHooks.*;
+
+/** One contact: loaded by the route's loader. The star is a fetcher: it saves without leaving the page. */
+public class ContactPage extends Component<ContactPage.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        Contact c = (Contact) useLoaderData();
+        Fetcher fetcher = useFetcher();
+        // optimistic: show what is being saved, not what was loaded
+        boolean favorite = fetcher.formData() != null ? fetcher.formData().contains("favorite=true") : c.favorite();
+
+        return (
+            <article id="page-contact" className="max-w-xl">
+                <div className="flex items-start justify-between gap-4">
+                    <h1 id="contact-name" className="text-4xl font-extrabold tracking-tight">{c.fullName()}</h1>
+                    <Form fetcher={fetcher} method="post" id="favorite-form">
+                        <input type="hidden" name="favorite" value={favorite ? "false" : "true"} />
+                        <button id="favorite" type="submit" aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+                                className={"text-3xl " + (favorite ? "text-amber-400" : "text-stone-300 hover:text-amber-300")}>{favorite ? "★" : "☆"}</button>
+                    </Form>
+                </div>
+                <p id="contact-notes" className="mt-6 text-lg leading-relaxed text-stone-700">{c.notes().isEmpty() ? "No notes yet." : c.notes()}</p>
+                <div className="mt-8 flex gap-3">
+                    <Form action="edit" id="edit-form"><button id="edit" type="submit" className="rounded-lg border border-stone-300 px-4 py-2 text-sm hover:bg-stone-100">Edit</button></Form>
+                    <Form method="post" action="destroy" id="destroy-form"><button id="destroy" type="submit" className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-600 hover:bg-red-50">Delete</button></Form>
+                </div>
+            </article>
+        );
+    }
+}

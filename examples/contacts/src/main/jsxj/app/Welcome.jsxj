@@ -1,0 +1,19 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+
+public class Welcome extends Component<Welcome.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <div id="welcome" className="mx-auto mt-24 max-w-md text-center">
+                <h1 className="text-3xl font-bold tracking-tight">Contacts</h1>
+                <p className="mt-3 text-stone-500">A data router demo: loaders fetch before a page renders, actions change data and everything reloads, and the address bar is always right.</p>
+            </div>
+        );
+    }
+}

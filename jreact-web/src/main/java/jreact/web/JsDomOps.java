@@ -79,6 +79,12 @@ public final class JsDomOps implements DomOps<JsNode> {
         @Override public boolean checked() { return checked(event.getTarget()); }
         @Override public void preventDefault() { event.preventDefault(); }
         @Override public boolean modified() { return modifiedClick(event); }
+        @Override public String formData() { return formFields(event.getTarget()); }
+
+        // the form itself (submit event) or the form that owns the target; files are skipped
+        @JSBody(params = {"t"}, script = "var f = t && (t.tagName === 'FORM' ? t : t.form || (t.closest && t.closest('form'))); if (!f) return '';"
+                + "var p = new URLSearchParams(); new FormData(f).forEach(function (v, k) { if (typeof v === 'string') p.append(k, v); }); return p.toString();")
+        private static native String formFields(JsNode target);
 
         @JSBody(params = {"e"}, script = "return !!(e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || (e.button || 0) !== 0);")
         private static native boolean modifiedClick(JsEvent event);

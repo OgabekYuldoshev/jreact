@@ -316,16 +316,97 @@ async function blog() {
   cssHas('blog', ['bg-indigo-600', 'divide-y', 'sm:grid-cols-3', 'max-w-4xl', 'hover:bg-stone-100']);
 }
 
+// ------------------------------------------------------------------------------------------------ contacts (data router)
+async function contacts() {
+  const t = await open('contacts');
+  const names = () => t.$$('aside nav li span:first-child').map(x => x.textContent);
+  const path = () => t.w.location.pathname + t.w.location.search;
+  const form = id => t.$('#' + id);
+  const settle = () => sleep(320);
+
+  check('contacts', 'the first loader ran before anything showed: 5 contacts and the welcome page', names().length === 5 && !!t.$('#welcome'), names());
+  check('contacts', 'the app lives under its basename', path() === '/contacts/', path());
+
+  await t.click(t.$('#contact-2'));
+  check('contacts', 'while a loader runs the old page stays and the app shows it is loading', !!t.$('#welcome') && t.text('#nav-state') === 'LOADING' && t.$('#detail').className.includes('opacity-40'), t.text('#nav-state'));
+  check('contacts', 'the URL changes only when the data is there', path() === '/contacts/', path());
+  await settle();
+  check('contacts', 'then the page appears with its data, in one step', t.text('#contact-name') === 'Grace Hopper' && path() === '/contacts/contacts/2' && t.text('#nav-state') === 'IDLE', t.text('#contact-name') + path());
+  check('contacts', 'the NavLink of the current contact is active', t.$('#contact-2').className.includes('bg-indigo-600') && !t.$('#contact-1').className.includes('bg-indigo-600'), t.$('#contact-2').className);
+
+  // a search box that replaces the history entry
+  const before = t.w.history.length;
+  await t.type(t.$('#q'), 'ad');
+  await sleep(100);
+  check('contacts', 'typing in the search box filters through the root loader (GET form)', names().join() === 'Ada Lovelace' && path() === '/contacts/?q=ad', names() + ' ' + path());
+  check('contacts', 'search replaces the history entry instead of filling the back button', t.w.history.length === before, before + ' ' + t.w.history.length);
+  await t.type(t.$('#q'), '');
+  await sleep(100);
+  check('contacts', 'clearing the search brings all contacts back', names().length === 5, names());
+
+  // a fetcher: the star
+  await t.click(t.$('#contact-2'));
+  await settle();
+  check('contacts', 'Grace is not a favorite yet', t.text('#favorite') === '☆' && !t.$('#contact-2 .fav'), t.text('#favorite'));
+  await t.submit(form('favorite-form'));
+  check('contacts', 'a fetcher submits without navigating and the star flips at once (optimistic)', t.text('#favorite') === '★' && path() === '/contacts/contacts/2', t.text('#favorite') + path());
+  await settle();
+  check('contacts', 'after the action every loader reruns: the sidebar shows the favorite', !!t.$('#contact-2 .fav') && t.text('#favorite') === '★', '');
+
+  // edit: a post action that redirects
+  await t.submit(form('edit-form'));
+  await sleep(120);
+  check('contacts', 'a GET <Form action="edit"> goes to the edit route (relative to the route)', path() === '/contacts/contacts/2/edit' && t.$('#first').value === 'Grace', path());
+  await t.type(t.$('#first'), 'Rear Admiral Grace');
+  await t.submit(form('edit-contact'));
+  await settle();
+  check('contacts', 'saving runs the action, redirects to the contact and the list is fresh', path() === '/contacts/contacts/2' && t.text('#contact-name') === 'Rear Admiral Grace Hopper' && names().includes('Rear Admiral Grace Hopper'), path() + ' ' + t.text('#contact-name'));
+  t.w.history.back();
+  await sleep(150);
+  check('contacts', 'the browser back button is a navigation too (loaders run for the page it returns to)', path() !== '/contacts/contacts/2' && !!t.$('#detail'), path());
+  await t.click(t.$('#contact-2'));
+  await settle();
+
+  // new: the layout's action, redirect to the edit page of the new contact
+  await t.submit(form('new-form'));
+  await sleep(150);
+  check('contacts', 'a POST on "/" reaches the root action (not the index route) and redirects', path() === '/contacts/contacts/6/edit' && names()[0] === 'No name', path() + ' ' + names());
+  await t.type(t.$('#last'), 'Newcomer');
+  await t.submit(form('edit-contact'));
+  await settle();
+  check('contacts', 'the new contact is saved', t.text('#contact-name') === 'Newcomer' && names().length === 6, t.text('#contact-name'));
+
+  // delete
+  await t.submit(form('destroy-form'));
+  await sleep(150);
+  check('contacts', 'delete runs the action and redirects home', path() === '/contacts/' && !!t.$('#welcome') && names().length === 5 && !names().includes('Newcomer'), path() + ' ' + names());
+
+  // errors
+  t.w.history.pushState(null, '', '/contacts/contacts/99');
+  t.w.dispatchEvent(new t.w.PopStateEvent('popstate'));
+  await settle();
+  check('contacts', 'a loader that throws ErrorResponse shows the errorElement inside the layout (sidebar stays)', t.text('#error-title') === '404 Not Found' && t.text('#error-detail').includes('99') && names().length === 5, t.text('#error-title'));
+  t.w.history.pushState(null, '', '/contacts/no/such/page');
+  t.w.dispatchEvent(new t.w.PopStateEvent('popstate'));
+  await sleep(120);
+  check('contacts', 'an unknown URL is a 404 from the root errorElement', t.text('#error-title') === '404 Not Found', t.text('#error-title'));
+  await t.click(t.$('#page-error a'));
+  await sleep(120);
+  check('contacts', 'and a Link leaves the error page', !!t.$('#welcome') && path() === '/contacts/', path());
+  noWarnings('contacts', t);
+  cssHas('contacts', ['bg-indigo-600', 'opacity-40', 'max-w-xl', 'text-amber-400', 'disabled:opacity-50']);
+}
+
 // ------------------------------------------------------------------------------------------------ gallery
 function gallery() {
   const html = fs.readFileSync(path.join(dist, 'index.html'), 'utf8');
-  const missing = ['kanban/', 'shop/', 'dashboard/', 'landing/', 'blog/'].filter(l => !html.includes('href="' + l + '"'));
+  const missing = ['kanban/', 'shop/', 'dashboard/', 'landing/', 'blog/', 'contacts/'].filter(l => !html.includes('href="' + l + '"'));
   check('gallery', 'links to every app', missing.length === 0, missing.join());
   check('gallery', 'has its stylesheet', fs.existsSync(path.join(dist, 'gallery.css')) && fs.statSync(path.join(dist, 'gallery.css')).size > 1000, '');
 }
 
 (async () => {
-  for (const run of [gallery, kanban, shop, dashboard, landing, blog]) await run();
+  for (const run of [gallery, kanban, shop, dashboard, landing, blog, contacts]) await run();
   console.log(failed ? `\n${failed} of ${total} FAILED` : `\nall ${total} example checks passed`);
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error('ERROR', e); process.exit(2); });

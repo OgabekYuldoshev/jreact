@@ -3,7 +3,7 @@
 //   node tools/dev-server.js [port] [app...]      (normally: ./build.sh dev [port] [app...])
 //
 //   /           gallery        /todo/  examples/todo-web (plain CSS)
-//   /kanban/    /shop/    /dashboard/    /landing/    /blog/      (Tailwind CSS v4)
+//   /kanban/  /shop/  /dashboard/  /landing/  /blog/  /contacts/      (Tailwind CSS v4)
 //
 // Source change in an app            -> Maven for that app + Tailwind CLI, then reload that app's tabs
 // Change in jreact-* (framework)     -> every app is rebuilt
@@ -25,6 +25,7 @@ const ALL = {
   dashboard: { dir: 'dashboard', tailwind: true },
   landing: { dir: 'landing', tailwind: true },
   blog: { dir: 'blog', tailwind: true },
+  contacts: { dir: 'contacts', tailwind: true },
 };
 const args = process.argv.slice(2);
 const port = Number(args.find(a => /^\d+$/.test(a)) || process.env.PORT || 5173);
@@ -41,7 +42,7 @@ const apps = Object.fromEntries(names.map(n => [n, {
 }]));
 
 const frameworkDirs = ['jreact-core/src', 'jreact-compiler/src/main', 'jreact-scheduler/src/main',
-  'jreact-reconciler/src/main', 'jreact-dom/src/main', 'jreact-web/src/main'].map(p => path.join(root, p));
+  'jreact-reconciler/src/main', 'jreact-dom/src/main', 'jreact-router/src/main', 'jreact-web/src/main'].map(p => path.join(root, p));
 const galleryDir = path.join(examples, 'gallery');
 const galleryCss = path.join(galleryDir, 'target/gallery.css');
 

@@ -24,6 +24,7 @@
         <module>dashboard</module>
         <module>landing</module>
         <module>blog</module>
+        <module>contacts</module>
         <module>bench</module>
     </modules>
 

@@ -22,7 +22,12 @@ import java.util.List;
  */
 public class Route extends Component<Route.Props> {
 
-    public record Props(String path, boolean index, Element element, List<Object> children) {}
+    /**
+     * {@code id}, {@code loader}, {@code action}, {@code errorElement}, {@code shouldRevalidate} and {@code handle} only do something
+     * under a {@code RouterProvider} (data router), see {@link RouteObject}.
+     */
+    public record Props(String path, boolean index, Element element, String id, Element errorElement, Loader loader, Action action,
+                        ShouldRevalidate shouldRevalidate, Object handle, List<Object> children) {}
 
     @Override public Element render(Props props) { return null; }
 }

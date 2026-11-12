@@ -1,0 +1,30 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+import static jreact.router.RouterHooks.*;
+
+/** The errorElement: whatever a loader or action threw, or the router's own 404. */
+public class ErrorPage extends Component<ErrorPage.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        Object error = useRouteError();
+        String title = "Something went wrong";
+        String detail = error instanceof Throwable t ? String.valueOf(t.getMessage()) : String.valueOf(error);
+        if (error instanceof ErrorResponse r) {
+            title = r.status() + " " + r.statusText();
+            detail = r.data() == null ? "" : String.valueOf(r.data());
+        }
+        return (
+            <div id="page-error" className="mx-auto mt-24 max-w-md text-center">
+                <h1 id="error-title" className="text-3xl font-bold tracking-tight">{title}</h1>
+                <p id="error-detail" className="mt-3 text-stone-500">{detail}</p>
+                <Link to="/" className="mt-6 inline-block text-indigo-600 hover:underline">Back to contacts</Link>
+            </div>
+        );
+    }
+}

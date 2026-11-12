@@ -1,0 +1,33 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+import static jreact.router.RouterHooks.*;
+
+/** The edit form: a post to this route's action, which saves and redirects to the contact. */
+public class EditContact extends Component<EditContact.Props> {
+
+    public record Props() {}
+
+    private static final String FIELD = "mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 outline-none focus:border-indigo-500";
+
+    @Override
+    public Element render(Props props) {
+        Contact c = (Contact) useLoaderData();
+        Navigator go = useNavigate();
+        boolean saving = useNavigation().state() == DataRouter.NavigationState.SUBMITTING;
+        return (
+            <Form method="post" id="edit-contact" className="max-w-xl space-y-4">
+                <h1 className="text-3xl font-bold tracking-tight">Edit contact</h1>
+                <label className="block text-sm font-medium">First name<input id="first" name="first" value={c.first()} className={FIELD} /></label>
+                <label className="block text-sm font-medium">Last name<input id="last" name="last" value={c.last()} className={FIELD} /></label>
+                <label className="block text-sm font-medium">Notes<textarea id="notes" name="notes" value={c.notes()} className={FIELD + " h-28"} /></label>
+                <div className="flex gap-3">
+                    <button id="save" type="submit" disabled={saving} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">{saving ? "Saving..." : "Save"}</button>
+                    <button id="cancel" type="button" className="rounded-lg border border-stone-300 px-4 py-2 text-sm hover:bg-stone-100" onClick={e -> go.back()}>Cancel</button>
+                </div>
+            </Form>
+        );
+    }
+}

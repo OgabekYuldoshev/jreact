@@ -28,13 +28,13 @@ if [[ "${1:-}" == "web" || "${1:-}" == "web-test" ]]; then
 fi
 
 # Tailwind example apps (examples/kanban, shop, dashboard, landing): Maven + TeaVM, then Tailwind CLI, then a gallery.
-#   ./build.sh examples        -> examples/dist/{index.html,kanban,shop,dashboard,landing,blog}   (needs Maven + node)
+#   ./build.sh examples        -> examples/dist/{index.html,kanban,shop,dashboard,landing,blog,contacts}   (needs Maven + node)
 #   ./build.sh examples-test   -> same, then clicks through every app in jsdom
 #   python3 -m http.server -d examples/dist 8080     # open http://localhost:8080
 if [[ "${1:-}" == "examples" || "${1:-}" == "examples-test" ]]; then
-  APPS="kanban shop dashboard landing blog"
+  APPS="kanban shop dashboard landing blog contacts"
   echo "== example apps (Maven + TeaVM)"
-  mvn -B -q -pl examples/kanban,examples/shop,examples/dashboard,examples/landing,examples/blog -am package
+  mvn -B -q -pl examples/kanban,examples/shop,examples/dashboard,examples/landing,examples/blog,examples/contacts -am package
   echo "== Tailwind CSS"
   (cd examples && npm install --silent --no-audit --no-fund)
   rm -rf examples/dist
@@ -111,6 +111,7 @@ if [[ "${1:-}" == "test" ]]; then
   echo "== router tests"
   $JAVAC -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/router -d $B/router-test $(find jreact-router/src/test/java -name '*.java')
   java -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/router:$B/router-test jreact.router.RouterTest
+  java -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/router:$B/router-test jreact.router.DataRouterTest
   echo "== language server tests"
   $JAVAC -cp $B/compiler:$B/lsp -d $B/lsp-test $(find jreact-lsp/src/test/java -name '*.java')
   java -cp $B/compiler:$B/lsp:$B/lsp-test jreact.lsp.LspTest
