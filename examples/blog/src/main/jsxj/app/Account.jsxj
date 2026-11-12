@@ -1,0 +1,32 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.NavLink;
+import jreact.router.Outlet;
+
+/** A layout route: the sidebar stays while the pages in the <Outlet /> change. Links here are relative to /account. */
+public class Account extends Component<Account.Props> {
+
+    public record Props() {}
+
+    private static final String LINK = "block rounded-md px-3 py-2 text-sm text-stone-600 hover:bg-stone-200/60";
+    private static final String ACTIVE = "bg-stone-200 font-medium text-stone-900";
+
+    @Override
+    public Element render(Props props) {
+        Auth auth = useContext(Auth.CONTEXT);
+        return (
+            <div id="page-account" className="grid gap-8 sm:grid-cols-[12rem_1fr]">
+                <aside>
+                    <p className="mb-3 text-xs uppercase tracking-wide text-stone-400">Signed in as <span id="account-user" className="font-medium text-stone-700">{auth.user()}</span></p>
+                    <nav id="account-nav" className="space-y-1">
+                        <NavLink to="." end className={LINK} activeClassName={ACTIVE}>Overview</NavLink>
+                        <NavLink to="settings" className={LINK} activeClassName={ACTIVE}>Settings</NavLink>
+                    </nav>
+                </aside>
+                <section><Outlet /></section>
+            </div>
+        );
+    }
+}

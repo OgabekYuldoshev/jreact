@@ -401,7 +401,7 @@ public final class JsxTranspiler {
     /** React's whitespace rule: trim each line, drop whitespace-only lines, join lines with one space. */
     static String cleanJsxText(String raw) {
         String[] lines = raw.split("\r\n|\n|\r", -1);
-        int lastNonEmpty = -1;
+        int lastNonEmpty = 0;     // not -1: a single whitespace-only line ("{a} {b}") must keep exactly its one space
         for (int i = 0; i < lines.length; i++) if (!lines[i].isBlank()) lastNonEmpty = i;
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < lines.length; i++) {

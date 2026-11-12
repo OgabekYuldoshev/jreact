@@ -15,6 +15,14 @@
 
     <dependencies>
         <dependency><groupId>dev.jreact</groupId><artifactId>jreact-dom</artifactId></dependency>
+        <dependency><groupId>dev.jreact</groupId><artifactId>jreact-router</artifactId></dependency>
         <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso</artifactId></dependency>
     </dependencies>
+
+    <build>
+        <resources>
+            <!-- ship the sources inside the jar: jsxj:compile reads the Props records of <BrowserRouter>, <HashRouter> from here -->
+            <resource><directory>src/main/java</directory><includes><include>**/*.java</include></includes></resource>
+        </resources>
+    </build>
 </project>

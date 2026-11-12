@@ -1,0 +1,21 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.Link;
+
+public class Overview extends Component<Overview.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <div id="page-overview">
+                <h1 className="text-2xl font-bold">Overview</h1>
+                <p className="mt-2 text-stone-600">Welcome back, {useContext(Auth.CONTEXT).user()}.</p>
+                <Link to="settings" className="mt-4 inline-block text-indigo-600 hover:underline">Open settings</Link>
+            </div>
+        );
+    }
+}

@@ -16,7 +16,8 @@ public final class Hooks {
 
     private static Dispatcher current;
 
-    static Dispatcher current() {
+    /** The dispatcher of the rendering component: custom hooks ({@code useNavigate()}...) are static methods that call it. */
+    public static Dispatcher current() {
         if (current == null) throw new IllegalStateException("hooks can only be called inside a component's render()");
         return current;
     }

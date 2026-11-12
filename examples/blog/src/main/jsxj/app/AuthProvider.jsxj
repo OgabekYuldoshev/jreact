@@ -1,0 +1,19 @@
+package app;
+
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+
+/** Holds who is signed in and provides it to the whole app. */
+public class AuthProvider extends Component<AuthProvider.Props> {
+
+    public record Props(List<Object> children) {}
+
+    @Override
+    public Element render(Props props) {
+        State<String> user = useState(null);
+        Auth auth = new Auth(user.get(), user::set, () -> user.set(null));
+        return Auth.CONTEXT.provide(auth, props.children());
+    }
+}

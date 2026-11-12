@@ -78,6 +78,10 @@ public final class JsDomOps implements DomOps<JsNode> {
         @Override public String value() { return value(event.getTarget()); }
         @Override public boolean checked() { return checked(event.getTarget()); }
         @Override public void preventDefault() { event.preventDefault(); }
+        @Override public boolean modified() { return modifiedClick(event); }
+
+        @JSBody(params = {"e"}, script = "return !!(e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || (e.button || 0) !== 0);")
+        private static native boolean modifiedClick(JsEvent event);
 
         @JSBody(params = {"t"}, script = "return t.tagName ? t.tagName.toLowerCase() : null;")
         private static native String tagName(JsNode target);

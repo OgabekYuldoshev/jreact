@@ -1,0 +1,58 @@
+package app;
+
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+import jreact.router.Link;
+import jreact.router.SearchParams;
+import jreact.router.SearchState;
+import static jreact.router.RouterHooks.*;
+
+/** The filter lives in the URL (?tag=java&q=fib): reload, share or press back and it is still there. */
+public class PostList extends Component<PostList.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        SearchState search = useSearchParams();
+        SearchParams params = search.params();
+        String tag = params.get("tag");
+        String q = params.get("q", "");
+        List<Post> posts = Posts.filter(tag, q);
+
+        return (
+            <div id="page-posts">
+                <h1 className="text-3xl font-bold tracking-tight">Posts</h1>
+                <div className="mt-6 flex flex-wrap items-center gap-2">
+                    <Link to={"?" + params.without("tag")} className={chip(tag == null)}>all</Link>
+                    {Posts.tags().stream().map(t ->
+                        <Link key={t} to={"?" + params.with("tag", t)} className={"tag " + chip(t.equals(tag))}>{t}</Link>
+                    ).toList()}
+                    <input id="q" type="search" placeholder="Search titles" value={q}
+                           className="ml-auto rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-indigo-500"
+                           onInput={e -> search.replace(params.with("q", e.value()))} />
+                </div>
+                <p id="post-count" className="mt-4 text-sm text-stone-500">{posts.size()} {posts.size() == 1 ? "post" : "posts"}</p>
+                <div className="mt-4 divide-y divide-stone-200 rounded-xl bg-white ring-1 ring-stone-200">
+                    {posts.isEmpty() ? <p id="no-posts" className="p-6 text-stone-500">No post matches.</p> : null}
+                    {posts.stream().map(p ->
+                        <Link key={p.id()} to={String.valueOf(p.id())} className="post block p-5 hover:bg-stone-50">
+                            <div className="flex items-baseline justify-between gap-4">
+                                <h2 className="font-semibold">{p.title()}</h2>
+                                <span className="shrink-0 text-xs text-stone-400">{p.date()}</span>
+                            </div>
+                            <p className="mt-1 text-sm text-stone-500">{p.excerpt()}</p>
+                        </Link>
+                    ).toList()}
+                </div>
+            </div>
+        );
+    }
+
+    private static String chip(boolean active) {
+        return active
+            ? "rounded-full bg-indigo-600 px-3 py-1 text-sm font-medium text-white"
+            : "rounded-full bg-white px-3 py-1 text-sm text-stone-600 ring-1 ring-stone-300 hover:bg-stone-100";
+    }
+}

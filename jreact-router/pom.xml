@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.jreact</groupId>
+        <artifactId>jreact-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>jreact-router</artifactId>
+    <name>jreact-router</name>
+    <description>Client-side routing like react-router: Router, Routes, Route, Link, Outlet, hooks (no DOM dependency)</description>
+
+    <dependencies>
+        <dependency><groupId>dev.jreact</groupId><artifactId>jreact-core</artifactId></dependency>
+    </dependencies>
+
+    <build>
+        <resources>
+            <!-- ship the sources inside the jar: jsxj:compile reads the Props records of <Link>, <Routes>... from here -->
+            <resource><directory>src/main/java</directory><includes><include>**/*.java</include></includes></resource>
+        </resources>
+    </build>
+</project>

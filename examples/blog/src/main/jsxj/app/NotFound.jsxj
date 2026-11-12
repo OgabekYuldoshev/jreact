@@ -1,0 +1,22 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.Link;
+import static jreact.router.RouterHooks.*;
+
+public class NotFound extends Component<NotFound.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <div id="page-404" className="py-16 text-center">
+                <p className="text-6xl font-extrabold text-stone-300">404</p>
+                <h1 className="mt-4 text-2xl font-bold">Nothing at <code id="missing-path">{useLocation().pathname()}</code></h1>
+                <Link to="/" className="mt-6 inline-block text-indigo-600 hover:underline">Back home</Link>
+            </div>
+        );
+    }
+}

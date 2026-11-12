@@ -38,6 +38,7 @@
         <module>jreact-maven-plugin</module>
         <module>jreact-scheduler</module>
         <module>jreact-reconciler</module>
+        <module>jreact-router</module>
         <module>jreact-dom</module>
         <module>jreact-web</module>
     </modules>
@@ -112,6 +113,7 @@
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-maven-plugin</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-scheduler</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-reconciler</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-router</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-dom</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-web</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso</artifactId><version>${teavm.version}</version></dependency>

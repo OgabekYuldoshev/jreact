@@ -110,6 +110,13 @@ public final class DomTest {
 
     static final List<String> log = new ArrayList<>();
 
+    /** A Map with a fixed iteration order (Map.of is shuffled per JVM run). */
+    static Map<String, Object> ordered(Object... kv) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        for (int i = 0; i < kv.length; i += 2) m.put((String) kv[i], kv[i + 1]);
+        return m;
+    }
+
     static Element el(String tag, Attrs attrs, Object... children) { return Jsx.el(tag, null, attrs, children); }
 
     static class Counter extends Component<Counter.Props> {
@@ -224,7 +231,7 @@ public final class DomTest {
             String html = jreact.ServerRenderer.renderToString(el("div", new Attrs().attr("title", "\"><script>x</script>")
                     .attr("onclick", "x()").attr("bad name", "1").attr("style", Map.of("color", "red; position: fixed")),
                     "<b>&</b>", el("a", new Attrs().attr("href", "javascript:alert(1)"), "go"),
-                    el("i", new Attrs().attr("style", Map.of("backgroundColor", "#fff", "width", 10)))));
+                    el("i", new Attrs().attr("style", ordered("backgroundColor", "#fff", "width", 10)))));
             eq("<div title=\"&quot;&gt;&lt;script&gt;x&lt;/script&gt;\">&lt;b&gt;&amp;&lt;/b&gt;<a href=\"about:blank\">go</a>"
                     + "<i style=\"background-color: #fff; width: 10px;\"></i></div>", html);
             boolean threw = false;

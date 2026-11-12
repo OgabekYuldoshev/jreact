@@ -14,7 +14,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function open(app) {
   const dir = path.join(dist, app);
   const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8').replace(/<script[\s\S]*?<\/script>/g, '');
-  const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true });
+  const dom = new JSDOM(html, { runScripts: 'outside-only', pretendToBeVisual: true, url: `http://localhost/${app}/` });
   const w = dom.window, d = w.document;
   const logs = [];
   for (const m of ['log', 'info', 'warn', 'error', 'debug']) w.console[m] = (...a) => logs.push(a.join(' '));
@@ -234,16 +234,98 @@ async function landing() {
   cssHas('landing', ['from-violet-600', 'bg-clip-text', 'lg:grid-cols-3', 'backdrop-blur', 'md:hidden']);
 }
 
+// ------------------------------------------------------------------------------------------------ blog (router)
+async function blog() {
+  const t = await open('blog');
+  const hash = () => t.w.location.hash;
+  const link = (href, scope = '#main-nav') => t.$(`${scope} a[href="${href}"]`);       // the brand link also points at #/
+  const hasClass = (el, c) => (el?.className || '').split(/\s+/).includes(c);       // 'hover:bg-x' must not count as 'bg-x'
+  const active = href => hasClass(link(href), 'bg-stone-900');
+  const go = async hashValue => { t.w.location.hash = hashValue; await sleep(120); };
+  const titles = () => t.$$('.post h2').map(h => h.textContent);
+
+  check('blog', 'the empty hash shows the home page', !!t.$('#page-home') && t.$$('.latest').length === 3, t.d.body.innerHTML.slice(0, 200));
+  check('blog', 'links carry hash hrefs', !!link('#/posts') && !!link('#/about') && !!link('#/account'), '');
+  check('blog', 'the current page is marked in the nav (aria-current)', active('#/') && !active('#/posts') && link('#/').getAttribute('aria-current') === 'page', link('#/').className);
+
+  await t.click(link('#/posts'));
+  check('blog', 'clicking a link changes the route without a reload', !!t.$('#page-posts') && !t.$('#page-home') && hash() === '#/posts', hash());
+  check('blog', 'the nav follows the route', active('#/posts') && !active('#/'), '');
+  check('blog', 'all 8 posts are listed', t.text('#post-count') === '8 posts' && t.$$('.post').length === 8, t.text('#post-count'));
+
+  await t.click(t.$$('.tag').find(a => a.textContent === 'java'));
+  check('blog', 'a filter chip puts the tag in the URL (a relative ?query link)', hash() === '#/posts?tag=java' && t.text('#post-count') === '4 posts', hash() + ' ' + t.text('#post-count'));
+  await t.click(t.$$('a').find(a => a.textContent === 'all'));
+  check('blog', '"all" clears the filter', hash() === '#/posts' && t.text('#post-count') === '8 posts', hash());
+
+  await t.type(t.$('#q'), 'fiber');
+  check('blog', 'typing in the search box updates the query string', hash() === '#/posts?q=fiber' && titles().length === 1 && titles()[0].startsWith('Fibers'), hash() + ' ' + titles());
+  await t.type(t.$('#q'), 'zzz');
+  check('blog', 'no match shows the empty state', !!t.$('#no-posts') && t.text('#post-count') === '0 posts', '');
+  await t.type(t.$('#q'), '');
+
+  await go('#/posts?tag=react');
+  check('blog', 'a deep link with a query string restores the filter', t.$$('.post').length === 3 && t.$$('.tag').find(a => a.textContent === 'react').className.includes('bg-indigo-600'), t.$$('.post').length);
+
+  await go('#/posts');
+  await t.click(t.$$('.post')[0]);
+  check('blog', 'a relative link opens /posts/:id and useParams reads the id', hash() === '#/posts/1' && t.text('#post-title').startsWith('Fibers') && !t.$('#prev') && !!t.$('#next'), hash());
+  await t.click(t.$('#next'));
+  check('blog', '"../2" resolves against the route', hash() === '#/posts/2' && t.text('#post-title').startsWith('Why keys'), hash() + ' ' + t.text('#post-title'));
+  await t.click(t.$('#prev'));
+  check('blog', 'prev goes back to post 1', hash() === '#/posts/1' && t.text('#post-title').startsWith('Fibers'), hash());
+  await t.click(t.$('#next'));
+  await t.click(t.$('#back'));
+  await sleep(100);
+  check('blog', 'useNavigate().back() follows the browser history (popstate)', hash() === '#/posts/1' && t.text('#post-title').startsWith('Fibers'), hash());
+
+  await go('#/posts/999');
+  check('blog', "an unknown id shows the page's own not-found, not the 404 route", !!t.$('#page-post-missing') && !t.$('#page-404') && t.text('#page-post-missing').includes('999'), t.d.body.textContent.slice(0, 100));
+  await go('#/nope/deeper');
+  check('blog', 'the * route catches everything else and sees the location', !!t.$('#page-404') && t.text('#missing-path') === '/nope/deeper', '');
+  check('blog', 'the layout stays around the 404 page', !!t.$('#main-nav'), '');
+
+  await go('#/account');
+  check('blog', 'a protected route redirects to /login and remembers where to return', !!t.$('#page-login') && hash() === '#/login?next=%2Faccount' && t.text('#next-path') === '/account', hash());
+  await t.type(t.$('#username'), 'Ada');
+  const ev = await t.submit(t.$('#login-form'));
+  check('blog', 'signing in lands on the page the user wanted', ev.defaultPrevented && !!t.$('#page-account') && !!t.$('#page-overview') && hash() === '#/account' && t.text('#account-user') === 'Ada', hash());
+  check('blog', 'the header shows Sign out and the Account link is active', !!t.$('#sign-out') && active('#/account'), '');
+
+  const sidebar = t.$('#account-nav');
+  const overviewActive = () => hasClass(link('#/account', '#account-nav'), 'bg-stone-200');
+  const settingsActive = () => hasClass(link('#/account/settings', '#account-nav'), 'bg-stone-200');
+  check('blog', 'index route: Overview is active, Settings is not (end link to ".")', overviewActive() && !settingsActive(), '');
+  await t.click(link('#/account/settings', '#account-nav'));
+  check('blog', "a nested route renders in the layout's Outlet", !!t.$('#page-settings') && !t.$('#page-overview') && hash() === '#/account/settings', hash());
+  check('blog', 'the layout is not remounted (same DOM node) and the sidebar follows', t.$('#account-nav') === sidebar && settingsActive() && !overviewActive(), '');
+
+  await t.click(t.$('#sign-out'));
+  check('blog', 'signing out goes home', !!t.$('#page-home') && !t.$('#sign-out') && hash() === '#/', hash());
+  await go('#/account/settings');
+  check('blog', 'a deep protected link redirects too', !!t.$('#page-login') && t.text('#next-path') === '/account/settings', hash());
+  await t.type(t.$('#username'), 'Bob');
+  await t.submit(t.$('#login-form'));
+  check('blog', 'and returns to the deep page after signing in', !!t.$('#page-settings') && hash() === '#/account/settings', hash());
+
+  const modifiedClick = new t.w.MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true });
+  link('#/about').dispatchEvent(modifiedClick);
+  await sleep(60);
+  check('blog', 'ctrl-click is left to the browser (no client-side navigation)', !modifiedClick.defaultPrevented, 'the router must not call preventDefault');   // jsdom then follows the #link itself, like a browser would
+  noWarnings('blog', t);
+  cssHas('blog', ['bg-indigo-600', 'divide-y', 'sm:grid-cols-3', 'max-w-4xl', 'hover:bg-stone-100']);
+}
+
 // ------------------------------------------------------------------------------------------------ gallery
 function gallery() {
   const html = fs.readFileSync(path.join(dist, 'index.html'), 'utf8');
-  const missing = ['kanban/', 'shop/', 'dashboard/', 'landing/'].filter(l => !html.includes('href="' + l + '"'));
+  const missing = ['kanban/', 'shop/', 'dashboard/', 'landing/', 'blog/'].filter(l => !html.includes('href="' + l + '"'));
   check('gallery', 'links to every app', missing.length === 0, missing.join());
   check('gallery', 'has its stylesheet', fs.existsSync(path.join(dist, 'gallery.css')) && fs.statSync(path.join(dist, 'gallery.css')).size > 1000, '');
 }
 
 (async () => {
-  for (const run of [gallery, kanban, shop, dashboard, landing]) await run();
+  for (const run of [gallery, kanban, shop, dashboard, landing, blog]) await run();
   console.log(failed ? `\n${failed} of ${total} FAILED` : `\nall ${total} example checks passed`);
   process.exit(failed ? 1 : 0);
 })().catch(e => { console.error('ERROR', e); process.exit(2); });

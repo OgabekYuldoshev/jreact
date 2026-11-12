@@ -20,4 +20,7 @@ public interface NativeEvent<N> {
     boolean checked();
 
     void preventDefault();
+
+    /** Ctrl/Cmd/Shift/Alt held or a non-primary button. */
+    default boolean modified() { return false; }
 }

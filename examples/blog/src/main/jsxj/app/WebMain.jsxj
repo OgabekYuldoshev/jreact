@@ -1,0 +1,18 @@
+package app;
+
+import jreact.web.JReactWeb;
+import jreact.web.HashRouter;
+
+public class WebMain {
+    public static void main(String[] args) {
+        // HashRouter keeps the route after the #, so it works on any static host. BrowserRouter uses real paths
+        // (/posts/3) and needs the server to answer every path with index.html.
+        JReactWeb.createRoot("root").render(
+            <HashRouter>
+                <AuthProvider>
+                    <App />
+                </AuthProvider>
+            </HashRouter>
+        );
+    }
+}

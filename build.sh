@@ -28,13 +28,13 @@ if [[ "${1:-}" == "web" || "${1:-}" == "web-test" ]]; then
 fi
 
 # Tailwind example apps (examples/kanban, shop, dashboard, landing): Maven + TeaVM, then Tailwind CLI, then a gallery.
-#   ./build.sh examples        -> examples/dist/{index.html,kanban,shop,dashboard,landing}   (needs Maven + node)
+#   ./build.sh examples        -> examples/dist/{index.html,kanban,shop,dashboard,landing,blog}   (needs Maven + node)
 #   ./build.sh examples-test   -> same, then clicks through every app in jsdom
 #   python3 -m http.server -d examples/dist 8080     # open http://localhost:8080
 if [[ "${1:-}" == "examples" || "${1:-}" == "examples-test" ]]; then
-  APPS="kanban shop dashboard landing"
+  APPS="kanban shop dashboard landing blog"
   echo "== example apps (Maven + TeaVM)"
-  mvn -B -q -pl examples/kanban,examples/shop,examples/dashboard,examples/landing -am package
+  mvn -B -q -pl examples/kanban,examples/shop,examples/dashboard,examples/landing,examples/blog -am package
   echo "== Tailwind CSS"
   (cd examples && npm install --silent --no-audit --no-fund)
   rm -rf examples/dist
@@ -86,6 +86,9 @@ $JAVAC -d $B/scheduler $(find jreact-scheduler/src/main/java -name '*.java')
 echo "== jreact-reconciler"
 $JAVAC -cp $B/core:$B/scheduler -d $B/reconciler $(find jreact-reconciler/src/main/java -name '*.java')
 
+echo "== jreact-router"
+$JAVAC -cp $B/core -d $B/router $(find jreact-router/src/main/java -name '*.java')
+
 echo "== jreact-dom"
 $JAVAC -cp $B/core:$B/scheduler:$B/reconciler -d $B/dom $(find jreact-dom/src/main/java -name '*.java')
 
@@ -105,6 +108,9 @@ if [[ "${1:-}" == "test" ]]; then
   echo "== dom tests"
   $JAVAC -cp $B/core:$B/scheduler:$B/reconciler:$B/dom -d $B/dom-test $(find jreact-dom/src/test/java -name '*.java')
   java -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/dom-test jreact.dom.DomTest
+  echo "== router tests"
+  $JAVAC -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/router -d $B/router-test $(find jreact-router/src/test/java -name '*.java')
+  java -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/router:$B/router-test jreact.router.RouterTest
   echo "== language server tests"
   $JAVAC -cp $B/compiler:$B/lsp -d $B/lsp-test $(find jreact-lsp/src/test/java -name '*.java')
   java -cp $B/compiler:$B/lsp:$B/lsp-test jreact.lsp.LspTest

@@ -1,0 +1,21 @@
+package app;
+
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+import jreact.router.Navigate;
+import static jreact.router.RouterHooks.*;
+
+/** Shows its children to signed-in users, sends everybody else to /login and remembers where they wanted to go. */
+public class RequireAuth extends Component<RequireAuth.Props> {
+
+    public record Props(List<Object> children) {}
+
+    @Override
+    public Element render(Props props) {
+        Auth auth = useContext(Auth.CONTEXT);
+        String wanted = useLocation().pathname();
+        if (!auth.signedIn()) return <Navigate to={"/login?next=" + Auth.encodePath(wanted)} replace />;
+        return <>{props.children()}</>;
+    }
+}

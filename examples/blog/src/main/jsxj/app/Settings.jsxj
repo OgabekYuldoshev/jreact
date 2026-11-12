@@ -1,0 +1,25 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.Navigator;
+import static jreact.router.RouterHooks.*;
+
+public class Settings extends Component<Settings.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        Auth auth = useContext(Auth.CONTEXT);
+        Navigator go = useNavigate();
+        return (
+            <div id="page-settings">
+                <h1 className="text-2xl font-bold">Settings</h1>
+                <p className="mt-2 text-stone-600">Nothing to configure. This page only shows a nested route.</p>
+                <button id="settings-sign-out" className="mt-6 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
+                        onClick={e -> { auth.signOut().run(); go.navigate("/", true); }}>Sign out</button>
+            </div>
+        );
+    }
+}

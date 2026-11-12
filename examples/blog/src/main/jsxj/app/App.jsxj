@@ -1,0 +1,32 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.Route;
+import jreact.router.Routes;
+
+/** The route table. Routes are ranked by specificity, not by order: "posts/:id" beats "*" wherever it is written. */
+public class App extends Component<App.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <Routes>
+                <Route path="/" element={<Layout />}>
+                    <Route index element={<Home />} />
+                    <Route path="posts" element={<PostList />} />
+                    <Route path="posts/:id" element={<PostPage />} />
+                    <Route path="about" element={<About />} />
+                    <Route path="login" element={<Login />} />
+                    <Route path="account" element={<RequireAuth><Account /></RequireAuth>}>
+                        <Route index element={<Overview />} />
+                        <Route path="settings" element={<Settings />} />
+                    </Route>
+                    <Route path="*" element={<NotFound />} />
+                </Route>
+            </Routes>
+        );
+    }
+}

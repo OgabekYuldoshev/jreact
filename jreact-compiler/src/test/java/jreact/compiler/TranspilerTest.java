@@ -72,6 +72,12 @@ public final class TranspilerTest {
                 "x = jreact.Jsx.el(\"p\", null, null, \"Hello world\"\n\n\n);");
         eq("inline spaces kept", "x = <p>a <b>b</b> c</p>;",
                 "x = jreact.Jsx.el(\"p\", null, null, \"a \", jreact.Jsx.el(\"b\", null, null, \"b\"), \" c\");");
+        eq("a space between two expressions stays one space", "x = <p>{a} {b}</p>;",
+                "x = jreact.Jsx.el(\"p\", null, null, a, \" \", b);");
+        eq("two spaces between expressions stay two (like React)", "x = <p>{a}  {b}</p>;",
+                "x = jreact.Jsx.el(\"p\", null, null, a, \"  \", b);");
+        eq("a newline between expressions adds no text", "x = <p>{a}\n  {b}</p>;",
+                "x = jreact.Jsx.el(\"p\", null, null, a, \nb);");     // the line break stays so line numbers match
         eq("whitespace-only lines dropped", "x = <p>\n  <a/>\n  <b/>\n</p>;",
                 "x = jreact.Jsx.el(\"p\", null, null, \n" +
                 "jreact.Jsx.el(\"a\", null, null), \n" +

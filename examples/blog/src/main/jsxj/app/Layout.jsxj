@@ -1,0 +1,49 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.Link;
+import jreact.router.NavLink;
+import jreact.router.Outlet;
+import jreact.router.Navigator;
+import static jreact.router.RouterHooks.*;
+
+/** The frame around every page: header with links, the matched page in the <Outlet />, footer. */
+public class Layout extends Component<Layout.Props> {
+
+    public record Props() {}
+
+    private static final String LINK = "rounded-md px-3 py-1.5 text-sm text-stone-600 hover:bg-stone-200/60 hover:text-stone-900";
+    private static final String ACTIVE = "bg-stone-900 text-white hover:bg-stone-900 hover:text-white";
+
+    @Override
+    public Element render(Props props) {
+        Auth auth = useContext(Auth.CONTEXT);
+        Navigator go = useNavigate();
+        return (
+            <div className="flex min-h-screen flex-col">
+                <header className="border-b border-stone-200 bg-white">
+                    <div className="mx-auto flex max-w-4xl items-center justify-between gap-4 px-6 py-4">
+                        <Link to="/" className="text-lg font-bold tracking-tight">Dispatch</Link>
+                        <nav id="main-nav" className="flex items-center gap-1">
+                            <NavLink to="/" className={LINK} activeClassName={ACTIVE}>Home</NavLink>
+                            <NavLink to="/posts" className={LINK} activeClassName={ACTIVE}>Posts</NavLink>
+                            <NavLink to="/about" className={LINK} activeClassName={ACTIVE}>About</NavLink>
+                            <NavLink to="/account" className={LINK} activeClassName={ACTIVE}>Account</NavLink>
+                            {auth.signedIn()
+                                ? <button id="sign-out" className="ml-2 rounded-md border border-stone-300 px-3 py-1.5 text-sm hover:bg-stone-100"
+                                          onClick={e -> { auth.signOut().run(); go.navigate("/", true); }}>Sign out</button>
+                                : <Link to="/login" className="ml-2 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700">Sign in</Link>}
+                        </nav>
+                    </div>
+                </header>
+                <main className="mx-auto w-full max-w-4xl flex-1 px-6 py-10">
+                    <Outlet />
+                </main>
+                <footer className="border-t border-stone-200 py-6 text-center text-sm text-stone-400">
+                    Built with JReact router: nested routes, params, search params, redirects.
+                </footer>
+            </div>
+        );
+    }
+}

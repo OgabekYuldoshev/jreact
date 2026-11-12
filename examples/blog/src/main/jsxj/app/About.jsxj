@@ -1,0 +1,22 @@
+package app;
+
+import jreact.Component;
+import jreact.Element;
+
+public class About extends Component<About.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <div id="page-about">
+                <h1 className="text-3xl font-bold tracking-tight">About</h1>
+                <p className="mt-4 max-w-2xl text-stone-600">
+                    This site has no server logic. Routes are matched in the browser against the part of the address after the
+                    <code className="mx-1 rounded bg-stone-200 px-1">#</code>.
+                </p>
+            </div>
+        );
+    }
+}

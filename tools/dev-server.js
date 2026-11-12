@@ -3,7 +3,7 @@
 //   node tools/dev-server.js [port] [app...]      (normally: ./build.sh dev [port] [app...])
 //
 //   /           gallery        /todo/  examples/todo-web (plain CSS)
-//   /kanban/    /shop/    /dashboard/    /landing/      (Tailwind CSS v4)
+//   /kanban/    /shop/    /dashboard/    /landing/    /blog/      (Tailwind CSS v4)
 //
 // Source change in an app            -> Maven for that app + Tailwind CLI, then reload that app's tabs
 // Change in jreact-* (framework)     -> every app is rebuilt
@@ -24,6 +24,7 @@ const ALL = {
   shop: { dir: 'shop', tailwind: true },
   dashboard: { dir: 'dashboard', tailwind: true },
   landing: { dir: 'landing', tailwind: true },
+  blog: { dir: 'blog', tailwind: true },
 };
 const args = process.argv.slice(2);
 const port = Number(args.find(a => /^\d+$/.test(a)) || process.env.PORT || 5173);
@@ -167,7 +168,9 @@ http.createServer((req, res) => {
   if (app.error && rel === 'index.html') {
     res.writeHead(200, { 'Content-Type': types['.html'] }); res.end(errorPage(app.name, app.error)); return;
   }
-  const file = path.join(app.web, rel);
+  let file = path.join(app.web, rel);
+  // single-page-app fallback: a path without a file extension (/blog/posts/3 with BrowserRouter) gets index.html
+  if (!fs.existsSync(file) && !path.extname(rel)) file = path.join(app.web, 'index.html');
   if ((file !== app.web && !file.startsWith(app.web + path.sep)) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return notFound();
   res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
   if (path.extname(file) === '.html') res.end(fs.readFileSync(file, 'utf8').replace('</body>', reloadSnippet(app.name) + '</body>'));

@@ -1,0 +1,39 @@
+package app;
+
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+import jreact.router.Link;
+
+public class Home extends Component<Home.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        List<Post> latest = Posts.ALL.subList(0, 3);
+        return (
+            <div id="page-home">
+                <h1 className="text-4xl font-extrabold tracking-tight">Notes on building a UI library</h1>
+                <p className="mt-3 max-w-2xl text-lg text-stone-600">
+                    A small blog that is also a router demo: every link below is a client-side navigation.
+                </p>
+                <div className="mt-6 flex gap-3">
+                    <Link to="/posts" className="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">Read the posts</Link>
+                    <Link to="/posts?tag=java" className="java-posts rounded-lg border border-stone-300 px-4 py-2 text-sm font-medium hover:bg-stone-100">Only Java</Link>
+                </div>
+                <h2 className="mt-12 text-sm font-semibold uppercase tracking-wide text-stone-500">Latest</h2>
+                <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                    {latest.stream().map(p ->
+                        <Link key={p.id()} to={"/posts/" + p.id()}
+                              className="latest block rounded-xl bg-white p-5 shadow-sm ring-1 ring-stone-200 transition hover:-translate-y-0.5 hover:shadow-md">
+                            <span className="text-xs font-medium uppercase text-indigo-600">{p.tag()}</span>
+                            <h3 className="mt-2 font-semibold">{p.title()}</h3>
+                            <p className="mt-2 text-sm text-stone-500">{p.date()} · {p.minutes()} min</p>
+                        </Link>
+                    ).toList()}
+                </div>
+            </div>
+        );
+    }
+}
