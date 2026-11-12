@@ -19,7 +19,6 @@
     <name>todo-web</name>
 
     <properties>
-        <jsxj.generated>${project.build.directory}/generated-sources/jsxj</jsxj.generated>
         <todo.src>${project.basedir}/../todo/src/main</todo.src>
     </properties>
 
@@ -34,33 +33,25 @@
         <plugins>
             <!-- 1. .jsxj -> .java. The shared Todo sources live in examples/todo, only WebMain is browser specific. -->
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.5.0</version>
-                <dependencies>
-                    <dependency><groupId>dev.jreact</groupId><artifactId>jreact-compiler</artifactId><version>${project.version}</version></dependency>
-                </dependencies>
+                <groupId>dev.jreact</groupId>
+                <artifactId>jreact-maven-plugin</artifactId>
+                <version>${project.version}</version>
                 <executions>
                     <execution>
-                        <id>jsxjc</id>
-                        <phase>generate-sources</phase>
-                        <goals><goal>java</goal></goals>
+                        <id>jsxj</id>
+                        <goals><goal>compile</goal></goals>
                         <configuration>
-                            <mainClass>jreact.compiler.JsxjCompiler</mainClass>
-                            <includePluginDependencies>true</includePluginDependencies>
-                            <arguments>
-                                <argument>${jsxj.generated}</argument>
-                                <argument>${project.basedir}/../../jreact-core/src/main/java</argument>
-                                <argument>${todo.src}/jsxj</argument>
-                                <argument>${todo.src}/java</argument>
-                                <argument>${project.basedir}/src/main/jsxj</argument>
-                            </arguments>
+                            <sourceDirectories>
+                                <directory>${todo.src}/jsxj</directory>
+                                <directory>${project.basedir}/src/main/jsxj</directory>
+                            </sourceDirectories>
+                            <indexDirectories><directory>${todo.src}/java</directory></indexDirectories>
                         </configuration>
                     </execution>
                 </executions>
             </plugin>
 
-            <!-- 2. compile generated sources together with Todo.java -->
+            <!-- 2. compile together with Todo.java (the generated folder is added by jsxj:compile) -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>build-helper-maven-plugin</artifactId>
@@ -72,7 +63,6 @@
                         <goals><goal>add-source</goal></goals>
                         <configuration>
                             <sources>
-                                <source>${jsxj.generated}</source>
                                 <source>${todo.src}/java</source>
                             </sources>
                         </configuration>

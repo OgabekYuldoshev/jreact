@@ -9,17 +9,92 @@
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>JReact</name>
+    <description>React internals in Java: .jsxj (JSX-like) syntax, Fiber reconciler, hooks, TeaVM browser build</description>
+    <url>https://github.com/OgabekYuldoshev/jreact</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <id>OgabekYuldoshev</id>
+            <name>Ogabek Yuldoshev</name>
+            <url>https://github.com/OgabekYuldoshev</url>
+        </developer>
+    </developers>
+    <scm>
+        <connection>scm:git:https://github.com/OgabekYuldoshev/jreact.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com/OgabekYuldoshev/jreact.git</developerConnection>
+        <url>https://github.com/OgabekYuldoshev/jreact</url>
+    </scm>
 
     <modules>
         <module>jreact-core</module>
         <module>jreact-compiler</module>
+        <module>jreact-maven-plugin</module>
         <module>jreact-scheduler</module>
         <module>jreact-reconciler</module>
         <module>jreact-dom</module>
         <module>jreact-web</module>
-        <module>examples/todo-web</module>
-        <module>examples</module>
     </modules>
+
+    <!-- The example apps are not published. -Prelease switches this profile off (activeByDefault). -->
+    <profiles>
+        <profile>
+            <id>examples</id>
+            <activation><activeByDefault>true</activeByDefault></activation>
+            <modules>
+                <module>examples/todo-web</module>
+                <module>examples</module>
+            </modules>
+        </profile>
+
+        <!--
+          Release to Maven Central:  mvn -Prelease -DskipTests deploy
+          Needs a GPG key (maven-gpg-plugin) and a Central Portal token in ~/.m2/settings.xml under server id "central".
+          Dry run (builds the sources/javadoc jars, no signing, no upload): mvn -Prelease -Dgpg.skip package
+        -->
+        <profile>
+            <id>release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-source-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions><execution><id>sources</id><goals><goal>jar-no-fork</goal></goals></execution></executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-javadoc-plugin</artifactId>
+                        <version>3.11.2</version>
+                        <configuration><doclint>none</doclint><quiet>true</quiet></configuration>
+                        <executions><execution><id>javadoc</id><goals><goal>jar</goal></goals></execution></executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.7</version>
+                        <executions><execution><id>sign</id><phase>verify</phase><goals><goal>sign</goal></goals></execution></executions>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.7.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>false</autoPublish>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -34,6 +109,7 @@
         <dependencies>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-core</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-compiler</artifactId><version>${project.version}</version></dependency>
+            <dependency><groupId>dev.jreact</groupId><artifactId>jreact-maven-plugin</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-scheduler</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-reconciler</artifactId><version>${project.version}</version></dependency>
             <dependency><groupId>dev.jreact</groupId><artifactId>jreact-dom</artifactId><version>${project.version}</version></dependency>

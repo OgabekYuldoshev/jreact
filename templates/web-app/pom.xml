@@ -13,9 +13,6 @@
         <maven.compiler.release>17</maven.compiler.release>   <!-- TeaVM reads Java 17 bytecode -->
         <jreact.version>0.1.0-SNAPSHOT</jreact.version>
         <teavm.version>0.16.0</teavm.version>
-        <generated>${project.build.directory}/generated-sources/jsxj</generated>
-        <!-- A jreact checkout next to this project. Only needed for ErrorBoundary: its Props must be indexed. A missing folder is skipped. -->
-        <jreact.home>${project.basedir}/../jreact</jreact.home>
     </properties>
 
     <dependencies>
@@ -27,43 +24,13 @@
 
     <build>
         <plugins>
-            <!-- .jsxj -> .java -->
+            <!-- .jsxj -> .java (src/main/jsxj); the generated folder is added to the compile sources -->
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>exec-maven-plugin</artifactId>
-                <version>3.5.0</version>
-                <dependencies>
-                    <dependency><groupId>dev.jreact</groupId><artifactId>jreact-compiler</artifactId><version>${jreact.version}</version></dependency>
-                </dependencies>
+                <groupId>dev.jreact</groupId>
+                <artifactId>jreact-maven-plugin</artifactId>
+                <version>${jreact.version}</version>
                 <executions>
-                    <execution>
-                        <id>jsxjc</id>
-                        <phase>generate-sources</phase>
-                        <goals><goal>java</goal></goals>
-                        <configuration>
-                            <mainClass>jreact.compiler.JsxjCompiler</mainClass>
-                            <includePluginDependencies>true</includePluginDependencies>
-                            <arguments>
-                                <argument>${generated}</argument>
-                                <argument>${jreact.home}/jreact-core/src/main/java</argument>
-                                <argument>${project.basedir}/src/main/jsxj</argument>
-                                <argument>${project.basedir}/src/main/java</argument>
-                            </arguments>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>build-helper-maven-plugin</artifactId>
-                <version>3.6.0</version>
-                <executions>
-                    <execution>
-                        <id>add-sources</id>
-                        <phase>generate-sources</phase>
-                        <goals><goal>add-source</goal></goals>
-                        <configuration><sources><source>${generated}</source></sources></configuration>
-                    </execution>
+                    <execution><id>jsxj</id><goals><goal>compile</goal></goals></execution>
                 </executions>
             </plugin>
             <!-- bytecode -> app.js -->

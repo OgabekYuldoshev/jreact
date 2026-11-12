@@ -44,6 +44,7 @@ public class Counter extends Component<Counter.Props> {
 - [Ishlab chiqish jarayoni](#ishlab-chiqish-jarayoni): dev server, VS Code, xatolar, dev ogohlantirishlar
 - [Buyruqlar ma'lumotnomasi](#buyruqlar-malumotnomasi)
 - [Qanday ishlaydi](#qanday-ishlaydi)
+- [Maven Central'ga chiqarish](#maven-centralga-chiqarish)
 - [Muammolarni hal qilish](#muammolarni-hal-qilish)
 - [Loyiha tuzilmasi](#loyiha-tuzilmasi)
 - [Cheklovlar](#cheklovlar)
@@ -83,7 +84,7 @@ Brauzer ilovasi uchun tayyor andoza bor: [`templates/web-app`](templates/web-app
 
 ```bash
 cd jreact
-mvn -B -q -pl jreact-web,jreact-compiler -am install
+mvn -B -q -pl jreact-web,jreact-maven-plugin -am install
 ```
 
 **2. Andozani nusxalang:**
@@ -97,7 +98,7 @@ Fayllar:
 
 ```
 mening-ilovam/
-├── pom.xml                              # .jsxj -> .java -> app.js zanjiri (o'zgartirish shart emas)
+├── pom.xml                              # jsxj:compile -> TeaVM -> app.js zanjiri (o'zgartirish shart emas)
 └── src/main
     ├── jsxj/app/
     │   ├── Counter.jsxj                 # komponent
@@ -144,7 +145,28 @@ python3 -m http.server -d target/web 8080     # yoki istalgan statik server
 
 Natija: `target/web/{index.html, app.js}`. `app.js` ~120 KB (gzip bilan ~45 KB), minifikatsiya qilingan. `index.html` va `app.js` ni istalgan statik hostingga qo'ying.
 
-**ErrorBoundary ishlatmoqchi bo'lsangiz:** uning `Props` yozuvi `jreact-core` manbasida, kompilyator uni indekslashi kerak. JReact'ni loyihangiz yoniga `jreact` nomli papkada klon qiling (yoki `mvn package -Djreact.home=/yo'l/jreact`). Papka topilmasa kompilyator uni jim o'tkazib yuboradi.
+**`jsxj:compile` plagini:** `pom.xml` dagi `jreact-maven-plugin` `generate-sources` bosqichida `src/main/jsxj` ichidagi `.jsxj` ni `target/generated-sources/jsxj` ga `.java` qilib yozadi va uni compile papkalariga qo'shadi. Komponent `Props`'lari loyihaning `.jsxj`/`.java` fayllaridan va `jreact-core` jar'i ichidagi manbalardan (u o'z `.java` fayllarini jar'ga qo'shadi) olinadi, shuning uchun `ErrorBoundary` qo'shimcha sozlamasiz ishlaydi. Xato bo'lsa build `jsxjc` xabari bilan (fayl:qator:ustun) to'xtaydi. Sozlamalar:
+
+```xml
+<plugin>
+    <groupId>dev.jreact</groupId>
+    <artifactId>jreact-maven-plugin</artifactId>
+    <version>${jreact.version}</version>
+    <executions>
+        <execution>
+            <id>jsxj</id>
+            <goals><goal>compile</goal></goals>
+            <configuration>
+                <!-- ixtiyoriy -->
+                <sourceDirectories><directory>${project.basedir}/src/main/jsxj</directory></sourceDirectories>  <!-- .jsxj papkalari -->
+                <indexDirectories><directory>../shared/src/main/java</directory></indexDirectories>             <!-- faqat Props qidiriladi -->
+                <outputDirectory>${project.build.directory}/generated-sources/jsxj</outputDirectory>
+                <skip>false</skip>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
 
 > Dev server (`./build.sh dev`) faqat `examples/` ilovalari uchun. O'z ilovangizda o'zgartirgach `mvn -B -q package` qilib sahifani yangilang.
 
@@ -628,6 +650,7 @@ java -cp build/core:build/app app.Main        # Windows'da ':' o'rniga ';'
 | `jreact-reconciler` | Fiber reconciler: work loop, key'li diff, commit, hooks dispatcher, `HostConfig` |
 | `jreact-dom` | DOM host: `DomHost`, `DomRoot`, event delegation, atribut/style qoidalari (JSO'siz) |
 | `jreact-web` | Brauzer bog'lamalari (TeaVM JSO): `JsDomOps`, `JsTimers`, `JReactWeb.createRoot` |
+| `jreact-maven-plugin` | Maven plagini: `jsxj:compile` |
 | `jreact-lsp` | `.jsxj` language server (LSP) |
 | `examples/todo`, `examples/todo-web` | namunaviy ilova: JVM'da HTML va brauzerda |
 | `examples/{kanban,shop,dashboard,landing}` | Tailwind bilan 4 ta real ilova + `gallery` |
@@ -663,11 +686,24 @@ Ikki o'tish: (1) barcha `.jsxj`/`.java` fayllardan komponentlarning `record Prop
 
 `.jsxj` faylning N-qatori generatsiya qilingan `.java` faylda ham N-qator bo'lib qoladi (sarlavha izohi birinchi qatorda, yangi qatorsiz yoziladi). Shu sababli `javac` xatolari va stack trace'lar asl `.jsxj` faylning to'g'ri qatorini ko'rsatadi.
 
+## Maven Central'ga chiqarish
+
+Sozlama tayyor (`pom.xml`: metadata, `release` profili), lekin haqiqiy chiqarish uchun sizdan 4 narsa kerak:
+
+1. **Namespace.** Hozir `groupId` = `dev.jreact`. Central'da buni tasdiqlash uchun `jreact.dev` domeni sizniki bo'lishi kerak. Aks holda GitHub orqali tasdiqlanadigan `io.github.ogabekyuldoshev` ni ishlating (`groupId` ni hamma `pom.xml` da almashtirish kerak).
+2. **Metadata.** `pom.xml` dagi `url`, `scm`, `developers` GitHub nomingizdan taxmin qilib yozilgan (`github.com/OgabekYuldoshev/jreact`). Haqiqiy repo manziliga to'g'rilang. Litsenziya: Apache-2.0 (`LICENSE`), xohlasangiz o'zgartiring.
+3. **Hisob va kalit.** [central.sonatype.com](https://central.sonatype.com) da token oling va `~/.m2/settings.xml` ga `<server><id>central</id>...` qilib qo'ying. GPG kalit yarating va uni ochiq serverga yuklang.
+4. **Versiya.** `0.1.0-SNAPSHOT` ni release versiyaga o'zgartiring: `mvn versions:set -DnewVersion=0.1.0` (`templates/web-app` va README'dagi `jreact.version` ni ham).
+
+Tekshirish (imzosiz, yuklamaydi): `mvn -Prelease -Dgpg.skip package` hamma modul uchun `-sources.jar` va `-javadoc.jar` yasaydi. Chiqarish: `mvn -Prelease deploy`. `release` profili namunalarni (`examples`) o'chiradi, shuning uchun faqat kutubxona modullari yuklanadi. `autoPublish` o'chiq: yuklangach Central portalida natijani ko'rib, qo'lda "Publish" bosasiz.
+
+Imzo va yuklash bosqichi shu loyihada sinalmagan (kalit va token yo'q), faqat `package` bosqichigacha tekshirilgan.
+
 ## Muammolarni hal qilish
 
 | Belgi | Sabab va yechim |
 |---|---|
-| `unknown component <Foo>: no 'record Props(...)' found` | `Foo` kompilyatorga berilgan papkalarda yo'q yoki `record Props` yo'q. `ErrorBoundary` bo'lsa `jreact-core/src/main/java` ni ham bering (`-Djreact.home=...`) |
+| `unknown component <Foo>: no 'record Props(...)' found` | `Foo` kompilyatorga berilgan papkalarda yo'q yoki `record Props` yo'q. `ErrorBoundary` bo'lsa `jreact-core/src/main/java` ni ham bering (`build.sh`/qo'lda ishlatganda). Maven plagini buni o'zi qiladi |
 | `<Foo> has no prop 'x'; its props are: ...` | prop nomi `record Props` da yo'q. Ro'yxatdan to'g'ri nomni oling |
 | `<Foo> does not accept children` | `Props` ga `List<Object> children` qo'shing |
 | TeaVM class faylni o'qiy olmaydi (yangi JDK bytecode'i) | `pom.xml` da `maven.compiler.release` = `17` bo'lsin (andozada shunday) |
@@ -686,6 +722,7 @@ jreact/
 ├── build.sh                          # build va test skripti
 ├── pom.xml                           # Maven: brauzer build'i uchun (modullar ./build.sh bilan ham yig'iladi)
 ├── jreact-compiler/                  # .jsxj kompilyatori
+├── jreact-maven-plugin/              # Maven plagini: jsxj:compile
 │   └── src/
 │       ├── main/java/jreact/compiler/
 │       │   ├── JsxjCompiler.java     # CLI, 2 o'tishni boshqaradi
@@ -730,7 +767,7 @@ jreact/
 ## Cheklovlar
 
 - Brauzer build'i faqat jsdom'da sinalgan, haqiqiy brauzerda emas. Dev server'ning live reload'i va VS Code klienti ham haqiqiy muhitda hali ko'rilmagan (server protokoli `vscode-jsonrpc` bilan sinalgan).
-- Dev server `examples/` ilovalari uchun qattiq yozilgan (`tools/dev-server.js` boshidagi ro'yxat). Maven build'i `jsxj:compile` plagini o'rniga `exec-maven-plugin` bilan `jsxjc` ni chaqiradi.
+- Dev server `examples/` ilovalari uchun qattiq yozilgan (`tools/dev-server.js` boshidagi ro'yxat).
 - JReact hali Maven Central'ga chiqarilmagan: o'z ilovangiz uchun `mvn install` bilan lokal o'rnatiladi.
 - CSS Modules va CSS-in-JS yo'q. Sass/Tailwind Maven build'iga ulanmagan, alohida buyruq bilan yig'iladi.
 - DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q.
@@ -739,13 +776,13 @@ jreact/
 - `{...spread}` komponentlarda qo'llab-quvvatlanmaydi.
 - Bir xil nomli komponentlar turli paketlarda bo'lsa indeks adashadi.
 - IntelliJ uchun plagin yo'q. VS Code'da `{...}` ichidagi Java uchun avtokomplit yo'q.
-- Litsenziya hali tanlanmagan.
+- Litsenziya: Apache-2.0 (`LICENSE`, `pom.xml`). Maven Central'ga hali chiqarilmagan, qarang: [Maven Central'ga chiqarish](#maven-centralga-chiqarish).
 
 ## Yo'l xaritasi
 
 1. ~~Fiber reconciler: work loop, key'li diff, commit, hooks~~ (tayyor)
 2. ~~Scheduler: bo'laklab render, ustuvorlik~~ (tayyor, root darajasida). Qolgani: haqiqiy lane'lar (update bo'yicha ustuvorlik, render'ni to'xtatib qayta boshlash)
 3. ~~DOM host, event delegation, TeaVM orqali `jreact-web`~~ (tayyor)
-4. ~~TeaVM bilan `app.js`, dev server~~ (tayyor). Qolgani: `jsxj:compile` Maven plagini, Maven Central'ga chiqarish, dev server'ni o'z ilovangiz uchun sozlanadigan qilish
+4. ~~TeaVM bilan `app.js`, dev server~~ (tayyor). Qolgani: `jsxj:compile` va Central sozlamasi tayyor, haqiqiy chiqarish qoldi. Dev server'ni o'z ilovangiz uchun sozlanadigan qilish
 5. ~~`Context`, `memo`, error boundary, key ogohlantirishlari~~ (tayyor). Qolgani: boshqa ogohlantirishlar (masalan `value` bor, `onInput` yo'q)
 6. ~~VS Code: ranglash, language server~~ (tayyor). Qolgani: IntelliJ plagini, Java ifodalari uchun autocomplete (jdtls bilan birlashtirish), rename/find references
