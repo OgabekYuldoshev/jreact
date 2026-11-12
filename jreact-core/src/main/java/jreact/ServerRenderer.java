@@ -17,23 +17,31 @@ public final class ServerRenderer {
 
     public static String renderToString(Object node) {
         StringBuilder sb = new StringBuilder();
-        render(node, sb, new HashMap<>());
+        render(node, sb, new HashMap<>(), new int[1]);
         return sb.toString();
     }
 
     /** {@code provided}: the context values in scope at this point of the tree. */
-    private static void render(Object node, StringBuilder sb, Map<Context<?>, Object> provided) {
+    private static void render(Object node, StringBuilder sb, Map<Context<?>, Object> provided, int[] textEnd) {
         if (node == null || node instanceof Boolean) return;
-        if (node instanceof Iterable<?> it) { for (Object o : it) render(o, sb, provided); return; }
-        if (node instanceof Object[] arr) { for (Object o : arr) render(o, sb, provided); return; }
-        if (!(node instanceof Element e)) { escape(String.valueOf(node), sb); return; }
+        if (node instanceof Iterable<?> it) { for (Object o : it) render(o, sb, provided, textEnd); return; }
+        if (node instanceof Object[] arr) { for (Object o : arr) render(o, sb, provided, textEnd); return; }
+        if (!(node instanceof Element e)) {
+            String text = String.valueOf(node);
+            if (text.isEmpty()) return;
+            // two text nodes next to each other would parse back as one: a comment keeps them apart (hydration needs that)
+            if (textEnd[0] > 0 && sb.length() == textEnd[0]) sb.append("<!-- -->");
+            escape(text, sb);
+            textEnd[0] = sb.length();
+            return;
+        }
 
         switch (e.kind()) {
-            case FRAGMENT -> render(e.children(), sb, provided);
+            case FRAGMENT -> render(e.children(), sb, provided, textEnd);
             case PROVIDER -> {
                 boolean had = provided.containsKey(e.context());
                 Object prevValue = provided.put(e.context(), e.contextValue());
-                try { render(e.children(), sb, provided); }
+                try { render(e.children(), sb, provided, textEnd); }
                 finally { if (had) provided.put(e.context(), prevValue); else provided.remove(e.context()); }
             }
             case COMPONENT -> {
@@ -41,7 +49,7 @@ public final class ServerRenderer {
                 Hooks.Dispatcher prev = Hooks.swap(new OneShotDispatcher(provided));
                 Element out;
                 try { out = instance.renderWith(e.props()); } finally { Hooks.swap(prev); }
-                render(out, sb, provided);
+                render(out, sb, provided, textEnd);
             }
             case HOST -> {
                 if (!Safety.isValidTagName(e.tag()) || Safety.isBlockedTag(e.tag())) {
@@ -65,7 +73,7 @@ public final class ServerRenderer {
                 }
                 sb.append('>');
                 if (VOID_TAGS.contains(e.tag())) return;
-                render(e.children(), sb, provided);
+                render(e.children(), sb, provided, textEnd);
                 sb.append("</").append(e.tag()).append('>');
             }
         }

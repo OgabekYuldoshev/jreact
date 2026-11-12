@@ -46,4 +46,17 @@ public interface DomOps<N> {
      * to in the capture phase so delegation still sees them.
      */
     void addEventListener(N container, String type, Consumer<NativeEvent<N>> listener);
+
+    // ---- hydration (optional: a DomOps without these renders normally instead of adopting server HTML)
+
+    /** Elements and text nodes inside {@code parent}, comments left out; null = not supported. */
+    default java.util.List<N> hydratableChildren(N parent) { return null; }
+
+    default boolean isTextNode(N node) { return false; }
+
+    /** Lower-case tag name of an element. */
+    default String tagName(N element) { return null; }
+
+    /** Text of a text node. */
+    default String textContent(N textNode) { return null; }
 }

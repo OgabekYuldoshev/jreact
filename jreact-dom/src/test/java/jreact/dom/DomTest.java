@@ -74,6 +74,11 @@ public final class DomTest {
             listeners.put(type, l);
         }
 
+        public List<FNode> hydratableChildren(FNode p) { return new ArrayList<>(p.children.stream().filter(c -> !"#comment".equals(c.tag)).toList()); }
+        public boolean isTextNode(FNode n) { return n.tag == null; }
+        public String tagName(FNode n) { return n.tag; }
+        public String textContent(FNode n) { return n.text; }
+
         private static void detach(FNode c) { if (c.parent != null) { c.parent.children.remove(c); c.parent = null; } }
 
         /** Dispatches like the browser would: the root listener receives an event that targets `target`. */
@@ -410,6 +415,53 @@ public final class DomTest {
             eq(1, t.timeouts.size());
             host.cancelHostTimeout();
             eq(0, t.timeouts.size());
+        });
+
+        test("hydrate adopts the server's nodes, attaches handlers and keeps working afterwards", () -> {
+            Env e = new Env();
+            FNode button = new FNode("button", null);
+            FNode label = new FNode(null, "n="); FNode comment = new FNode("#comment", null); FNode count = new FNode(null, "0");
+            button.children.addAll(List.of(label, comment, count));
+            for (FNode c : button.children) c.parent = button;
+            e.container.children.add(button); button.parent = e.container;
+            List<String> warnings = new ArrayList<>();
+            e.root.host().setWarningHandler(warnings::add);
+            e.root.hydrate(Counter.make());
+            e.flush();
+            check(e.first() == button, "the existing <button> was kept");
+            eq("[]", warnings.toString());
+            e.dom.fire("click", button);
+            e.flush();
+            check(e.first() == button, "still the same node after an update");
+            eq("n=1", button.children.stream().filter(c -> !"#comment".equals(c.tag)).map(c -> c.text).reduce("", String::concat));
+        });
+
+        test("hydrate replaces what does not match and removes extras, with a warning", () -> {
+            Env e = new Env();
+            FNode wrong = new FNode("div", null);
+            FNode extra = new FNode("p", null);
+            e.container.children.addAll(List.of(wrong, extra));
+            wrong.parent = e.container; extra.parent = e.container;
+            List<String> warnings = new ArrayList<>();
+            e.root.host().setWarningHandler(warnings::add);
+            e.root.hydrate(Counter.make());
+            eq("<button>n=0</button>", e.html());
+            check(warnings.size() == 2, "two mismatches reported: " + warnings);
+            e.dom.fire("click", e.first());
+            e.flush();
+            eq("<button>n=1</button>", e.html());
+        });
+
+        test("hydrate fixes text the server rendered differently", () -> {
+            Env e = new Env();
+            FNode p = new FNode("p", null); FNode t = new FNode(null, "old");
+            p.children.add(t); t.parent = p; e.container.children.add(p); p.parent = e.container;
+            List<String> warnings = new ArrayList<>();
+            e.root.host().setWarningHandler(warnings::add);
+            e.root.hydrate(el("p", new Attrs(), "new"));
+            check(e.first() == p && p.children.get(0) == t, "nodes kept");
+            eq("<p>new</p>", e.html());
+            check(warnings.size() == 1, "one warning: " + warnings);
         });
 
         System.out.println(passed + " passed, " + failures.size() + " failed");

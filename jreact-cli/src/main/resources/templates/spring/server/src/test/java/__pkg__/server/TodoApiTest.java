@@ -54,14 +54,17 @@ class TodoApiTest {
     }
 
     @Test
-    void theBuiltClientIsServedAtTheRootAndForClientRoutes() {
+    void theFirstPageIsRenderedOnTheServer() {
         HttpHeaders html = new HttpHeaders();
         html.set("Accept", MediaType.TEXT_HTML_VALUE);
-        for (String path : new String[]{"/", "/some/client/route"}) {
-            var page = http.exchange(path, HttpMethod.GET, new HttpEntity<>(html), String.class);
-            assertThat(page.getStatusCode()).isEqualTo(HttpStatus.OK);
-            assertThat(page.getBody()).contains("<div id=\"root\"").contains("/assets/app.");
-        }
+        var page = http.exchange("/", HttpMethod.GET, new HttpEntity<>(html), String.class);
+        assertThat(page.getStatusCode()).isEqualTo(HttpStatus.OK);
+        // the page, its data and the built assets arrive together: no JavaScript needed to see the list
+        assertThat(page.getBody()).contains("<div id=\"root\"").contains("Read the README").contains("__jreact_data").contains("/assets/app.");
+        // a URL no route matches is a 404 page (the errorElement), still with the app around it
+        var missing = http.exchange("/some/unknown/route", HttpMethod.GET, new HttpEntity<>(html), String.class);
+        assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(missing.getBody()).contains("/assets/app.");
         assertThat(http.exchange("/api/nothing", HttpMethod.GET, new HttpEntity<>(html), String.class).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 }

@@ -69,20 +69,31 @@ class RpcController {
         }
     }
 
+    /** The outcome of one call: an HTTP status and the JSON text of the answer (or {@code {"message": ...}} for an error). */
+    record Result(int status, String json) {
+        boolean ok() { return status == 200; }
+    }
+
     @PostMapping(value = "/_rpc/{api}/{method}", consumes = MediaType.APPLICATION_JSON_VALUE)
     ResponseEntity<String> call(@PathVariable("api") String api, @PathVariable("method") String method, @RequestBody String body) {     // names spelled out: no -parameters needed
-        Target target = targets.get(api);
-        if (target == null) return error(404, "no such api: " + api);
         Object args;
         try {
             args = Json.parse(body);
         } catch (Json.ParseException e) {
-            return error(400, "the body is not valid JSON: " + e.getMessage());
+            return respond(error(400, "the body is not valid JSON: " + e.getMessage()));
         }
-        if (!(args instanceof List<?>)) return error(400, "the body must be a JSON array of the arguments");
+        if (!(args instanceof List<?>)) return respond(error(400, "the body must be a JSON array of the arguments"));
+        @SuppressWarnings("unchecked") Result r = invoke(api, method, (List<Object>) args);
+        return respond(r);
+    }
+
+    /** Calls the bean; also used by server side rendering, so a loader sees exactly what the browser would get over HTTP. */
+    Result invoke(String api, String method, List<Object> args) {
+        Target target = targets.get(api);
+        if (target == null) return error(404, "no such api: " + api);
         try {
-            @SuppressWarnings("unchecked") Object result = target.dispatcher().invoke(target.bean(), method, (List<Object>) args);
-            return respond(200, Json.stringify(result));
+            Object result = target.dispatcher().invoke(target.bean(), method, args);
+            return new Result(200, Json.stringify(result));
         } catch (RpcException e) {
             return error(e.status(), e.getMessage());
         } catch (ResponseStatusException e) {
@@ -105,11 +116,11 @@ class RpcController {
         return null;
     }
 
-    private static ResponseEntity<String> error(int status, String message) {
-        return respond(status, Json.stringify(Map.of("message", message == null ? "" : message)));
+    private static Result error(int status, String message) {
+        return new Result(status, Json.stringify(Map.of("message", message == null ? "" : message)));
     }
 
-    private static ResponseEntity<String> respond(int status, String json) {
-        return ResponseEntity.status(status).contentType(MediaType.APPLICATION_JSON).cacheControl(CacheControl.noStore()).body(json);
+    private static ResponseEntity<String> respond(Result r) {
+        return ResponseEntity.status(r.status()).contentType(MediaType.APPLICATION_JSON).cacheControl(CacheControl.noStore()).body(r.json());
     }
 }

@@ -40,6 +40,9 @@ public final class DomRoot<N> {
     /** Renders and commits right now, including effects. */
     public void renderSync(Element element) { root.renderSync(element); }
 
+    /** Adopts the server-rendered HTML already inside the container instead of building new nodes (see {@link Root#hydrate}). */
+    public void hydrate(Element element) { root.hydrate(element); }
+
     /** Removes everything this root rendered and runs effect cleanups. */
     public void unmount() { root.unmount(); }
 

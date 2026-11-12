@@ -22,4 +22,6 @@ public interface JsNode extends JSObject {
     @JSProperty("parentNode") JsNode getParentNode();
 
     @JSProperty("textContent") void setTextContent(String text);
+
+    @JSProperty("textContent") String getTextContent();
 }

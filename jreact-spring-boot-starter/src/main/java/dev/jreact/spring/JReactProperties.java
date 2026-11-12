@@ -10,6 +10,7 @@ import java.util.List;
  * jreact.enabled=true                      # serve the app at all
  * jreact.location=classpath:/jreact/       # where the client module put its files (index.html, assets/)
  * jreact.reserved-prefixes=/api,/_rpc      # unknown URLs under these answer 404, never index.html
+ * jreact.ssr.app=com.acme.client.App      # render the first page on the server: a class implementing dev.jreact.api.ClientApp (off in dev mode)
  * jreact.dev-dir=../client/target/classes/jreact   # dev mode: serve from this folder, reload the browser when it changes
  * </pre>
  */
@@ -21,6 +22,23 @@ public class JReactProperties {
     private List<String> reservedPrefixes = List.of("/api", "/_rpc", "/actuator", "/error", "/__jreact");
     private String devDir;
     private String devErrorFile;
+    private final Ssr ssr = new Ssr();
+
+    /** {@code jreact.ssr.*}: server side rendering of the first page. */
+    public static class Ssr {
+        private String app;
+        private String containerId = "root";
+
+        /** Class name of the {@code ClientApp}; SSR is on when this is set (and dev mode is off). */
+        public String getApp() { return app; }
+        public void setApp(String app) { this.app = app; }
+
+        /** The id of the element the app renders into (the one in index.html). */
+        public String getContainerId() { return containerId; }
+        public void setContainerId(String containerId) { this.containerId = containerId; }
+    }
+
+    public Ssr getSsr() { return ssr; }
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }

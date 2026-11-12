@@ -91,6 +91,31 @@ public final class DomHost<N> implements HostConfig<N> {
         ops.setTextContent(textInstance, newText);
     }
 
+    // ---------------------------------------------------------------- hydration
+
+    @Override public List<N> hydratableChildren(N parent) { return ops.hydratableChildren(parent); }
+
+    @Override public boolean isTextNode(N node) { return ops.isTextNode(node); }
+
+    @Override public String tagName(N node) { return ops.tagName(node); }
+
+    @Override
+    public void hydrateInstance(N existing, N created) {
+        Object d = ops.getData(created);
+        if (d != null) ops.setData(existing, d);         // the event handlers
+    }
+
+    @Override
+    public void hydrateText(N existing, String text) {
+        String found = ops.textContent(existing);
+        if (found != null && !found.equals(text)) {
+            warnOnce("hydration mismatch: text \"" + text + "\" but the server HTML has \"" + found + "\"");
+            ops.setTextContent(existing, text);
+        }
+    }
+
+    @Override public void hydrationMismatch(String message) { warnOnce("hydration mismatch: " + message); }
+
     // ---------------------------------------------------------------- attributes
 
     private void applyAttribute(N node, String name, Object value) {

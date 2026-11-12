@@ -631,6 +631,25 @@ Reflection yo'q, shuning uchun brauzerda (TeaVM) ham ishlaydi. Nima ketadi: `POS
 Har bir metod ochiq HTTP endpoint: ruxsatni serverda tekshiring (`@PreAuthorize`), argumentlarni validatsiya qiling. Interfeysga bitta bean mos kelishi kerak, aks holda server ishga tushmaydi (aniq xabar bilan).
 `JReactWeb.createRoot` HTTP transportni o'zi o'rnatadi; testda `Rpc.transport(...)` bilan soxta transport berish mumkin. Maven'da `maven-compiler-plugin` ning `annotationProcessorPaths` ida `jreact-processor` ko'rsatiladi (shablon shunday: JDK 23+ processor'ni classpath'dan o'zi topmaydi).
 
+### Server-side rendering va hydration
+
+`jreact new` loyihasida birinchi sahifa serverda HTML qilib render qilinadi: brauzer JavaScript yuklanmasdan oldin ham ro'yxatni ko'radi (tez birinchi ko'rinish, SEO). Keyin `app.js` ishga tushib, tayyor HTML'ni **hydrate** qiladi: yangi tugun yaratmaydi, mavjudlariga event handlerlarni ulaydi.
+
+```
+GET /  ->  Spring: App.routes() ni xotiradagi router bilan shu URL uchun ishga tushiradi
+           loader'lar TodoApiClient.list() ni chaqiradi (HTTP'siz, bean'ga to'g'ridan-to'g'ri)
+           sahifa HTML'ga render qilinadi, loader javoblari <script id="__jreact_data"> ga yoziladi
+brauzer ->  JReactWeb.createRoot(..).hydrate(..): HTML qabul qilinadi, loader'lar javobni shu yerdan oladi (tarmoq so'rovi yo'q)
+```
+
+- Marshrutlar `ClientApp` ni amalga oshiradigan bitta klassda (`App.jrx`): brauzer ham, server ham o'shani ishlatadi. U `jreact.web.*` ga bog'liq bo'lmasin.
+- Yoqish: `server/src/main/resources/application.properties` da `jreact.ssr.app=<paket>.client.App` (shablonda bor; o'chirish uchun qatorni olib tashlang). `jreact dev` da o'chiq (brauzer render qiladi).
+- Loader'ning statusi saqlanadi: `ErrorResponse(404)` -> HTTP 404, `Redirect` -> 302, route topilmasa 404 sahifa.
+- Loader kutadigan (`Promise.pending()`, taymer) bo'lsa yoki render xato bersa server oddiy `index.html` qaytaradi, ilova brauzerda render qilinadi.
+- Server HTML'i brauzer render qilganiga mos kelmasa, mos kelmagan qism mijoz versiyasi bilan almashtiriladi va konsolga `hydration mismatch` ogohlantirishi chiqadi.
+- Qo'lda: `ServerRenderer.renderToString` ixtiyoriy matnlar orasiga `<!-- -->` qo'yadi; `DomRoot.hydrate(element)` mavjud DOM'ni qabul qiladi.
+- Cheklov: faqat `@ServerApi` javoblari oldindan ulanadi; `Http.get` kabi boshqa so'rovlar serverda ishlamaydi.
+
 ### `jreact-spring-boot-starter`
 
 Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
@@ -645,7 +664,7 @@ Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
 Maven plagini `jrx:bundle` ham beradi (client modulida avtomatik): TeaVM natijasini hash'lab `target/classes/jreact/` ga qo'yadi, `index.html` ni yangilaydi, `manifest.json` yozadi.
 Spring Security ishlatsangiz va `/` ni ochiq qilmasangiz, UI ham login talab qiladi: starter filtr emas, oddiy resource handler.
 
-**Hozircha yo'q** (reja): `@ServerApi` da `Optional`, sana/vaqt va generik tiplar, SSR + hydration, Gradle plagini, `context-path` bilan ishlash (asset yo'llari `/` dan boshlanadi), `shared/` o'zgarganda tezroq qayta yig'ish.
+**Hozircha yo'q** (reja): `@ServerApi` da `Optional`, sana/vaqt va generik tiplar, Gradle plagini, `context-path` bilan ishlash (asset yo'llari `/` dan boshlanadi), `shared/` o'zgarganda tezroq qayta yig'ish.
 
 ## Stillar: CSS, Sass, Tailwind
 

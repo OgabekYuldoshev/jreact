@@ -18,10 +18,80 @@ final class Commit<N> {
     Commit(Reconciler<N> reconciler) { this.reconciler = reconciler; this.host = reconciler.host; }
 
     void commitRoot(Root<N> root, Fiber finished) {
+        if (root.hydrating) {
+            root.hydrating = false;
+            if (root.current.child == null) hydrate(root, finished);
+        }
         mutate(root, finished);
         root.current = finished;
         layout(finished);
         root.pendingPassive = ((finished.flags | finished.subtreeFlags) & Fiber.PASSIVE) != 0 ? finished : null;
+    }
+
+    // ---------------------------------------------------------------- hydration
+
+    /** Adopts the container's existing nodes for the freshly rendered tree (first commit only), see {@link Root#hydrate}. */
+    private void hydrate(Root<N> root, Fiber finished) {
+        List<N> existing = host.hydratableChildren(root.container());
+        if (existing == null || existing.isEmpty()) return;      // nothing from the server: a normal first render
+        List<Fiber> fibers = new ArrayList<>();
+        hostFibers(finished, fibers, true);
+        hydrateChildren(root.container(), fibers, existing);
+    }
+
+    /** The nearest host fibers below {@code parent}; {@code clear} drops PLACEMENT (the nodes are already in the page). */
+    private void hostFibers(Fiber parent, List<Fiber> out, boolean clear) {
+        for (Fiber c = parent.child; c != null; c = c.sibling) {
+            if (clear) c.flags &= ~Fiber.PLACEMENT;
+            if (c.tag == Fiber.Tag.HOST || c.tag == Fiber.Tag.TEXT) out.add(c);
+            else hostFibers(c, out, clear);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private void hydrateChildren(N parent, List<Fiber> fibers, List<N> existing) {
+        int i = 0;
+        for (Fiber f : fibers) {
+            N created = (N) f.stateNode;
+            boolean text = f.tag == Fiber.Tag.TEXT;
+            N cur = i < existing.size() ? existing.get(i) : null;
+            if (text && f.text.isEmpty()) {              // HTML cannot carry an empty text node: keep the client's
+                place(parent, created, cur);
+                continue;
+            }
+            if (cur != null && (text ? host.isTextNode(cur)
+                    : !host.isTextNode(cur) && ((String) f.type).equalsIgnoreCase(host.tagName(cur)))) {
+                i++;
+                f.stateNode = cur;
+                if (text) {
+                    host.hydrateText(cur, f.text);
+                } else {
+                    host.hydrateInstance(cur, created);
+                    List<N> inner = host.hydratableChildren(cur);
+                    List<Fiber> innerFibers = new ArrayList<>();
+                    hostFibers(f, innerFibers, false);
+                    hydrateChildren(cur, innerFibers, inner == null ? new ArrayList<>() : inner);
+                }
+            } else {
+                host.hydrationMismatch("expected " + (text ? "text \"" + f.text + "\"" : "<" + f.type + ">")
+                        + " but the server HTML has " + describe(cur));
+                place(parent, created, cur);
+                if (cur != null) { host.removeChild(parent, cur); i++; }
+            }
+        }
+        for (; i < existing.size(); i++) {
+            host.hydrationMismatch("the server HTML has an extra " + describe(existing.get(i)));
+            host.removeChild(parent, existing.get(i));
+        }
+    }
+
+    private void place(N parent, N node, N before) {
+        if (before != null) host.insertBefore(parent, node, before); else host.appendChild(parent, node);
+    }
+
+    private String describe(N node) {
+        if (node == null) return "nothing";
+        return host.isTextNode(node) ? "a text node" : "<" + host.tagName(node) + ">";
     }
 
     // ---------------------------------------------------------------- mutation

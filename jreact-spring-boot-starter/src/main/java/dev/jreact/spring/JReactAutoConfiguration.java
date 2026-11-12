@@ -38,9 +38,28 @@ import java.time.Duration;
 @EnableConfigurationProperties(JReactProperties.class)
 public class JReactAutoConfiguration {
 
+    /** Server side rendering of page requests, on when {@code jreact.ssr.app} is set (and not in dev mode). */
     @Bean
-    WebMvcConfigurer jreactWebMvcConfigurer(JReactProperties props, ResourceLoader loader) {
+    @ConditionalOnProperty(prefix = "jreact.ssr", name = "app")
+    SsrInterceptor jreactSsrInterceptor(JReactProperties props, ResourceLoader loader, RpcController rpc) {
+        if (props.isDev()) return new SsrInterceptor(null, props);       // dev: the client changes all the time, the browser renders
+        Resource index;
+        try { index = locationOf(props, loader).createRelative("index.html"); }
+        catch (IOException e) { throw new IllegalStateException("bad jreact.location: " + e.getMessage(), e); }
+        ClassLoader cl = loader != null && loader.getClassLoader() != null ? loader.getClassLoader() : getClass().getClassLoader();
+        return new SsrInterceptor(new SsrRenderer(props.getSsr().getApp(), props.getSsr().getContainerId(), rpc, index, cl), props);
+    }
+
+    @Bean
+    WebMvcConfigurer jreactWebMvcConfigurer(JReactProperties props, ResourceLoader loader,
+                                            org.springframework.beans.factory.ObjectProvider<SsrInterceptor> ssr) {
         return new WebMvcConfigurer() {
+            @Override
+            public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
+                SsrInterceptor i = ssr.getIfAvailable();
+                if (i != null) registry.addInterceptor(i);
+            }
+
             @Override
             public void addViewControllers(ViewControllerRegistry registry) {
                 registry.addViewController("/").setViewName("forward:/index.html");

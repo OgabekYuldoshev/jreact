@@ -11,7 +11,7 @@
 
     <artifactId>{{name}}-client</artifactId>
     <name>{{name}}-client</name>
-    <description>The UI: .jrx -> .java -> app.js (TeaVM). The jar holds only the built files (jreact/index.html, jreact/assets/...), the server serves them.</description>
+    <description>The UI: .jrx -> .java -> app.js (TeaVM). The jar holds the built files (jreact/index.html, jreact/assets/...) that the server serves, and the UI classes it uses to render the first page.</description>
 
     <dependencies>
         <dependency><groupId>${project.groupId}</groupId><artifactId>{{name}}-shared</artifactId></dependency>
@@ -78,11 +78,11 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- the jar is for the server: only the built files, not the TeaVM-only classes -->
+            <!-- the jar is for the server: the built files (jreact/...) and the classes it renders the first page with (App, TodoPage...) -->
             <plugin>
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.4.2</version>
-                <configuration><includes><include>jreact/**</include></includes></configuration>
+                <configuration><includes><include>jreact/**</include><include>**/*.class</include></includes></configuration>
             </plugin>
         </plugins>
     </build>

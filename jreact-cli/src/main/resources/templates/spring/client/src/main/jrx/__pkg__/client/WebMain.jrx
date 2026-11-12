@@ -1,31 +1,15 @@
 package {{package}}.client;
 
-import java.util.List;
 import jreact.router.*;
 import jreact.web.JReactWeb;
 import jreact.web.Routers;
-import {{package}}.shared.TodoApiClient;
 
 public class WebMain {
 
     public static void main(String[] args) {
-        List<RouteObject> routes = List.of(
-            RouteObject.of("/").id("todos").element(<TodoPage />).errorElement(<ErrorPage />)
-                // runs in the browser before the page renders. TodoApiClient is generated from the TodoApi interface in shared/:
-                // it calls the Spring Boot bean and returns a Promise<List<Todo>>, already converted from JSON
-                .loader(a -> TodoApiClient.list())
-                // every <Form method="post"> on the page lands here; after it, the loader runs again
-                .action(a -> {
-                    SearchParams f = a.request().form();
-                    switch (f.get("intent", "")) {
-                        case "add": return TodoApiClient.add(f.get("title", ""));
-                        case "toggle": return TodoApiClient.setDone(Long.parseLong(f.get("id", "0")), "true".equals(f.get("done")));
-                        case "delete": return TodoApiClient.remove(Long.parseLong(f.get("id", "0")));
-                        default: throw new ErrorResponse(400, "Bad Request", "unknown intent");
-                    }
-                }));
-
-        // real paths (/, /anything): the Spring Boot server answers every page URL with index.html
-        JReactWeb.createRoot("root").render(<RouterProvider router={Routers.createBrowserRouter(routes)} fallbackElement={<p className="p-8 text-slate-500">Loading...</p>} />);
+        App app = new App();
+        // The server already put the page into index.html (jreact.ssr.app): hydrate takes that HTML over instead of building it again.
+        // Without it (an empty #root) it simply renders. Real paths (/, /anything): the Spring Boot server answers every page URL.
+        JReactWeb.createRoot("root").hydrate(<RouterProvider router={Routers.createBrowserRouter(app.routes())} fallbackElement={app.fallback()} />);
     }
 }

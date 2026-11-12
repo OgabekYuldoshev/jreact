@@ -37,4 +37,30 @@ public interface HostConfig<N> {
     void commitUpdate(N instance, AttrsDiff diff);
 
     void commitTextUpdate(N textInstance, String oldText, String newText);
+
+    // ---------------------------------------------------------------- hydration (optional)
+
+    /**
+     * Hydration: the nodes already inside {@code parent} that the server rendered (elements and text; comments
+     * are left out), or null when this host cannot hydrate (then {@link Root#hydrate} renders normally).
+     */
+    default java.util.List<N> hydratableChildren(N parent) { return null; }
+
+    /** Hydration: is this existing node a text node? (otherwise it is an element) */
+    default boolean isTextNode(N node) { return false; }
+
+    /** Hydration: lower-case tag name of an existing element. */
+    default String tagName(N node) { return null; }
+
+    /**
+     * Hydration: {@code existing} (server HTML) replaces {@code created} (just built by the render phase) as the node
+     * of an element. Carry over whatever {@link #finalizeInitialChildren} attached to {@code created} (event handlers).
+     */
+    default void hydrateInstance(N existing, N created) {}
+
+    /** Hydration: an existing text node stands for {@code text}; fix its content when the server sent something else. */
+    default void hydrateText(N existing, String text) {}
+
+    /** Hydration: the server HTML did not match what the client rendered; the client version was put in place. */
+    default void hydrationMismatch(String message) {}
 }

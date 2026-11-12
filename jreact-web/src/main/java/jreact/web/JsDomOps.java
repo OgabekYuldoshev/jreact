@@ -50,6 +50,37 @@ public final class JsDomOps implements DomOps<JsNode> {
 
     @Override public JsNode parentNode(JsNode node) { return node.getParentNode(); }
 
+    @Override
+    public java.util.List<JsNode> hydratableChildren(JsNode parent) {
+        java.util.List<JsNode> out = new java.util.ArrayList<>();
+        for (int i = 0, n = childCount(parent); i < n; i++) {
+            JsNode c = childAt(parent, i);
+            if (nodeType(c) != 8) out.add(c);                // 8 = comment (the server's text separators)
+        }
+        return out;
+    }
+
+    @Override public boolean isTextNode(JsNode node) { return nodeType(node) == 3; }
+
+    @Override public String tagName(JsNode element) { return tagName0(element); }
+
+    @Override public String textContent(JsNode textNode) { return textOf(textNode); }
+
+    @JSBody(params = {"n"}, script = "return n.childNodes.length;")
+    private static native int childCount(JsNode node);
+
+    @JSBody(params = {"n", "i"}, script = "return n.childNodes[i];")
+    private static native JsNode childAt(JsNode node, int index);
+
+    @JSBody(params = {"n"}, script = "return n.nodeType;")
+    private static native int nodeType(JsNode node);
+
+    @JSBody(params = {"n"}, script = "return n.nodeName.toLowerCase();")
+    private static native String tagName0(JsNode node);
+
+    @JSBody(params = {"n"}, script = "return n.nodeValue;")
+    private static native String textOf(JsNode node);
+
     @Override public Object getData(JsNode node) { return data(node); }
 
     @Override public void setData(JsNode node, Object data) { storeData(node, data); }

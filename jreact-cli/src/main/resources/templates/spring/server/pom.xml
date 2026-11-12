@@ -27,7 +27,7 @@
 
     <dependencies>
         <dependency><groupId>${project.groupId}</groupId><artifactId>{{name}}-shared</artifactId></dependency>
-        <!-- the built UI only (jreact/index.html, jreact/assets/...). Its own dependencies (TeaVM, jreact-web) are for the browser, not for this JVM -->
+        <!-- the built UI (jreact/index.html, jreact/assets/...) and its classes for server side rendering. Its own dependencies (TeaVM, jreact-web) are for the browser, not for this JVM -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>{{name}}-client</artifactId>

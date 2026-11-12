@@ -1,22 +1,27 @@
 // Opens the running app of a `jreact new` project in jsdom and clicks through it: node tools/spring-e2e.js http://localhost:8099
 const path = require('path');
-const { JSDOM } = require(path.join(__dirname, '..', 'examples', 'node_modules', 'jsdom'));
+const { JSDOM, VirtualConsole } = require(path.join(__dirname, '..', 'examples', 'node_modules', 'jsdom'));
 const base = process.argv[2];
 const rpc = async (method, args) => (await (await fetch(base + '/_rpc/TodoApi/' + method, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(args) })).json());
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
   let fails = 0;
   const check = (name, ok, extra) => { console.log((ok ? 'ok   ' : 'FAIL ') + name + (ok ? '' : '  -> ' + extra)); if (!ok) fails++; };
-  const errors = [];
+  const errors = [], logs = [];
+  let rpcListCalls = 0;
+  const virtualConsole = new VirtualConsole();
+  virtualConsole.on('error', m => logs.push(String(m))).on('warn', m => logs.push(String(m)));
   const dom = await JSDOM.fromURL(base + '/', {
-    runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true,
+    runScripts: 'dangerously', resources: 'usable', pretendToBeVisual: true, virtualConsole,
     beforeParse(w) {
-      w.fetch = (u, o) => fetch(new URL(u, w.location.href), o);
+      w.fetch = (u, o) => { if (String(u).includes('/_rpc/TodoApi/list')) rpcListCalls++; return fetch(new URL(u, w.location.href), o); };
       w.addEventListener('error', e => errors.push(String(e.message)));
     },
   });
   const w = dom.window, d = w.document;
   await sleep(1200);
+  check('hydrated without a mismatch warning', !logs.some(l => /hydration/i.test(l)), logs);
+  check('the first render used the answers embedded in the page (no list call over the network)', rpcListCalls === 0, rpcListCalls);
   const items = () => [...d.querySelectorAll('#todos li span')].map(s => s.textContent);
   check('the loader called TodoApiClient.list() and the page rendered the list', items().length >= 3 && items().includes('Read the README'), items());
   check('the page is styled by Tailwind (a stylesheet link with a hashed name)', !!d.querySelector('link[rel=stylesheet][href^="/assets/app."]'), '');

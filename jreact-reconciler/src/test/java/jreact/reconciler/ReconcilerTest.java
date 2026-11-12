@@ -673,9 +673,13 @@ public final class ReconcilerTest {
         });
 
         test("context: consumers also work with server rendering", () -> {
-            eq("<p>light/0</p>", ServerRenderer.renderToString(Themed.make()));
-            eq("<div><p>dark/0</p><p>blue/0</p><p>dark/0</p></div>", ServerRenderer.renderToString(
+            eq("<p>light<!-- -->/<!-- -->0</p>", ServerRenderer.renderToString(Themed.make()));
+            eq("<div><p>dark<!-- -->/<!-- -->0</p><p>blue<!-- -->/<!-- -->0</p><p>dark<!-- -->/<!-- -->0</p></div>", ServerRenderer.renderToString(
                     THEME.provide("dark", el("div", Themed.make(), THEME.provide("blue", Themed.make()), Themed.make()))));
+        });
+
+        test("server rendering separates adjacent text nodes with a comment and skips empty text", () -> {
+            eq("<p>a<!-- -->b<b>c</b>d</p>", ServerRenderer.renderToString(Jsx.el("p", null, null, "a", "", "b", Jsx.el("b", null, null, "c"), "d")));
         });
 
         // ---------------------------------------------------------------- dev warnings

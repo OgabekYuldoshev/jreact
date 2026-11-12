@@ -26,6 +26,7 @@ public final class Root<N> {
     Task passiveTask;                       // scheduled flush of useEffects
     int nestedUpdates;                      // consecutive updates caused by effects, see Reconciler.MAX_UPDATE_PASSES
     Fiber pendingPassive;                   // committed tree whose useEffects have not run yet
+    boolean hydrating;                      // the first commit adopts the container's existing nodes
     final List<Runnable> deletionCleanups = new ArrayList<>();
 
     Root(Reconciler<N> reconciler, N container) {
@@ -42,6 +43,13 @@ public final class Root<N> {
 
     /** Renders and commits right now (never time-sliced), including effects. */
     public void renderSync(Element element) { render(element); flush(); }
+
+    /**
+     * Like {@link #renderSync} for a container that already holds the server-rendered HTML of {@code element}: the
+     * first commit adopts those nodes (attaching handlers and refs) instead of creating new ones. Parts that do not
+     * match are replaced by the client's version. Needs a host with hydration support, else it renders normally.
+     */
+    public void hydrate(Element element) { hydrating = true; renderSync(element); }
 
     /** Runs any pending render, commit and effects right now, finishing a paused render if there is one. */
     public void flush() { reconciler.flushSync(this); }
