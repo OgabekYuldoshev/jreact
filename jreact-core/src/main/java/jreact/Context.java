@@ -9,7 +9,7 @@ import java.util.List;
  * <pre>{@code
  * public static final Context<Theme> THEME = Context.create(Theme.LIGHT);
  *
- * // a provider is an ordinary component, so it works from .jsxj as <ThemeProvider value={...}>...</ThemeProvider>
+ * // a provider is an ordinary component, so it works from .jrx as <ThemeProvider value={...}>...</ThemeProvider>
  * public class ThemeProvider extends Component<ThemeProvider.Props> {
  *     public record Props(Theme value, List<Object> children) {}
  *     public Element render(Props p) { return THEME.provide(p.value(), p.children()); }

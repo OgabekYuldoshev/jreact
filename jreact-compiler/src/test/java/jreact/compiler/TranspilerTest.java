@@ -3,7 +3,7 @@ package jreact.compiler;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Dependency-free test runner for the .jsxj transpiler (run: ./build.sh test). */
+/** Dependency-free test runner for the .jrx transpiler (run: ./build.sh test). */
 public final class TranspilerTest {
 
     private static int passed = 0;
@@ -119,7 +119,7 @@ public final class TranspilerTest {
     private static String t(String src) {
         PropsIndex index = new PropsIndex();
         index.scan(src);
-        return new JsxTranspiler("Test.jsxj", src, index).transpile();
+        return new JsxTranspiler("Test.jrx", src, index).transpile();
     }
 
     private static void same(String name, String src) { eq(name, src, src); }

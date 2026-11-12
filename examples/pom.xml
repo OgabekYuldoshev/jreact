@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Parent of the Tailwind example apps (kanban, shop, dashboard, landing). The whole .jsxj -> .java -> app.js chain
+  Parent of the Tailwind example apps (kanban, shop, dashboard, landing). The whole .jrx -> .java -> app.js chain
   lives here; an app's own pom only names itself and lists the three plugins. Tailwind runs afterwards: ./build.sh examples
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -46,7 +46,7 @@
                     <artifactId>jreact-maven-plugin</artifactId>
                     <version>${project.version}</version>
                     <executions>
-                        <execution><id>jsxj</id><goals><goal>compile</goal></goals></execution>
+                        <execution><id>jrx</id><goals><goal>compile</goal></goals></execution>
                     </executions>
                 </plugin>
                 <plugin>

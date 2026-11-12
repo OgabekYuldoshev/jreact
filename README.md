@@ -1,6 +1,6 @@
 # JReact
 
-**Java'da React.** UI'ni Java klasslari va JSX'ga o'xshash `.jsxj` sintaksisi bilan yozasiz, brauzer uchun `app.js` olasiz. React'ning ichki mexanizmi (Fiber, reconciler, hooks, scheduler) Java OOP asosida qayta qurilgan.
+**Java'da React.** UI'ni Java klasslari va JSX'ga o'xshash `.jrx` sintaksisi bilan yozasiz, brauzer uchun `app.js` olasiz. React'ning ichki mexanizmi (Fiber, reconciler, hooks, scheduler) Java OOP asosida qayta qurilgan.
 
 ```java
 public class Counter extends Component<Counter.Props> {
@@ -20,18 +20,18 @@ public class Counter extends Component<Counter.Props> {
 ```
 
 ```
-.jsxj ──jsxjc──▶ .java ──javac──▶ .class ──TeaVM──▶ app.js (brauzer)
+.jrx ──jrxc──▶ .java ──javac──▶ .class ──TeaVM──▶ app.js (brauzer)
                                       └──▶ JVM'da HTML (ServerRenderer)
 ```
 
-> **Holat: erta bosqich.** Ishlaydi: `.jsxj` kompilyatori, Fiber reconciler (state, hooks, key'li diff, context, memo, error boundary), scheduler (ustuvorlik, bo'laklab render), DOM host, TeaVM bilan brauzer build, dev server, VS Code qo'llab-quvvatlashi. Brauzer build'i jsdom'da sinalgan, haqiqiy brauzerda hali emas. Batafsil: [Cheklovlar](#cheklovlar) va [Yo'l xaritasi](#yol-xaritasi).
+> **Holat: erta bosqich.** Ishlaydi: `.jrx` kompilyatori, Fiber reconciler (state, hooks, key'li diff, context, memo, error boundary), scheduler (ustuvorlik, bo'laklab render), DOM host, TeaVM bilan brauzer build, dev server, VS Code qo'llab-quvvatlashi. Brauzer build'i jsdom'da sinalgan, haqiqiy brauzerda hali emas. Batafsil: [Cheklovlar](#cheklovlar) va [Yo'l xaritasi](#yol-xaritasi).
 
 ## Mundarija
 
 - [Talablar](#talablar)
 - [Tez boshlash: namunani ishga tushirish](#tez-boshlash-namunani-ishga-tushirish)
 - [O'z ilovangizni yaratish](#oz-ilovangizni-yaratish) (brauzer)
-- [`.jsxj` sintaksisi](#jsxj-sintaksisi)
+- [`.jrx` sintaksisi](#jrx-sintaksisi)
 - [Komponentlar va props](#komponentlar-va-props)
 - [Hooks](#hooks)
 - [Context va memo](#context-va-memo)
@@ -60,7 +60,7 @@ public class Counter extends Component<Counter.Props> {
 | **JDK 17+** (JDK 21 va 26'da sinalgan) | doim. `javac` diagnostikasi uchun JRE emas, JDK kerak |
 | **Maven 3.x** (3.10 da sinalgan) | brauzer build'i (TeaVM) uchun. Internet kerak (TeaVM yuklanadi) |
 | **Node.js** (v26 da sinalgan) | `./build.sh web-test`, `./build.sh dev`, VS Code kengaytmasi uchun |
-| VS Code | ixtiyoriy, `.jsxj` ranglash va language server uchun |
+| VS Code | ixtiyoriy, `.jrx` ranglash va language server uchun |
 
 macOS, Linux va Windows'da (Git Bash yoki WSL) ishlaydi. Maven faqat brauzer build'i uchun kerak, qolgan hammasi (`./build.sh`, testlar) faqat JDK bilan ishlaydi.
 
@@ -70,7 +70,7 @@ macOS, Linux va Windows'da (Git Bash yoki WSL) ishlaydi. Maven faqat brauzer bui
 git clone <repo-url> jreact
 cd jreact
 
-./build.sh          # kompilyator -> runtime -> .jsxj -> .java -> javac -> Todo namunasi HTML chiqaradi
+./build.sh          # kompilyator -> runtime -> .jrx -> .java -> javac -> Todo namunasi HTML chiqaradi
 ./build.sh test     # barcha testlar (kompilyator 41, scheduler 14, reconciler 57, dom 24, router 20 + 31 (data router), language server 12)
 ./build.sh dev      # galereya + 5 ilova: http://localhost:5173 (o'zgarsa o'zi qayta yig'iladi)
 ```
@@ -101,17 +101,17 @@ Fayllar:
 
 ```
 mening-ilovam/
-├── pom.xml                              # jsxj:compile -> TeaVM -> app.js zanjiri (o'zgartirish shart emas)
+├── pom.xml                              # jrx:compile -> TeaVM -> app.js zanjiri (o'zgartirish shart emas)
 └── src/main
-    ├── jsxj/app/
-    │   ├── Counter.jsxj                 # komponent
-    │   └── WebMain.jsxj                 # kirish nuqtasi (mainClass app.WebMain)
+    ├── jrx/app/
+    │   ├── Counter.jrx                 # komponent
+    │   └── WebMain.jrx                 # kirish nuqtasi (mainClass app.WebMain)
     └── webapp/index.html                # sahifa
 ```
 
 `pom.xml` da faqat `groupId`/`artifactId` ni o'zgartiring. Oddiy Java fayllaringiz bo'lsa `src/main/java` ga qo'ying (papka bo'lmasa kompilyator uni o'tkazib yuboradi).
 
-**3. Kirish nuqtasi** (`WebMain.jsxj`): `JReactWeb.createRoot("root")` sahifadagi `id="root"` elementga render qiladi:
+**3. Kirish nuqtasi** (`WebMain.jrx`): `JReactWeb.createRoot("root")` sahifadagi `id="root"` elementga render qiladi:
 
 ```java
 package app;
@@ -148,7 +148,7 @@ python3 -m http.server -d target/web 8080     # yoki istalgan statik server
 
 Natija: `target/web/{index.html, app.js}`. `app.js` ~120 KB (gzip bilan ~45 KB), minifikatsiya qilingan. `index.html` va `app.js` ni istalgan statik hostingga qo'ying.
 
-**`jsxj:compile` plagini:** `pom.xml` dagi `jreact-maven-plugin` `generate-sources` bosqichida `src/main/jsxj` ichidagi `.jsxj` ni `target/generated-sources/jsxj` ga `.java` qilib yozadi va uni compile papkalariga qo'shadi. Komponent `Props`'lari loyihaning `.jsxj`/`.java` fayllaridan va `jreact-core` jar'i ichidagi manbalardan (u o'z `.java` fayllarini jar'ga qo'shadi) olinadi, shuning uchun `ErrorBoundary` qo'shimcha sozlamasiz ishlaydi. Xato bo'lsa build `jsxjc` xabari bilan (fayl:qator:ustun) to'xtaydi. Sozlamalar:
+**`jrx:compile` plagini:** `pom.xml` dagi `jreact-maven-plugin` `generate-sources` bosqichida `src/main/jrx` ichidagi `.jrx` ni `target/generated-sources/jrx` ga `.java` qilib yozadi va uni compile papkalariga qo'shadi. Komponent `Props`'lari loyihaning `.jrx`/`.java` fayllaridan va `jreact-core` jar'i ichidagi manbalardan (u o'z `.java` fayllarini jar'ga qo'shadi) olinadi, shuning uchun `ErrorBoundary` qo'shimcha sozlamasiz ishlaydi. Xato bo'lsa build `jrxc` xabari bilan (fayl:qator:ustun) to'xtaydi. Sozlamalar:
 
 ```xml
 <plugin>
@@ -157,13 +157,13 @@ Natija: `target/web/{index.html, app.js}`. `app.js` ~120 KB (gzip bilan ~45 KB),
     <version>${jreact.version}</version>
     <executions>
         <execution>
-            <id>jsxj</id>
+            <id>jrx</id>
             <goals><goal>compile</goal></goals>
             <configuration>
                 <!-- ixtiyoriy -->
-                <sourceDirectories><directory>${project.basedir}/src/main/jsxj</directory></sourceDirectories>  <!-- .jsxj papkalari -->
+                <sourceDirectories><directory>${project.basedir}/src/main/jrx</directory></sourceDirectories>  <!-- .jrx papkalari -->
                 <indexDirectories><directory>../shared/src/main/java</directory></indexDirectories>             <!-- faqat Props qidiriladi -->
-                <outputDirectory>${project.build.directory}/generated-sources/jsxj</outputDirectory>
+                <outputDirectory>${project.build.directory}/generated-sources/jrx</outputDirectory>
                 <skip>false</skip>
             </configuration>
         </execution>
@@ -173,9 +173,9 @@ Natija: `target/web/{index.html, app.js}`. `app.js` ~120 KB (gzip bilan ~45 KB),
 
 > Dev server (`./build.sh dev`) faqat `examples/` ilovalari uchun. O'z ilovangizda o'zgartirgach `mvn -B -q package` qilib sahifani yangilang.
 
-## `.jsxj` sintaksisi
+## `.jrx` sintaksisi
 
-`.jsxj` fayl oddiy Java fayl, ichida JSX ifodalari bor. Kompilyator Java kodini o'zgartirmay nusxalaydi, faqat JSX'ni runtime chaqiruvlariga aylantiradi (Babel JSX'ni JS'ga aylantirgani kabi).
+`.jrx` fayl oddiy Java fayl, ichida JSX ifodalari bor. Kompilyator Java kodini o'zgartirmay nusxalaydi, faqat JSX'ni runtime chaqiruvlariga aylantiradi (Babel JSX'ni JS'ga aylantirgani kabi).
 
 JSX ifoda yozish mumkin bo'lgan joyda yoziladi. Aniqrog'i, `<` quyidagilardan keyin kelsa JSX deb o'qiladi: `=`, `(`, `,`, `?`, `:`, `{`, `[`, `&`, `|`, `->`, `return`, `yield`. Ko'p qatorli JSX'ni qavs ichiga oling: `return ( <div>...</div> );`. `List<String>`, `a < b`, satr va izohlar ichidagi `<` JSX hisoblanmaydi.
 
@@ -233,11 +233,11 @@ Ishlatilishi:
 Qoidalar:
 
 - Propslar record konstruktoriga **e'lon tartibida** uzatiladi. Berilmagan propga default qiymat qo'yiladi (`null`, `0`, `false`...).
-- Prop tipi noto'g'ri bo'lsa (masalan `value={"uch"}` `int` o'rniga), buni `javac` tutadi. Xabardagi qator raqami `.jsxj` fayldagi qator bilan bir xil.
+- Prop tipi noto'g'ri bo'lsa (masalan `value={"uch"}` `int` o'rniga), buni `javac` tutadi. Xabardagi qator raqami `.jrx` fayldagi qator bilan bir xil.
 - Komponentda **argumentsiz konstruktor** bo'lishi kerak (kompilyator `TodoItem::new` ishlatadi). Maxsus konstruktor yozmasangiz, bu o'z-o'zidan bajariladi.
 - Komponent nomi bosh harf bilan (`<Card>`), HTML teglar kichik harf bilan (`<div>`).
 - `key` va `{...spread}` props'ga kirmaydi. `{...spread}` komponentlarda qo'llab-quvvatlanmaydi, propslarni aniq yozing.
-- Komponentlar `.jsxj` yoki oddiy `.java` faylda bo'lishi mumkin. Ammo JSX faqat `.jsxj` da ishlaydi. `.java` da elementni `Jsx.el("div", null, null, "matn")` bilan qo'lda yasaysiz.
+- Komponentlar `.jrx` yoki oddiy `.java` faylda bo'lishi mumkin. Ammo JSX faqat `.jrx` da ishlaydi. `.java` da elementni `Jsx.el("div", null, null, "matn")` bilan qo'lda yasaysiz.
 
 ### Children
 
@@ -301,7 +301,7 @@ Qoidalar:
 
 ## Context va memo
 
-**Context** props'ni har bir darajadan o'tkazmasdan qiymat berish uchun. Bir marta e'lon qilinadi, tepada `provide` qilinadi, pastda `useContext` bilan o'qiladi. Provider oddiy komponent, shuning uchun `.jsxj` da ham ishlaydi:
+**Context** props'ni har bir darajadan o'tkazmasdan qiymat berish uchun. Bir marta e'lon qilinadi, tepada `provide` qilinadi, pastda `useContext` bilan o'qiladi. Provider oddiy komponent, shuning uchun `.jrx` da ham ishlaydi:
 
 ```java
 public static final Context<Theme> THEME = Context.create(Theme.LIGHT);
@@ -542,7 +542,7 @@ Ha, hammasini ishlatsa bo'ladi. JReact CSS'ni bilmaydi va unga tegmaydi: u faqat
 | Inline `style` | ishlaydi |
 | CSS Modules, CSS-in-JS | yo'q (JS bundler kerak, bu yerda bundler yo'q) |
 
-Sass va Tailwind'ni haqiqatan sinab ko'rdim: andoza ilovada `.scss` ning o'zgaruvchi va ichma-ich qoidalari to'g'ri `.css` ga aylandi, Tailwind CLI `.jsxj` dagi klasslarni topib CSS yaratdi, DOM'da klasslar to'g'ri qo'yildi va state o'zgarganda almashdi (jsdom'da; haqiqiy brauzerda tashqi ko'rinish ko'rilmagan).
+Sass va Tailwind'ni haqiqatan sinab ko'rdim: andoza ilovada `.scss` ning o'zgaruvchi va ichma-ich qoidalari to'g'ri `.css` ga aylandi, Tailwind CLI `.jrx` dagi klasslarni topib CSS yaratdi, DOM'da klasslar to'g'ri qo'yildi va state o'zgarganda almashdi (jsdom'da; haqiqiy brauzerda tashqi ko'rinish ko'rilmagan).
 
 ### Oddiy CSS
 
@@ -589,7 +589,7 @@ npm install --save-dev tailwindcss @tailwindcss/cli
 
 ```css
 @import "tailwindcss";
-@source "../jsxj";
+@source "../jrx";
 ```
 
 ```bash
@@ -601,9 +601,9 @@ npx @tailwindcss/cli -i src/main/styles/tw.css -o target/web/tw.css --watch    #
 <button className="px-4 py-2 rounded bg-blue-500 text-white hover:bg-blue-600">Saqlash</button>
 ```
 
-- Tailwind klass nomlarini manba fayldan **matn sifatida** qidiradi, shuning uchun `.jsxj` ham, `.java` ham ishlaydi (`@source` papkasini ko'rsatish kifoya).
+- Tailwind klass nomlarini manba fayldan **matn sifatida** qidiradi, shuning uchun `.jrx` ham, `.java` ham ishlaydi (`@source` papkasini ko'rsatish kifoya).
 - JS'dagi kabi klass **to'liq satr** bo'lishi kerak: `cond ? "bg-blue-500" : "bg-red-500"` topiladi, `"bg-" + color` topilmaydi (CSS'ga tushmaydi).
-- Tailwind v3 uchun `tailwind.config.js` da `content: ["./src/main/jsxj/**/*.jsxj"]` beriladi (v3 sinab ko'rilmagan).
+- Tailwind v3 uchun `tailwind.config.js` da `content: ["./src/main/jrx/**/*.jrx"]` beriladi (v3 sinab ko'rilmagan).
 
 ### Build bilan birga ishlatish
 
@@ -617,7 +617,7 @@ Maven ichiga olish uchun `exec-maven-plugin` yoki `frontend-maven-plugin` ishlat
 
 ## Namunalar: Tailwind bilan 6 ta ilova
 
-`examples/` ichida Tailwind CSS v4 bilan yozilgan 5 ta real ilova bor. Hammasi `.jsxj`, brauzerda TeaVM orqali ishlaydi.
+`examples/` ichida Tailwind CSS v4 bilan yozilgan 5 ta real ilova bor. Hammasi `.jrx`, brauzerda TeaVM orqali ishlaydi.
 
 | Ilova | Nima ko'rsatadi |
 |-------|-----------------|
@@ -634,7 +634,7 @@ Yig'ish va ko'rish:
 python3 -m http.server -d examples/dist 8080     # http://localhost:8080
 ```
 
-Har ilova: `src/main/jsxj` (komponentlar), `src/main/java` (ma'lumot modellari), `src/main/styles/app.css` (`@import "tailwindcss"; @source ...`), `src/main/webapp/index.html`. Maven `.jsxj` ni kompilyatsiya qilib `app.js` yasaydi, Tailwind CLI esa `.jsxj`/`.java` ichidagi klass satrlarini topib `app.css` yasaydi. Umumiy sozlama `examples/pom.xml` da (4 ilova shuni meros qiladi), Tailwind va jsdom `examples/package.json` da.
+Har ilova: `src/main/jrx` (komponentlar), `src/main/java` (ma'lumot modellari), `src/main/styles/app.css` (`@import "tailwindcss"; @source ...`), `src/main/webapp/index.html`. Maven `.jrx` ni kompilyatsiya qilib `app.js` yasaydi, Tailwind CLI esa `.jrx`/`.java` ichidagi klass satrlarini topib `app.css` yasaydi. Umumiy sozlama `examples/pom.xml` da (4 ilova shuni meros qiladi), Tailwind va jsdom `examples/package.json` da.
 
 ## Error boundary
 
@@ -709,12 +709,12 @@ Brauzersiz ham ishlatish mumkin:
 ./build.sh dev kanban shop        # faqat tanlangan ilovalar (tezroq boshlanadi)
 ```
 
-Bitta portda galereya (`/`) va ilovalarni (`/todo/`, `/kanban/`, `/shop/`, `/dashboard/`, `/landing/`, `/blog/`, `/contacts/`) ko'rsatadi. Ilovaning `.jsxj`, `.java`, `.css` yoki `index.html` fayli o'zgarsa faqat shu ilova qayta yig'iladi (Maven + Tailwind, ~4 s) va uning sahifasi yangilanadi. `jreact-*` (framework) o'zgarsa hammasi qayta yig'iladi. Build xatosi brauzerda qizil sahifa bo'lib chiqadi, tuzatsangiz o'zi tiklanadi.
+Bitta portda galereya (`/`) va ilovalarni (`/todo/`, `/kanban/`, `/shop/`, `/dashboard/`, `/landing/`, `/blog/`, `/contacts/`) ko'rsatadi. Ilovaning `.jrx`, `.java`, `.css` yoki `index.html` fayli o'zgarsa faqat shu ilova qayta yig'iladi (Maven + Tailwind, ~4 s) va uning sahifasi yangilanadi. `jreact-*` (framework) o'zgarsa hammasi qayta yig'iladi. Build xatosi brauzerda qizil sahifa bo'lib chiqadi, tuzatsangiz o'zi tiklanadi.
 
 ### VS Code
 
 ```bash
-./editors/vscode-jsxj/install.sh      # keyin: Cmd+Shift+P -> Developer: Reload Window
+./editors/vscode-jrx/install.sh      # keyin: Cmd+Shift+P -> Developer: Reload Window
 ```
 
 - **Ranglash:** Java'ni VS Code'ning o'z grammar'i, JSX teglar, atributlar va `{...}` ni kengaytma ranglaydi.
@@ -722,37 +722,37 @@ Bitta portda galereya (`/`) va ilovalarni (`/todo/`, `/kanban/`, `/shop/`, `/das
 
 | Imkoniyat | Qanday ishlaydi |
 |---|---|
-| Diagnostika | JSX xatolari (`jsxjc`) har bosishda aniq qator/ustun bilan. Java xatolari (`javac`) yozish to'xtagandan ~0.5 s keyin va saqlaganda. Generatsiya qilingan Java'da qator raqami `.jsxj` bilan bir xil, JSX'siz qatorlarda ustun ham aniq |
+| Diagnostika | JSX xatolari (`jrxc`) har bosishda aniq qator/ustun bilan. Java xatolari (`javac`) yozish to'xtagandan ~0.5 s keyin va saqlaganda. Generatsiya qilingan Java'da qator raqami `.jrx` bilan bir xil, JSX'siz qatorlarda ustun ham aniq |
 | Completion | `<` dan keyin komponentlar (`record Props` bor sinflar) va HTML teglar. Tag ichida prop'lar (berilganlari chiqmaydi, `key`, `ref` bilan), `name={}` shaklida qo'yiladi. `{...}` va string ichida taklif yo'q |
 | Hover | Tag ustida `record Props(...)`, atribut ustida uning turi |
 | Definition | Komponent tegidan sinf e'loniga o'tadi |
 
-Sozlamalar (VS Code *Settings* da `jsxj.*`):
+Sozlamalar (VS Code *Settings* da `jrx.*`):
 
 | Sozlama | Ma'nosi |
 |---|---|
-| `jsxj.javaPath` | `java` fayli (default `java`) |
-| `jsxj.server.jar` | server jar'i (default: kengaytma ichidagi `server/jsxj-lsp.jar`) |
-| `jsxj.sourceRoots` | javac va komponent qidiruvi uchun qo'shimcha `.java` papkalar. Workspace ichidagilar o'zi topiladi (`package` qatorlaridan) |
-| `jsxj.classpath` | javac uchun jar/papkalar, masalan `jreact-core` jar'i, manbasi workspace'da bo'lmasa |
+| `jrx.javaPath` | `java` fayli (default `java`) |
+| `jrx.server.jar` | server jar'i (default: kengaytma ichidagi `server/jrx-lsp.jar`) |
+| `jrx.sourceRoots` | javac va komponent qidiruvi uchun qo'shimcha `.java` papkalar. Workspace ichidagilar o'zi topiladi (`package` qatorlaridan) |
+| `jrx.classpath` | javac uchun jar/papkalar, masalan `jreact-core` jar'i, manbasi workspace'da bo'lmasa |
 
-Loyihadagi barcha `.jsxj`/`.java` fayllar indekslanadi (`target`, `build`, `node_modules`, `test` papkalaridan tashqari: test sinflari bir xil nomlar bilan indeksni buzadi). Java ifodalari (`{...}` ichi) uchun avtokomplit va hover yo'q, bu Java til serveri ishi. Server `java -jar build/jsxj-lsp.jar` (stdio), LSP so'zlashadigan boshqa muharrir ham ishlata oladi. Batafsil: [`editors/vscode-jsxj`](editors/vscode-jsxj/README.md).
+Loyihadagi barcha `.jrx`/`.java` fayllar indekslanadi (`target`, `build`, `node_modules`, `test` papkalaridan tashqari: test sinflari bir xil nomlar bilan indeksni buzadi). Java ifodalari (`{...}` ichi) uchun avtokomplit va hover yo'q, bu Java til serveri ishi. Server `java -jar build/jrx-lsp.jar` (stdio), LSP so'zlashadigan boshqa muharrir ham ishlata oladi. Batafsil: [`editors/vscode-jrx`](editors/vscode-jrx/README.md).
 
-**IntelliJ IDEA:** *Settings → Editor → File Types → Java* ga `*.jsxj` naqshini qo'shing. Java qismlari rangli bo'ladi, JSX qismlarini IDE xato deb ko'rsatishi mumkin (plagin yo'q). Haqiqiy xatolarni `jsxjc` va `javac` beradi.
+**IntelliJ IDEA:** *Settings → Editor → File Types → Java* ga `*.jrx` naqshini qo'shing. Java qismlari rangli bo'ladi, JSX qismlarini IDE xato deb ko'rsatishi mumkin (plagin yo'q). Haqiqiy xatolarni `jrxc` va `javac` beradi.
 
 ### Kompilyator xatolari
 
-`jsxjc` xatolarni `javac` uslubida, fayl, qator va ustun bilan chiqaradi:
+`jrxc` xatolarni `javac` uslubida, fayl, qator va ustun bilan chiqaradi:
 
 ```
-app/Bad.jsxj:3:1: error: expected </ul> to close <ul> opened at 1:5, but found </ol>
+app/Bad.jrx:3:1: error: expected </ul> to close <ul> opened at 1:5, but found </ol>
     </ol>;
     ^
 ```
 
 Kompilyator topadigan xatolar: noto'g'ri yopilgan yoki yopilmagan teg, noma'lum prop (mavjud propslar ro'yxati bilan), noma'lum komponent, bola qabul qilmaydigan komponentga bola berish, takrorlangan prop, satr ko'rinishidagi event handler, bo'sh `{}` atribut qiymati, JSX matnidagi yakka `}`, yopilmagan `{`.
 
-Tip xatolari (masalan `int` o'rniga `String`) `javac`dan keladi. U generatsiya qilingan `.java` faylni ko'rsatadi, lekin qator raqami `.jsxj` fayldagi bilan bir xil:
+Tip xatolari (masalan `int` o'rniga `String`) `javac`dan keladi. U generatsiya qilingan `.java` faylni ko'rsatadi, lekin qator raqami `.jrx` fayldagi bilan bir xil:
 
 ```
 build/gen/app/TodoApp.java:43: error: incompatible types: String cannot be converted to int
@@ -789,8 +789,8 @@ root.reconciler().setWarningHandler(msg -> log.warn(msg)); // default: System.er
 | `./build.sh examples` | Tailwind namunalari (kanban, shop, dashboard, landing, blog, contacts) -> `examples/dist/` (Maven + node) |
 | `./build.sh examples-test` | shuni yig'ib, jsdom'da bosib tekshiradi |
 | `./build.sh bench [n]` | brauzerda benchmark: JReact vs React 18 vs vanilla (Maven, node, Brave/Chrome) |
-| `./build.sh lsp` | language server jar'i: `build/jsxj-lsp.jar` |
-| `./editors/vscode-jsxj/install.sh` | VS Code kengaytmasini o'rnatadi (jar, npm, symlink) |
+| `./build.sh lsp` | language server jar'i: `build/jrx-lsp.jar` |
+| `./editors/vscode-jrx/install.sh` | VS Code kengaytmasini o'rnatadi (jar, npm, symlink) |
 | `mvn -B -q -pl jreact-web,jreact-compiler -am install` | JReact modullarini lokal Maven repoga qo'yadi (o'z ilovangiz uchun) |
 
 **Kompilyatorni to'g'ridan-to'g'ri chaqirish** (Maven'siz, JVM'da ishlatish uchun):
@@ -800,16 +800,16 @@ root.reconciler().setWarningHandler(msg -> log.warn(msg)); // default: System.er
 javac -encoding UTF-8 -d build/compiler $(find jreact-compiler/src/main/java -name '*.java')
 javac -encoding UTF-8 -d build/core     $(find jreact-core/src/main/java -name '*.java')
 
-# 2. .jsxj -> .java:  jsxjc <chiqish-papka> <manba-papka> [<manba-papka>...]
-java -cp build/compiler jreact.compiler.JsxjCompiler build/gen src/main/jsxj src/main/java
+# 2. .jrx -> .java:  jrxc <chiqish-papka> <manba-papka> [<manba-papka>...]
+java -cp build/compiler jreact.compiler.JrxCompiler build/gen src/main/jrx src/main/java
 
 # 3. Java -> .class va ishga tushirish
 javac -encoding UTF-8 -cp build/core -d build/app $(find build/gen src/main/java -name '*.java')
 java -cp build/core:build/app app.Main        # Windows'da ':' o'rniga ';'
 ```
 
-- Har bir manba papkasi rekursiv o'qiladi. `.jsxj` va `.java` fayllari komponent indeksiga kiradi, faqat `.jsxj` fayllar `.java` ga aylantiriladi. Mavjud bo'lmagan papka o'tkazib yuboriladi.
-- Chiqish fayllari paket yo'lini saqlaydi: `src/app/Card.jsxj` → `<chiqish>/app/Card.java`.
+- Har bir manba papkasi rekursiv o'qiladi. `.jrx` va `.java` fayllari komponent indeksiga kiradi, faqat `.jrx` fayllar `.java` ga aylantiriladi. Mavjud bo'lmagan papka o'tkazib yuboriladi.
+- Chiqish fayllari paket yo'lini saqlaydi: `src/app/Card.jrx` → `<chiqish>/app/Card.java`.
 - Xato bo'lsa chiqish kodi `1`, hammasi joyida bo'lsa `0`.
 - Komponent faqat kompilyatorga berilgan manba papkalarida bo'lsa topiladi. Indeks klassning **oddiy nomi** bo'yicha ishlaydi, shuning uchun turli paketlarda bir xil nomli ikki komponent yozmang.
 
@@ -817,25 +817,25 @@ java -cp build/core:build/app app.Main        # Windows'da ':' o'rniga ';'
 
 | Modul | Vazifasi |
 |---|---|
-| `jreact-compiler` | `.jsxj` → `.java` kompilyatori (`jsxjc`) |
+| `jreact-compiler` | `.jrx` → `.java` kompilyatori (`jrxc`) |
 | `jreact-core` | Runtime: `Component`, `Element`, `Attrs`, hooks API, `Jsx`, `ErrorBoundary`, `ServerRenderer` |
 | `jreact-scheduler` | Vazifalar navbati: ustuvorlik, muddat (timeout), `shouldYield`, delay |
 | `jreact-reconciler` | Fiber reconciler: work loop, key'li diff, commit, hooks dispatcher, `HostConfig` |
 | `jreact-dom` | DOM host: `DomHost`, `DomRoot`, event delegation, atribut/style qoidalari (JSO'siz) |
 | `jreact-router` | Router: `Routes`, `Route`, `Link`, `NavLink`, `Outlet`, `Navigate`, hooks, `MemoryHistory` (DOM'siz); data router: `DataRouter`, `RouterProvider`, loader/action, `Form`, fetcher |
 | `jreact-web` | Brauzer bog'lamalari (TeaVM JSO): `JsDomOps`, `JsTimers`, `JReactWeb.createRoot`, `BrowserRouter`, `HashRouter`, `Routers.createBrowserRouter` |
-| `jreact-maven-plugin` | Maven plagini: `jsxj:compile` |
-| `jreact-lsp` | `.jsxj` language server (LSP) |
+| `jreact-maven-plugin` | Maven plagini: `jrx:compile` |
+| `jreact-lsp` | `.jrx` language server (LSP) |
 | `examples/todo`, `examples/todo-web` | namunaviy ilova: JVM'da HTML va brauzerda |
 | `examples/{kanban,shop,dashboard,landing,blog}` | Tailwind bilan 6 ta real ilova + `gallery` (blog: router) |
 | `templates/web-app` | o'z brauzer ilovangiz uchun andoza |
-| `editors/vscode-jsxj` | VS Code kengaytmasi |
+| `editors/vscode-jrx` | VS Code kengaytmasi |
 
 ### 1. Kompilyatsiya
 
 Kompilyator Java kodini o'zgartirmay nusxalaydi (Java'ni haqiqatan `javac` tekshiradi), faqat JSX ifodalarini topib, runtime chaqiruvlariga aylantiradi.
 
-`.jsxj` (kirish):
+`.jrx` (kirish):
 
 ```java
 return <span className={cls}>{props.label()}: <b>{props.value()}</b></span>;
@@ -848,7 +848,7 @@ return jreact.Jsx.el("span", null, new jreact.Attrs().attr("className", cls),
         props.label(), ": ", jreact.Jsx.el("b", null, null, props.value()));
 ```
 
-Ikki o'tish: (1) barcha `.jsxj`/`.java` fayllardan komponentlarning `record Props(...)` e'lonlari yig'iladi, (2) har bir `.jsxj` `.java` ga yoziladi: `<TodoItem todo={t} />` Props indeksi bo'yicha tipli `new TodoItem.Props(t, ...)` chaqiruviga aylanadi.
+Ikki o'tish: (1) barcha `.jrx`/`.java` fayllardan komponentlarning `record Props(...)` e'lonlari yig'iladi, (2) har bir `.jrx` `.java` ga yoziladi: `<TodoItem todo={t} />` Props indeksi bo'yicha tipli `new TodoItem.Props(t, ...)` chaqiruviga aylanadi.
 
 ### 2. Runtime
 
@@ -858,7 +858,7 @@ Ikki o'tish: (1) barcha `.jsxj`/`.java` fayllardan komponentlarning `record Prop
 
 ### 3. Qatorlar mosligi
 
-`.jsxj` faylning N-qatori generatsiya qilingan `.java` faylda ham N-qator bo'lib qoladi (sarlavha izohi birinchi qatorda, yangi qatorsiz yoziladi). Shu sababli `javac` xatolari va stack trace'lar asl `.jsxj` faylning to'g'ri qatorini ko'rsatadi.
+`.jrx` faylning N-qatori generatsiya qilingan `.java` faylda ham N-qator bo'lib qoladi (sarlavha izohi birinchi qatorda, yangi qatorsiz yoziladi). Shu sababli `javac` xatolari va stack trace'lar asl `.jrx` faylning to'g'ri qatorini ko'rsatadi.
 
 ## Xavfsizlik (XSS)
 
@@ -881,7 +881,7 @@ Foydalanuvchi ma'lumotini (`<p>{comment}</p>`, `<a href={url}>`) ishonchli chiqa
 
 Ogohlantirishlarni ushlash: `root.host().setWarningHandler(msg -> ...)`.
 
-**Audit (2026-11-12)** quyidagilarni topdi va tuzatdi: (1) `javascript:` URL tekshirilmagan edi; (2) `onclick` satr atributi va noto'g'ri atribut nomlari o'tkazib yuborilardi; (3) `<script>`/noto'g'ri tag nomi yaratilardi; (4) `ServerRenderer` `style` obyektini `{color=red}` deb chiqarardi (xato, endi CSS); (5) dev server hamma tarmoq interfeyslarida tinglardi va noto'g'ri URL (`/%E0`) uni qulatardi: endi `127.0.0.1` (boshqasi uchun `HOST=0.0.0.0`) va 400; (6) VS Code'da `jsxj.javaPath`/`jsxj.server.jar` ni begona reponing `.vscode/settings.json` i orqali o'zgartirib ixtiyoriy fayl ishga tushirish mumkin edi: endi `machine` doirasi.
+**Audit (2026-11-12)** quyidagilarni topdi va tuzatdi: (1) `javascript:` URL tekshirilmagan edi; (2) `onclick` satr atributi va noto'g'ri atribut nomlari o'tkazib yuborilardi; (3) `<script>`/noto'g'ri tag nomi yaratilardi; (4) `ServerRenderer` `style` obyektini `{color=red}` deb chiqarardi (xato, endi CSS); (5) dev server hamma tarmoq interfeyslarida tinglardi va noto'g'ri URL (`/%E0`) uni qulatardi: endi `127.0.0.1` (boshqasi uchun `HOST=0.0.0.0`) va 400; (6) VS Code'da `jrx.javaPath`/`jrx.server.jar` ni begona reponing `.vscode/settings.json` i orqali o'zgartirib ixtiyoriy fayl ishga tushirish mumkin edi: endi `machine` doirasi.
 
 **Tekshirilgan va xavfsiz:** matn va atribut yo'llari, kompilyatorning satr literallari (`\u0022` kabi kiritma qochadi), LSP'ning `javac` chaqiruvi (`-proc:none`, annotatsiya protsessorlari ishlamaydi), `npm audit` (examples, smoke, VS Code kengaytmasi: 0 zaiflik).
 
@@ -933,8 +933,8 @@ Imzo va yuklash bosqichi shu loyihada sinalmagan (kalit va token yo'q), faqat `p
 | TeaVM class faylni o'qiy olmaydi (yangi JDK bytecode'i) | `pom.xml` da `maven.compiler.release` = `17` bo'lsin (andozada shunday) |
 | `main is not defined` brauzerda | `app.js` yuklanmagan yoki yo'li noto'g'ri; `<script src="app.js">` `main();` dan oldin bo'lsin |
 | `no element with id 'root'` | `createRoot("root")` dagi id sahifadagi element bilan mos emas |
-| VS Code'da javac xatolari chiqmaydi | `java` JRE yoki PATH'da yo'q: `jsxj.javaPath` ga JDK bering. Eslatma: jsxjc xatosi bo'lsa javac ishlamaydi, avval uni tuzating |
-| VS Code'da `cannot find symbol` (jreact...) | `jreact-core` manbasi workspace'da yo'q: `jsxj.sourceRoots` yoki `jsxj.classpath` bering |
+| VS Code'da javac xatolari chiqmaydi | `java` JRE yoki PATH'da yo'q: `jrx.javaPath` ga JDK bering. Eslatma: jrxc xatosi bo'lsa javac ishlamaydi, avval uni tuzating |
+| VS Code'da `cannot find symbol` (jreact...) | `jreact-core` manbasi workspace'da yo'q: `jrx.sourceRoots` yoki `jrx.classpath` bering |
 | `Maximum update depth exceeded` | effekt har renderda `set` chaqiryapti: `deps` bering yoki shart qo'ying |
 | `State cannot be updated while rendering` | `render()` ichida `set` chaqirmang, event handler yoki `useEffect` da chaqiring |
 | `Hooks were called in a different order` | hook shartli/tsiklda chaqirilgan, har renderda bir xil tartibda bo'lsin |
@@ -945,12 +945,12 @@ Imzo va yuklash bosqichi shu loyihada sinalmagan (kalit va token yo'q), faqat `p
 jreact/
 ├── build.sh                          # build va test skripti
 ├── pom.xml                           # Maven: brauzer build'i uchun (modullar ./build.sh bilan ham yig'iladi)
-├── jreact-compiler/                  # .jsxj kompilyatori
-├── jreact-maven-plugin/              # Maven plagini: jsxj:compile
+├── jreact-compiler/                  # .jrx kompilyatori
+├── jreact-maven-plugin/              # Maven plagini: jrx:compile
 ├── jreact-router/                    # router: Routes, Route, Link, NavLink, Outlet, hooks
 │   └── src/
 │       ├── main/java/jreact/compiler/
-│       │   ├── JsxjCompiler.java     # CLI, 2 o'tishni boshqaradi
+│       │   ├── JrxCompiler.java     # CLI, 2 o'tishni boshqaradi
 │       │   ├── PropsIndex.java       # 1-o'tish: komponent Props indeksi
 │       │   ├── JsxTranspiler.java    # 2-o'tish: JSX → Java
 │       │   └── CompileError.java     # fayl:qator:ustun xatolari
@@ -977,13 +977,13 @@ jreact/
 ├── jreact-web/                       # brauzer bog'lamalari (TeaVM JSO): JReactWeb, JsDomOps, JsTimers...
 ├── jreact-lsp/                       # language server: Server, Analyzer, Features, Workspace, Json
 │   └── src/test/.../LspTest.java     # 12 ta test, haqiqiy JSON-RPC oqimi bilan
-├── editors/vscode-jsxj/              # VS Code kengaytmasi: grammar + LSP klienti
+├── editors/vscode-jrx/              # VS Code kengaytmasi: grammar + LSP klienti
 ├── tools/dev-server.js               # dev server: hamma namuna ilovalar, live reload
 ├── templates/web-app/                # o'z ilovangiz uchun andoza (pom.xml, Counter, WebMain, index.html)
 └── examples/
-    ├── todo/                         # namunaviy ilova (.jsxj), JVM'da HTML chiqaradi
+    ├── todo/                         # namunaviy ilova (.jrx), JVM'da HTML chiqaradi
     ├── todo-web/                     # shu ilova brauzerda + jsdom smoke testi
-    ├── kanban/ shop/ dashboard/ landing/ blog/ contacts/   # Tailwind bilan 6 ta ilova (pom.xml, src/main/{jsxj,java,styles,webapp})
+    ├── kanban/ shop/ dashboard/ landing/ blog/ contacts/   # Tailwind bilan 6 ta ilova (pom.xml, src/main/{jrx,java,styles,webapp})
     ├── gallery/                      # to'rttasini bog'lovchi bosh sahifa
     ├── pom.xml, package.json         # umumiy Maven sozlamasi; Tailwind CLI + jsdom
     └── smoke.js                      # 4 ilova uchun jsdom testi
@@ -1009,6 +1009,6 @@ jreact/
 1. ~~Fiber reconciler: work loop, key'li diff, commit, hooks~~ (tayyor)
 2. ~~Scheduler: bo'laklab render, ustuvorlik~~ (tayyor, root darajasida). Qolgani: haqiqiy lane'lar (update bo'yicha ustuvorlik, render'ni to'xtatib qayta boshlash)
 3. ~~DOM host, event delegation, TeaVM orqali `jreact-web`~~ (tayyor)
-4. ~~TeaVM bilan `app.js`, dev server~~ (tayyor). Qolgani: `jsxj:compile` va Central sozlamasi tayyor, haqiqiy chiqarish qoldi. Dev server'ni o'z ilovangiz uchun sozlanadigan qilish
+4. ~~TeaVM bilan `app.js`, dev server~~ (tayyor). Qolgani: `jrx:compile` va Central sozlamasi tayyor, haqiqiy chiqarish qoldi. Dev server'ni o'z ilovangiz uchun sozlanadigan qilish
 5. ~~`Context`, `memo`, error boundary, key ogohlantirishlari~~ (tayyor). Qolgani: boshqa ogohlantirishlar (masalan `value` bor, `onInput` yo'q)
 6. ~~VS Code: ranglash, language server~~ (tayyor). Qolgani: IntelliJ plagini, Java ifodalari uchun autocomplete (jdtls bilan birlashtirish), rename/find references

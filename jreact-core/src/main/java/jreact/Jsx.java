@@ -5,7 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Supplier;
 
-/** Runtime target of compiled .jsxj code (React's jsx()/createElement). */
+/** Runtime target of compiled .jrx code (React's jsx()/createElement). */
 public final class Jsx {
     private Jsx() {}
 

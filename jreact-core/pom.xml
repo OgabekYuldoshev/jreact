@@ -15,7 +15,7 @@
 
     <build>
         <resources>
-            <!-- ship the sources inside the jar: jsxj:compile reads the Props records of framework components from here -->
+            <!-- ship the sources inside the jar: jrx:compile reads the Props records of framework components from here -->
             <resource><directory>src/main/java</directory><includes><include>**/*.java</include></includes></resource>
         </resources>
     </build>

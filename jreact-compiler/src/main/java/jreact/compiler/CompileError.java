@@ -1,6 +1,6 @@
 package jreact.compiler;
 
-/** A .jsxj compile error with an exact source position. */
+/** A .jrx compile error with an exact source position. */
 public final class CompileError extends RuntimeException {
     private final String file;
     private final int line;

@@ -12,7 +12,7 @@
     <artifactId>jreact-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
     <name>jreact-maven-plugin</name>
-    <description>Maven plugin: jsxj:compile turns .jsxj into .java during generate-sources</description>
+    <description>Maven plugin: jrx:compile turns .jrx into .java during generate-sources</description>
 
     <dependencies>
         <dependency><groupId>dev.jreact</groupId><artifactId>jreact-compiler</artifactId></dependency>
@@ -28,7 +28,7 @@
                 <artifactId>maven-plugin-plugin</artifactId>
                 <version>3.15.1</version>
                 <configuration>
-                    <goalPrefix>jsxj</goalPrefix>
+                    <goalPrefix>jrx</goalPrefix>
                 </configuration>
             </plugin>
         </plugins>

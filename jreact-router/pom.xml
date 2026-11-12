@@ -19,7 +19,7 @@
 
     <build>
         <resources>
-            <!-- ship the sources inside the jar: jsxj:compile reads the Props records of <Link>, <Routes>... from here -->
+            <!-- ship the sources inside the jar: jrx:compile reads the Props records of <Link>, <Routes>... from here -->
             <resource><directory>src/main/java</directory><includes><include>**/*.java</include></includes></resource>
         </resources>
     </build>

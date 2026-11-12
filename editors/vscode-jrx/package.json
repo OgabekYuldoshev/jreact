@@ -1,7 +1,7 @@
 {
-  "name": "jsxj",
-  "displayName": "JSXJ (JReact)",
-  "description": "JSXJ (Java + JSX): syntax highlighting and a language server (diagnostics, completion, hover, go to definition).",
+  "name": "jrx",
+  "displayName": "JRX (JReact)",
+  "description": "JRX (Java + JSX): syntax highlighting and a language server (diagnostics, completion, hover, go to definition).",
   "version": "0.2.0",
   "publisher": "jreact",
   "license": "MIT",
@@ -14,43 +14,43 @@
   "contributes": {
     "languages": [
       {
-        "id": "jsxj",
+        "id": "jrx",
         "aliases": [
-          "JSXJ",
-          "jsxj"
+          "JRX",
+          "jrx"
         ],
         "extensions": [
-          ".jsxj"
+          ".jrx"
         ],
         "configuration": "./language-configuration.json"
       }
     ],
     "grammars": [
       {
-        "language": "jsxj",
-        "scopeName": "source.jsxj",
-        "path": "./syntaxes/jsxj.tmLanguage.json",
+        "language": "jrx",
+        "scopeName": "source.jrx",
+        "path": "./syntaxes/jrx.tmLanguage.json",
         "embeddedLanguages": {
-          "meta.embedded.expression.jsxj": "java"
+          "meta.embedded.expression.jrx": "java"
         }
       }
     ],
     "configuration": {
-      "title": "JSXJ",
+      "title": "JRX",
       "properties": {
-        "jsxj.server.jar": {
+        "jrx.server.jar": {
           "type": "string",
           "scope": "machine",
           "default": "",
-          "description": "Path to jsxj-lsp.jar. Empty: the jar bundled with the extension (server/jsxj-lsp.jar)."
+          "description": "Path to jrx-lsp.jar. Empty: the jar bundled with the extension (server/jrx-lsp.jar)."
         },
-        "jsxj.javaPath": {
+        "jrx.javaPath": {
           "type": "string",
           "scope": "machine",
           "default": "java",
           "description": "The java executable that runs the server (JDK 17+; javac diagnostics need a JDK, not a JRE)."
         },
-        "jsxj.sourceRoots": {
+        "jrx.sourceRoots": {
           "type": "array",
           "items": {
             "type": "string"
@@ -58,7 +58,7 @@
           "default": [],
           "description": "Extra folders with .java sources for javac and component lookup (relative to the workspace root). Folders inside the workspace are found automatically."
         },
-        "jsxj.classpath": {
+        "jrx.classpath": {
           "type": "array",
           "items": {
             "type": "string"
@@ -71,7 +71,7 @@
   },
   "main": "./extension.js",
   "activationEvents": [
-    "onLanguage:jsxj"
+    "onLanguage:jrx"
   ],
   "dependencies": {
     "vscode-languageclient": "^9.0.1"

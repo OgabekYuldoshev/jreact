@@ -26,8 +26,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Diagnostics of a .jsxj file in two steps, like the real build: the JSX parser of jsxjc (exact position), then
- * javac on the generated Java. Line N of the generated source is line N of the .jsxj file, so javac errors map
+ * Diagnostics of a .jrx file in two steps, like the real build: the JSX parser of jrxc (exact position), then
+ * javac on the generated Java. Line N of the generated source is line N of the .jrx file, so javac errors map
  * back by line; on lines without JSX the column is exact too.
  */
 final class Analyzer {
@@ -36,11 +36,11 @@ final class Analyzer {
     record Diag(int line, int col, int endLine, int endCol, int severity, String message, String source) {}
 
     /** Immutable inputs, so javac can run off the server lock. */
-    record Input(String uri, Map<String, String> jsxj, PropsIndex index, List<Path> javaRoots, List<String> classpath) {}
+    record Input(String uri, Map<String, String> jrx, PropsIndex index, List<Path> javaRoots, List<String> classpath) {}
 
     private Analyzer() {}
 
-    /** Fast part: only the jsxjc parser. Null when the file has no JSX errors. */
+    /** Fast part: only the jrxc parser. Null when the file has no JSX errors. */
     static Diag parse(String uri, String text, PropsIndex index) {
         try {
             new JsxTranspiler(name(uri), text, index).transpile();
@@ -52,9 +52,9 @@ final class Analyzer {
             int end = col;
             while (end < l.length() && (Character.isLetterOrDigit(l.charAt(end)) || l.charAt(end) == '_')) end++;
             if (end == col) end = Math.min(l.length(), col + 1);
-            return new Diag(line, col, line, Math.max(end, col + 1), 1, e.getMessage(), "jsxjc");
+            return new Diag(line, col, line, Math.max(end, col + 1), 1, e.getMessage(), "jrxc");
         } catch (RuntimeException e) {
-            return new Diag(0, 0, 0, 1, 1, "jsxjc failed: " + e, "jsxjc");
+            return new Diag(0, 0, 0, 1, 1, "jrxc failed: " + e, "jrxc");
         }
     }
 
@@ -62,7 +62,7 @@ final class Analyzer {
     static List<Diag> javac(Input in, Path scratch) {
         List<Diag> out = new ArrayList<>();
         JavaCompiler jc = ToolProvider.getSystemJavaCompiler();
-        String text = in.jsxj().get(in.uri());
+        String text = in.jrx().get(in.uri());
         if (jc == null || text == null) return out;
         String generated;
         try {
@@ -75,8 +75,8 @@ final class Analyzer {
             deleteTree(gen);
             Files.createDirectories(gen);
             Files.createDirectories(classes);
-            // the other .jsxj files, as Java, so components defined in them resolve
-            for (Map.Entry<String, String> e : in.jsxj().entrySet()) {
+            // the other .jrx files, as Java, so components defined in them resolve
+            for (Map.Entry<String, String> e : in.jrx().entrySet()) {
                 if (e.getKey().equals(in.uri())) continue;
                 try {
                     String other = new JsxTranspiler(name(e.getKey()), e.getValue(), in.index()).transpile();
@@ -125,10 +125,10 @@ final class Analyzer {
         return out;
     }
 
-    /** {@code app/Card.java} for a file with {@code package app;} and name Card.jsxj. */
+    /** {@code app/Card.java} for a file with {@code package app;} and name Card.jrx. */
     static String relativeJavaPath(String uri, String text) {
         String pkg = Workspace.packageOf(text);
-        String file = name(uri).replaceAll("\\.jsxj$", ".java");
+        String file = name(uri).replaceAll("\\.jrx$", ".java");
         return pkg.isEmpty() ? file : pkg.replace('.', '/') + "/" + file;
     }
 

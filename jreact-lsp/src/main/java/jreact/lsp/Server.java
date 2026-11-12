@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Language Server Protocol over a pair of streams (JSON-RPC with Content-Length framing). Features: diagnostics
- * (jsxjc parse errors at once, javac on the generated Java shortly after typing stops), completion of component
+ * (jrxc parse errors at once, javac on the generated Java shortly after typing stops), completion of component
  * names and props, hover and go-to-definition for tags. Messages are handled one at a time; javac runs on a
  * separate thread and its results are dropped if the file changed meanwhile.
  */
@@ -34,7 +34,7 @@ public final class Server {
     private final Map<String, Integer> versions = new HashMap<>();
     private final Map<String, ScheduledFuture<?>> pending = new HashMap<>();
     private final ScheduledExecutorService worker = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "jsxj-javac");
+        Thread t = new Thread(r, "jrx-javac");
         t.setDaemon(true);
         return t;
     });
@@ -53,7 +53,7 @@ public final class Server {
                 if (!handle(msg)) break;
             }
         } catch (IOException e) {
-            System.err.println("jsxj-lsp: " + e);
+            System.err.println("jrx-lsp: " + e);
         } finally {
             worker.shutdownNow();
             try { if (scratch != null) Analyzer.deleteTree(scratch); } catch (IOException ignored) {}
@@ -104,7 +104,7 @@ public final class Server {
                 default -> { if (id != null) respondError(id, -32601, "method not found: " + method); }
             }
         } catch (RuntimeException e) {
-            System.err.println("jsxj-lsp: error in " + method + ": " + e);
+            System.err.println("jrx-lsp: error in " + method + ": " + e);
             if (id != null) respondError(id, -32603, String.valueOf(e));
         }
         return true;
@@ -144,7 +144,7 @@ public final class Server {
                 }
             }
         }
-        scratch = Files.createTempDirectory("jsxj-lsp");
+        scratch = Files.createTempDirectory("jrx-lsp");
         Map<String, Object> save = new LinkedHashMap<>();
         save.put("includeText", false);
         Map<String, Object> sync = new LinkedHashMap<>();
@@ -159,7 +159,7 @@ public final class Server {
         caps.put("hoverProvider", true);
         caps.put("definitionProvider", true);
         Map<String, Object> info = new LinkedHashMap<>();
-        info.put("name", "jsxj-lsp");
+        info.put("name", "jrx-lsp");
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("capabilities", caps);
         result.put("serverInfo", info);
@@ -186,7 +186,7 @@ public final class Server {
         Analyzer.Diag parseError;
         synchronized (lock) {
             String text = ws.text(uri);
-            parseError = text == null || !uri.endsWith(".jsxj") ? null : Analyzer.parse(uri, text, ws.index());
+            parseError = text == null || !uri.endsWith(".jrx") ? null : Analyzer.parse(uri, text, ws.index());
         }
         if (parseError != null) {
             synchronized (lock) { cancel(uri); }
@@ -204,7 +204,7 @@ public final class Server {
     private void scheduleJavac(String uri, long delayMs) {
         synchronized (lock) {
             cancel(uri);
-            if (!uri.endsWith(".jsxj") || worker.isShutdown()) return;
+            if (!uri.endsWith(".jrx") || worker.isShutdown()) return;
             pending.put(uri, worker.schedule(() -> runJavac(uri), delayMs, TimeUnit.MILLISECONDS));
         }
     }
@@ -218,13 +218,13 @@ public final class Server {
             Analyzer.Diag parseError = Analyzer.parse(uri, text, ws.index());
             if (parseError != null) return;               // reported by analyze()
             version = versions.getOrDefault(uri, 0);
-            input = new Analyzer.Input(uri, ws.jsxjFiles(), ws.index(), ws.javaSourceRoots(), new ArrayList<>(ws.classpath));
+            input = new Analyzer.Input(uri, ws.jrxFiles(), ws.index(), ws.javaSourceRoots(), new ArrayList<>(ws.classpath));
         }
         List<Analyzer.Diag> diags = Analyzer.javac(input, scratch);
         synchronized (lock) {
             if (versions.getOrDefault(uri, 0) != version || !ws.isOpen(uri)) return;   // edited meanwhile
         }
-        try { publish(uri, diags); } catch (IOException e) { System.err.println("jsxj-lsp: " + e); }
+        try { publish(uri, diags); } catch (IOException e) { System.err.println("jrx-lsp: " + e); }
     }
 
     private void publish(String uri, List<Analyzer.Diag> diags) throws IOException {

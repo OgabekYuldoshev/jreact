@@ -9,7 +9,7 @@
     <version>0.1.0-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>JReact</name>
-    <description>React internals in Java: .jsxj (JSX-like) syntax, Fiber reconciler, hooks, TeaVM browser build</description>
+    <description>React internals in Java: .jrx (JSX-like) syntax, Fiber reconciler, hooks, TeaVM browser build</description>
     <url>https://github.com/OgabekYuldoshev/jreact</url>
 
     <licenses>

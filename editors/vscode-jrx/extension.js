@@ -1,4 +1,4 @@
-// VS Code client of the JSXJ language server (a Java process speaking LSP over stdio).
+// VS Code client of the JRX language server (a Java process speaking LSP over stdio).
 const fs = require('fs');
 const vscode = require('vscode');
 const { LanguageClient } = require('vscode-languageclient/node');
@@ -6,20 +6,20 @@ const { LanguageClient } = require('vscode-languageclient/node');
 let client;
 
 function activate(context) {
-  const cfg = vscode.workspace.getConfiguration('jsxj');
-  const jar = cfg.get('server.jar') || context.asAbsolutePath('server/jsxj-lsp.jar');
+  const cfg = vscode.workspace.getConfiguration('jrx');
+  const jar = cfg.get('server.jar') || context.asAbsolutePath('server/jrx-lsp.jar');
   if (!fs.existsSync(jar)) {
-    vscode.window.showWarningMessage('JSXJ: language server jar not found (' + jar + '). Highlighting works; run editors/vscode-jsxj/install.sh to build the server.');
+    vscode.window.showWarningMessage('JRX: language server jar not found (' + jar + '). Highlighting works; run editors/vscode-jrx/install.sh to build the server.');
     return;
   }
   client = new LanguageClient(
-    'jsxj', 'JSXJ Language Server',
+    'jrx', 'JRX Language Server',
     { command: cfg.get('javaPath') || 'java', args: ['-jar', jar] },
     {
-      documentSelector: [{ scheme: 'file', language: 'jsxj' }],
+      documentSelector: [{ scheme: 'file', language: 'jrx' }],
       initializationOptions: { classpath: cfg.get('classpath'), sourceRoots: cfg.get('sourceRoots') },
     });
-  client.start().catch(err => vscode.window.showErrorMessage('JSXJ language server failed to start: ' + err.message));
+  client.start().catch(err => vscode.window.showErrorMessage('JRX language server failed to start: ' + err.message));
   context.subscriptions.push({ dispose: () => client && client.stop() });
 }
 

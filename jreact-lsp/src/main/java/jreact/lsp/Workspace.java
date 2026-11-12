@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
- * Everything the server knows about the project: the text of every .jsxj/.java file (open editors win over disk)
+ * Everything the server knows about the project: the text of every .jrx/.java file (open editors win over disk)
  * and the component index built from them. Not thread-safe by itself; {@link Server} guards it with a lock.
  */
 final class Workspace {
@@ -53,7 +53,7 @@ final class Workspace {
             if (!Files.isDirectory(root)) continue;
             try (Stream<Path> walk = Files.walk(root)) {
                 walk.filter(Files::isRegularFile)
-                    .filter(p -> p.toString().endsWith(".jsxj") || p.toString().endsWith(".java"))
+                    .filter(p -> p.toString().endsWith(".jrx") || p.toString().endsWith(".java"))
                     .filter(p -> !skipped(root, p))
                     .forEach(p -> {
                         try { disk.put(p.toUri().toString(), Files.readString(p)); } catch (IOException | RuntimeException ignored) {}
@@ -86,10 +86,10 @@ final class Workspace {
 
     List<String> openUris() { return new ArrayList<>(open.keySet()); }
 
-    /** All known .jsxj files (uri to text), open editors overriding disk. */
-    Map<String, String> jsxjFiles() {
+    /** All known .jrx files (uri to text), open editors overriding disk. */
+    Map<String, String> jrxFiles() {
         Map<String, String> m = new LinkedHashMap<>();
-        for (String uri : allUris()) if (uri.endsWith(".jsxj")) m.put(uri, text(uri));
+        for (String uri : allUris()) if (uri.endsWith(".jrx")) m.put(uri, text(uri));
         return m;
     }
 
@@ -109,7 +109,7 @@ final class Workspace {
         PropsIndex idx = new PropsIndex();
         Map<String, Location> locs = new HashMap<>();
         for (String uri : allUris()) {
-            if (!uri.endsWith(".jsxj") && !uri.endsWith(".java")) continue;
+            if (!uri.endsWith(".jrx") && !uri.endsWith(".java")) continue;
             String text = text(uri);
             idx.scan(text);
             Matcher m = CLASS.matcher(text);

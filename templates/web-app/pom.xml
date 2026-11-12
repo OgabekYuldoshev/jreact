@@ -24,13 +24,13 @@
 
     <build>
         <plugins>
-            <!-- .jsxj -> .java (src/main/jsxj); the generated folder is added to the compile sources -->
+            <!-- .jrx -> .java (src/main/jrx); the generated folder is added to the compile sources -->
             <plugin>
                 <groupId>dev.jreact</groupId>
                 <artifactId>jreact-maven-plugin</artifactId>
                 <version>${jreact.version}</version>
                 <executions>
-                    <execution><id>jsxj</id><goals><goal>compile</goal></goals></execution>
+                    <execution><id>jrx</id><goals><goal>compile</goal></goals></execution>
                 </executions>
             </plugin>
             <!-- bytecode -> app.js -->

@@ -15,7 +15,7 @@ public final class Posts {
             "Without keys the reconciler can only compare by position, and state follows the position.",
             "Delete the first row of an unkeyed list and every row below inherits the state of the one above it. A key ties state to identity instead of position."),
         new Post(3, "Compiling JSX to Java", "java", "Oct 21", 8,
-            "jsxjc turns angle brackets into method calls and keeps line numbers, so stack traces still point at your file.",
+            "jrxc turns angle brackets into method calls and keeps line numbers, so stack traces still point at your file.",
             "The compiler reads a record Props to know which attributes a component accepts, and javac checks the types afterwards. Mistakes show up as ordinary compile errors."),
         new Post(4, "Routing without a page reload", "react", "Oct 14", 5,
             "The History API lets a single page change its address. A router is the glue between that address and your components.",

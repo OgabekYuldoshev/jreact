@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Compiles one .jsxj file into plain Java.
+ * Compiles one .jrx file into plain Java.
  *
  * <p>Java code is copied through untouched (javac does the real Java work); only JSX
  * expressions are parsed and replaced with runtime calls, exactly like Babel does for JS:
@@ -18,7 +18,7 @@ import java.util.Map;
  *     → jreact.Jsx.c(TodoItem.class, TodoItem::new, t.id(), new TodoItem.Props(t, null, null))
  * </pre>
  *
- * <p>Every newline inside JSX is re-emitted, so line N of the .jsxj file is line N of the
+ * <p>Every newline inside JSX is re-emitted, so line N of the .jrx file is line N of the
  * generated .java file: javac errors and stack traces point at the original source line.
  */
 public final class JsxTranspiler {

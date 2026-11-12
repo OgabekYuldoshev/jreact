@@ -66,11 +66,11 @@ public final class LspTest {
 
     @SuppressWarnings("unchecked")
     public static void main(String[] args) throws Exception {
-        Path root = Files.createTempDirectory("jsxj-lsp-test");
-        Path dir = root.resolve("src/main/jsxj/app");
+        Path root = Files.createTempDirectory("jrx-lsp-test");
+        Path dir = root.resolve("src/main/jrx/app");
         Files.createDirectories(dir);
-        Files.writeString(dir.resolve("Card.jsxj"), CARD);
-        Files.writeString(dir.resolve("Page.jsxj"), PAGE_OK);
+        Files.writeString(dir.resolve("Card.jrx"), CARD);
+        Files.writeString(dir.resolve("Page.jrx"), PAGE_OK);
         // a test fixture with the same class name must not shadow the real component
         Files.createDirectories(root.resolve("src/test/java/app"));
         Files.writeString(root.resolve("src/test/java/app/Card.java"),
@@ -98,8 +98,8 @@ public final class LspTest {
         rt.setDaemon(true);
         rt.start();
 
-        String cardUri = dir.resolve("Card.jsxj").toUri().toString();
-        String pageUri = dir.resolve("Page.jsxj").toUri().toString();
+        String cardUri = dir.resolve("Card.jrx").toUri().toString();
+        String pageUri = dir.resolve("Page.jrx").toUri().toString();
 
         test("initialize advertises the features", () -> {
             Map<String, Object> init = new LinkedHashMap<>();
@@ -124,7 +124,7 @@ public final class LspTest {
             change(pageUri, PAGE_JSX_ERROR);
             List<Map<String, Object>> d = diagnostics(pageUri);
             check(d.size() == 1, "one diagnostic: " + d);
-            eq("jsxjc", d.get(0).get("source"));
+            eq("jrxc", d.get(0).get("source"));
             eq(1L, d.get(0).get("severity"));
             eq(11, line(d.get(0)));         // the `return <Card ...>` line, zero-based
         });
@@ -248,7 +248,7 @@ public final class LspTest {
     }
 
     static void open(String uri, String text) throws IOException {
-        notify("textDocument/didOpen", Map.of("textDocument", Map.of("uri", uri, "languageId", "jsxj", "version", 1, "text", text)));
+        notify("textDocument/didOpen", Map.of("textDocument", Map.of("uri", uri, "languageId", "jrx", "version", 1, "text", text)));
     }
 
     static void change(String uri, String text) throws IOException {

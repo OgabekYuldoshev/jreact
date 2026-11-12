@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# JVM build without Maven: compiler -> runtime -> .jsxj -> .java -> .class -> run.
+# JVM build without Maven: compiler -> runtime -> .jrx -> .java -> .class -> run.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 B=build
 JAVAC="javac -encoding UTF-8 -Xlint:-options"
 
-# Browser build (needs Maven, downloads TeaVM): .jsxj -> .java -> .class -> app.js
+# Browser build (needs Maven, downloads TeaVM): .jrx -> .java -> .class -> app.js
 #   ./build.sh web        -> examples/todo-web/target/web/{index.html,app.js}
 #   ./build.sh web-test   -> same, then loads it in jsdom and clicks through the app (needs node + npm)
 #   ./build.sh dev [port] [app...] -> dev server for todo, kanban, shop, dashboard, landing + gallery,
@@ -61,20 +61,20 @@ if [[ "${1:-}" == "bench" ]]; then
   exit 0
 fi
 
-# Language server for .jsxj (diagnostics, completion, hover, definition): build/jsxj-lsp.jar
-#   ./build.sh lsp        -> build/jsxj-lsp.jar (used by editors/vscode-jsxj/install.sh)
+# Language server for .jrx (diagnostics, completion, hover, definition): build/jrx-lsp.jar
+#   ./build.sh lsp        -> build/jrx-lsp.jar (used by editors/vscode-jrx/install.sh)
 if [[ "${1:-}" == "lsp" ]]; then
-  rm -rf "$B/compiler" "$B/lsp" "$B/jsxj-lsp.jar"
+  rm -rf "$B/compiler" "$B/lsp" "$B/jrx-lsp.jar"
   $JAVAC -d $B/compiler $(find jreact-compiler/src/main/java -name '*.java')
   $JAVAC -cp $B/compiler -d $B/lsp $(find jreact-lsp/src/main/java -name '*.java')
-  jar --create --file $B/jsxj-lsp.jar --main-class jreact.lsp.Main -C $B/compiler . -C $B/lsp .
-  echo "built $B/jsxj-lsp.jar"
+  jar --create --file $B/jrx-lsp.jar --main-class jreact.lsp.Main -C $B/compiler . -C $B/lsp .
+  echo "built $B/jrx-lsp.jar"
   exit 0
 fi
 
 rm -rf "$B"
 
-echo "== jsxjc compiler"
+echo "== jrxc compiler"
 $JAVAC -d $B/compiler $(find jreact-compiler/src/main/java -name '*.java')
 
 echo "== jreact-core runtime"
@@ -92,7 +92,7 @@ $JAVAC -cp $B/core -d $B/router $(find jreact-router/src/main/java -name '*.java
 echo "== jreact-dom"
 $JAVAC -cp $B/core:$B/scheduler:$B/reconciler -d $B/dom $(find jreact-dom/src/main/java -name '*.java')
 
-echo "== jsxj language server"
+echo "== jrx language server"
 $JAVAC -cp $B/compiler -d $B/lsp $(find jreact-lsp/src/main/java -name '*.java')
 
 if [[ "${1:-}" == "test" ]]; then
@@ -118,8 +118,8 @@ if [[ "${1:-}" == "test" ]]; then
   exit 0
 fi
 
-echo "== .jsxj -> .java"
-java -cp $B/compiler jreact.compiler.JsxjCompiler $B/gen jreact-core/src/main/java examples/todo/src/main/jsxj examples/todo/src/main/java
+echo "== .jrx -> .java"
+java -cp $B/compiler jreact.compiler.JrxCompiler $B/gen jreact-core/src/main/java examples/todo/src/main/jrx examples/todo/src/main/java
 
 echo "== javac"
 $JAVAC -cp $B/core -d $B/app $(find $B/gen examples/todo/src/main/java -name '*.java')

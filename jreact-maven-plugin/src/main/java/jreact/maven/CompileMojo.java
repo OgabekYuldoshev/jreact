@@ -1,6 +1,6 @@
 package jreact.maven;
 
-import jreact.compiler.JsxjCompiler;
+import jreact.compiler.JrxCompiler;
 import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugin.MojoFailureException;
@@ -27,8 +27,8 @@ import java.util.jar.JarFile;
 import java.util.stream.Stream;
 
 /**
- * {@code jsxj:compile}: compiles the project's {@code .jsxj} files to Java and adds the result to the compile
- * source roots, so {@code javac} (and TeaVM after it) sees them. Component Props are looked up in the .jsxj and
+ * {@code jrx:compile}: compiles the project's {@code .jrx} files to Java and adds the result to the compile
+ * source roots, so {@code javac} (and TeaVM after it) sees them. Component Props are looked up in the .jrx and
  * .java sources of the project and in the sources that jreact-core ships inside its jar (so {@code ErrorBoundary}
  * and other framework components work without extra setup).
  */
@@ -39,47 +39,47 @@ public class CompileMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", readonly = true, required = true)
     private MavenProject project;
 
-    /** Folders with .jsxj files. */
-    @Parameter(property = "jsxj.sourceDirectories")
+    /** Folders with .jrx files. */
+    @Parameter(property = "jrx.sourceDirectories")
     private List<File> sourceDirectories;
 
     /** Extra folders that are only scanned for component Props (e.g. Java sources shared from another module). */
-    @Parameter(property = "jsxj.indexDirectories")
+    @Parameter(property = "jrx.indexDirectories")
     private List<File> indexDirectories;
 
     /** Where the generated .java files go. */
-    @Parameter(defaultValue = "${project.build.directory}/generated-sources/jsxj", property = "jsxj.outputDirectory")
+    @Parameter(defaultValue = "${project.build.directory}/generated-sources/jrx", property = "jrx.outputDirectory")
     private File outputDirectory;
 
-    @Parameter(defaultValue = "false", property = "jsxj.skip")
+    @Parameter(defaultValue = "false", property = "jrx.skip")
     private boolean skip;
 
     @Override
     public void execute() throws MojoExecutionException, MojoFailureException {
-        if (skip) { getLog().info("jsxj:compile skipped"); return; }
+        if (skip) { getLog().info("jrx:compile skipped"); return; }
 
         List<Path> dirs = new ArrayList<>();
-        List<File> jsxjDirs = sourceDirectories == null || sourceDirectories.isEmpty()
-                ? List.of(new File(project.getBasedir(), "src/main/jsxj")) : sourceDirectories;
-        for (File f : jsxjDirs) if (f.isDirectory()) dirs.add(f.toPath());
-        if (dirs.isEmpty()) { getLog().info("jsxj:compile: no .jsxj folder, nothing to do"); return; }
+        List<File> jrxDirs = sourceDirectories == null || sourceDirectories.isEmpty()
+                ? List.of(new File(project.getBasedir(), "src/main/jrx")) : sourceDirectories;
+        for (File f : jrxDirs) if (f.isDirectory()) dirs.add(f.toPath());
+        if (dirs.isEmpty()) { getLog().info("jrx:compile: no .jrx folder, nothing to do"); return; }
         // the project's own Java sources (and any other source root added so far) may define components too
         for (String root : project.getCompileSourceRoots()) if (new File(root).isDirectory()) dirs.add(Path.of(root));
         if (indexDirectories != null) for (File f : indexDirectories) dirs.add(f.toPath());
 
         ByteArrayOutputStream errors = new ByteArrayOutputStream();
-        JsxjCompiler.Result result;
+        JrxCompiler.Result result;
         try (PrintStream err = new PrintStream(errors, true, StandardCharsets.UTF_8)) {
-            result = JsxjCompiler.compile(outputDirectory.toPath(), dirs, frameworkSources(), err);
+            result = JrxCompiler.compile(outputDirectory.toPath(), dirs, frameworkSources(), err);
         } catch (IOException e) {
-            throw new MojoExecutionException("jsxjc failed: " + e.getMessage(), e);
+            throw new MojoExecutionException("jrxc failed: " + e.getMessage(), e);
         }
         String messages = errors.toString(StandardCharsets.UTF_8).strip();
         if (result.errors() > 0) {
-            throw new MojoFailureException("jsxjc: " + result.errors() + " error(s)\n" + messages);
+            throw new MojoFailureException("jrxc: " + result.errors() + " error(s)\n" + messages);
         }
         project.addCompileSourceRoot(outputDirectory.getAbsolutePath());
-        getLog().info("jsxjc: " + result.files() + " file(s) -> " + outputDirectory);
+        getLog().info("jrxc: " + result.files() + " file(s) -> " + outputDirectory);
     }
 
     /** Java sources of every jreact-* dependency jar that carries them (jreact-core does). */

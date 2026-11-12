@@ -8,7 +8,7 @@ import jreact.web.JReactWeb;
 public class WebMain {
     public static void main(String[] args) {
         List<Todo> todos = List.of(
-            new Todo(1, ".jsxj kompilyatorini yozish", true),
+            new Todo(1, ".jrx kompilyatorini yozish", true),
             new Todo(2, "Fiber reconciler", true),
             new Todo(3, "TeaVM bilan JS'ga build", false)
         );

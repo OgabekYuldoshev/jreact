@@ -11,5 +11,5 @@
 
     <artifactId>jreact-compiler</artifactId>
     <name>jreact-compiler</name>
-    <description>.jsxj to .java compiler (jsxjc)</description>
+    <description>.jrx to .java compiler (jrxc)</description>
 </project>

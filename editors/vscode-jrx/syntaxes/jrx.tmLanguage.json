@@ -1,0 +1,132 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "JRX",
+  "scopeName": "source.jrx",
+  "patterns": [{ "include": "source.java" }],
+  "injections": {
+    "L:source.jrx - (comment | string)": { "patterns": [{ "include": "#jsx-element" }] }
+  },
+  "repository": {
+    "jsx-element": {
+      "patterns": [
+        { "include": "#jsx-fragment" },
+        { "include": "#jsx-component" },
+        { "include": "#jsx-html" }
+      ]
+    },
+    "jsx-fragment": {
+      "name": "meta.tag.fragment.jrx",
+      "begin": "(?<![\\w$.)\\]])(<)(?=>)",
+      "beginCaptures": { "1": { "name": "punctuation.definition.tag.begin.jrx" } },
+      "end": "(</)(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jrx" },
+        "2": { "name": "punctuation.definition.tag.end.jrx" }
+      },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-component": {
+      "name": "meta.tag.component.jrx",
+      "begin": "(?<![\\w$.)\\]])(<)([A-Z][\\w$.]*)(?=[\\s/>])",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jrx" },
+        "2": { "name": "support.class.component.jrx" }
+      },
+      "end": "(/>)|(</)([\\w$.]*)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.jrx" },
+        "2": { "name": "punctuation.definition.tag.begin.jrx" },
+        "3": { "name": "support.class.component.jrx" },
+        "4": { "name": "punctuation.definition.tag.end.jrx" }
+      },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-html": {
+      "name": "meta.tag.html.jrx",
+      "begin": "(?<![\\w$.)\\]])(<)([a-z][\\w$-]*)(?=[\\s/>])",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jrx" },
+        "2": { "name": "entity.name.tag.jrx" }
+      },
+      "end": "(/>)|(</)([\\w$.-]*)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.jrx" },
+        "2": { "name": "punctuation.definition.tag.begin.jrx" },
+        "3": { "name": "entity.name.tag.jrx" },
+        "4": { "name": "punctuation.definition.tag.end.jrx" }
+      },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-body": {
+      "patterns": [
+        { "include": "#jsx-expression" },
+        { "include": "#jsx-element-nested" },
+        { "include": "#jsx-attribute-string" },
+        { "match": "([A-Za-z_$][\\w$:-]*)\\s*(=)", "captures": {
+            "1": { "name": "entity.other.attribute-name.jrx" },
+            "2": { "name": "keyword.operator.assignment.jrx" } } },
+        { "match": ">", "name": "punctuation.definition.tag.end.jrx" }
+      ]
+    },
+    "jsx-element-nested": {
+      "patterns": [
+        { "include": "#jsx-fragment-nested" },
+        { "include": "#jsx-component-nested" },
+        { "include": "#jsx-html-nested" }
+      ]
+    },
+    "jsx-fragment-nested": {
+      "begin": "(<)(?=>)", "end": "(</)(>)", "name": "meta.tag.fragment.jrx",
+      "beginCaptures": { "1": { "name": "punctuation.definition.tag.begin.jrx" } },
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jrx" },
+        "2": { "name": "punctuation.definition.tag.end.jrx" } },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-component-nested": {
+      "begin": "(<)([A-Z][\\w$.]*)(?=[\\s/>])", "name": "meta.tag.component.jrx",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jrx" },
+        "2": { "name": "support.class.component.jrx" } },
+      "end": "(/>)|(</)([\\w$.]*)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.jrx" },
+        "2": { "name": "punctuation.definition.tag.begin.jrx" },
+        "3": { "name": "support.class.component.jrx" },
+        "4": { "name": "punctuation.definition.tag.end.jrx" } },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-html-nested": {
+      "begin": "(<)([a-z][\\w$-]*)(?=[\\s/>])", "name": "meta.tag.html.jrx",
+      "beginCaptures": {
+        "1": { "name": "punctuation.definition.tag.begin.jrx" },
+        "2": { "name": "entity.name.tag.jrx" } },
+      "end": "(/>)|(</)([\\w$.-]*)\\s*(>)",
+      "endCaptures": {
+        "1": { "name": "punctuation.definition.tag.end.jrx" },
+        "2": { "name": "punctuation.definition.tag.begin.jrx" },
+        "3": { "name": "entity.name.tag.jrx" },
+        "4": { "name": "punctuation.definition.tag.end.jrx" } },
+      "patterns": [{ "include": "#jsx-body" }]
+    },
+    "jsx-attribute-string": {
+      "name": "string.quoted.double.jrx",
+      "begin": "\"", "end": "\"",
+      "beginCaptures": { "0": { "name": "punctuation.definition.string.begin.jrx" } },
+      "endCaptures": { "0": { "name": "punctuation.definition.string.end.jrx" } },
+      "patterns": [{ "match": "\\\\.", "name": "constant.character.escape.jrx" }]
+    },
+    "jsx-expression": {
+      "name": "meta.embedded.expression.jrx",
+      "begin": "\\{",
+      "end": "\\}",
+      "beginCaptures": { "0": { "name": "punctuation.section.embedded.begin.jrx" } },
+      "endCaptures": { "0": { "name": "punctuation.section.embedded.end.jrx" } },
+      "patterns": [
+        { "include": "source.java#comments" },
+        { "include": "#jsx-element" },
+        { "include": "source.java#code" }
+      ]
+    }
+  }
+}
