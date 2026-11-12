@@ -12,7 +12,7 @@
     <artifactId>jreact-maven-plugin</artifactId>
     <packaging>maven-plugin</packaging>
     <name>jreact-maven-plugin</name>
-    <description>Maven plugin: jrx:compile turns .jrx into .java during generate-sources</description>
+    <description>Maven plugin: jrx:compile turns .jrx into .java; jrx:bundle hashes and packs the TeaVM output for a server</description>
 
     <dependencies>
         <dependency><groupId>dev.jreact</groupId><artifactId>jreact-compiler</artifactId></dependency>

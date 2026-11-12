@@ -41,6 +41,8 @@
         <module>jreact-router</module>
         <module>jreact-dom</module>
         <module>jreact-web</module>
+        <module>jreact-spring-boot-starter</module>
+        <module>jreact-cli</module>
     </modules>
 
     <!-- The example apps are not published. -Prelease switches this profile off (activeByDefault). -->

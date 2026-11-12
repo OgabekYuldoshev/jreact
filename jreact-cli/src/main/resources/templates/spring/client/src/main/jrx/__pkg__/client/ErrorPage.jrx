@@ -1,0 +1,30 @@
+package {{package}}.client;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+import static jreact.router.RouterHooks.*;
+
+/** Shown when a loader or action fails: the server is down, answered 4xx/5xx, or the URL matches no route. */
+public class ErrorPage extends Component<ErrorPage.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        Object error = useRouteError();
+        String title = "Something went wrong";
+        String detail = error instanceof Throwable t ? String.valueOf(t.getMessage()) : String.valueOf(error);
+        if (error instanceof ErrorResponse r) {
+            title = r.status() == 0 ? "The server is not reachable" : r.status() + " " + r.statusText();
+            detail = r.data() == null ? "" : String.valueOf(r.data());
+        }
+        return (
+            <div id="page-error" className="mx-auto mt-24 max-w-md px-4 text-center">
+                <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+                <p className="mt-3 break-words text-slate-500">{detail}</p>
+                <Link to="/" className="mt-6 inline-block text-indigo-600 hover:underline">Back</Link>
+            </div>
+        );
+    }
+}

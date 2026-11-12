@@ -53,6 +53,12 @@ if [[ "${1:-}" == "examples" || "${1:-}" == "examples-test" ]]; then
   exit 0
 fi
 
+# Spring Boot + JReact end to end: jreact new, jreact build, run the jar, click through the app in jsdom
+#   ./build.sh spring-e2e      (needs Maven, node + npm; the first run downloads Tailwind)
+if [[ "${1:-}" == "spring-e2e" ]]; then
+  exec tools/spring-e2e.sh
+fi
+
 # Benchmark (js-framework-benchmark scenarios in headless Brave/Chrome): JReact vs React 18 vs vanilla DOM
 #   ./build.sh bench [rounds]   -> table on stdout and examples/bench/target/results.md (needs Maven, node, Brave or Chrome)
 if [[ "${1:-}" == "bench" ]]; then
@@ -112,6 +118,7 @@ if [[ "${1:-}" == "test" ]]; then
   $JAVAC -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/router -d $B/router-test $(find jreact-router/src/test/java -name '*.java')
   java -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/router:$B/router-test jreact.router.RouterTest
   java -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/router:$B/router-test jreact.router.DataRouterTest
+  java -cp $B/core:$B/scheduler:$B/reconciler:$B/dom:$B/router:$B/router-test jreact.router.JsonTest
   echo "== language server tests"
   $JAVAC -cp $B/compiler:$B/lsp -d $B/lsp-test $(find jreact-lsp/src/test/java -name '*.java')
   java -cp $B/compiler:$B/lsp:$B/lsp-test jreact.lsp.LspTest

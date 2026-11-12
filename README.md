@@ -37,6 +37,7 @@ public class Counter extends Component<Counter.Props> {
 - [Context va memo](#context-va-memo)
 - [Eventlar](#eventlar)
 - [Router](#router)
+- [Spring Boot bilan: `jreact` buyrug'i](#spring-boot-bilan-jreact-buyrugi)
 - [Stillar: CSS, Sass, Tailwind](#stillar-css-sass-tailwind)
 - [Namunalar: Tailwind bilan 6 ta ilova](#namunalar-tailwind-bilan-5-ta-ilova)
 - [Error boundary](#error-boundary)
@@ -530,6 +531,84 @@ Misol: `examples/contacts` (`/contacts/`): qidiruv (GET forma, tarixni to'ldirma
 
 **Hali yo'q:** `defer`/`<Await>`/Suspense (loader'ning bir qismini kutmay chizish), orqaga tugmasini bloklash (`useBlocker` faqat ilova ichidagini ushlaydi), `Location.state` / `key` (`Link state`), `caseSensitive`, ixtiyoriy param (`:id?`), `useFormAction`, fayl yuklash formalari. Scroll tiklash joyni URL bo'yicha saqlaydi (bir URL'ga ikki marta kirsangiz bir xil joy).
 
+## Spring Boot bilan: `jreact` buyrug'i
+
+Frontend (JReact) va backend (Spring Boot) bitta loyihada, bitta buyruq bilan, bitta jar'da. Brauzer ham, server ham Java.
+
+```bash
+# 1. JReact'ni bir marta o'rnating (Maven Central'ga chiqquncha lokal repoga)
+mvn -B -q install -DskipTests
+ln -s "$PWD/bin/jreact" /usr/local/bin/jreact        # yoki bin/ papkani PATH'ga qo'shing
+
+# 2. yangi loyiha
+jreact new shop --group com.acme
+cd shop
+jreact dev                                            # http://localhost:8080
+```
+
+`jreact new` uch modulli Maven loyihasi yaratadi (TeaVM server klasslarini yig'a olmaydi, shuning uchun bitta modul bo'lmaydi):
+
+```
+shop/
+├── jreact.properties        # loyiha ildizi belgisi (port va modul papkalari)
+├── shared/                  # ikki tomon ishlatadigan tiplar (oddiy Java, bog'liqliksiz): Todo
+├── client/                  # UI: src/main/jrx, src/main/styles/app.css (Tailwind), src/main/webapp/index.html
+└── server/                  # Spring Boot: API (TodoController) va tayyor UI'ni beradi
+```
+
+| Buyruq | Vazifasi |
+|---|---|
+| `jreact new <nom> [--group g] [--package p] [--dir d]` | loyiha yaratadi (nom: kichik harf, raqam, `-`) |
+| `jreact dev [--port n]` | Spring Boot (devtools) + kuzatuvchi: `client/` o'zgarsa Tailwind + `.jrx` + TeaVM qayta yig'iladi (~5 s) va sahifa o'zi yangilanadi; `server/` o'zgarsa kompilyatsiya + Spring qayta ishga tushadi; `shared/` o'zgarsa ikkalasi va server qayta yig'iladi |
+| `jreact build [--skip-tests] [-- <mvn args>]` | optimallashgan build: minify, hash'li fayl nomlari (`app.3f9a1c2b.js`), gzip, Tailwind (minify), testlar, bitta `server/target/*.jar` |
+| `jreact start [--port n]` | shu jar'ni ishga tushiradi |
+| `jreact test` | barcha modullarning testlari (`mvn test`) |
+| `jreact doctor` | Java 17+, Maven, JReact lokal repoda, Tailwind, port, modul papkalari |
+| `jreact docker [--force]` | jar'ni ishga tushiruvchi `Dockerfile` (avval `jreact build`) |
+
+CLI'ni yig'ish: `mvn -pl jreact-cli -am package` (`jreact-cli/target/jreact-cli.jar`, faqat JDK 17+ kerak).
+Tailwind mustaqil binary sifatida `~/.jreact/` ga bir marta yuklab olinadi (Node kerak emas; o'zingiznikini `TAILWINDCSS=/yo'l/tailwindcss` bilan bering).
+
+### So'rov qanday o'tadi
+
+1. Brauzer `/` ni ochadi. Spring Boot `index.html` beradi. `/api/...` bo'lmagan har bir sahifa URL'i ham shuni oladi (`createBrowserRouter` uchun SPA fallback), `/api/yoq` esa 404.
+2. `app.js` ishga tushadi, router URL'ni topadi va route'ning loader'ini chaqiradi: `Http.get("/api/todos")`.
+3. Spring Boot'dagi `TodoController` JSON qaytaradi, loader natijasi sahifaga aylanadi.
+4. `<Form method="post">` route'ning action'ini ishga tushiradi (`Http.post(...)`), keyin loader'lar qayta ishlaydi va sahifa yangi ma'lumotni ko'rsatadi.
+
+Brauzer va server bitta origin'da, shuning uchun CORS sozlash kerak emas; cookie va Spring Security'ning CSRF tokeni ishlayveradi
+(`Http` `XSRF-TOKEN` cookie'sini `X-XSRF-TOKEN` sarlavhasi bilan qaytaradi).
+
+### `Http` va `Json` (brauzerda)
+
+```java
+Http.get("/api/todos")                                 // Promise<Object>: List / Map / String / Long / Double / Boolean / null
+Http.post("/api/todos", Map.of("title", "sut"))        // tana JSON bo'lib ketadi
+Http.patch("/api/todos/3", Map.of("done", true))
+Http.delete("/api/todos/3")
+Http.request("GET", url, null)                         // Promise<Http.Response>: status(), ok(), body(), json(); har qanday HTTP status bilan "resolve" bo'ladi
+```
+
+2xx bo'lmagan javob `ErrorResponse(status, statusText, tana)` bilan reject bo'ladi, ya'ni route'ning `errorElement`'iga tushadi.
+Server o'chiq bo'lsa `ErrorResponse(0, "Network Error")`. `jreact.Json` (`parse`, `stringify`) reflection'siz, JVM va brauzerda bir xil ishlaydi;
+`Json.Writable` bilan o'z klassingizning JSON shaklini berasiz. Chiqish `<`, `>`, `&` ni `\uXXXX` qiladi (`<script>` ichida xavfsiz).
+
+### `jreact-spring-boot-starter`
+
+Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
+
+- `/assets/**`: hash'li fayllar, `Cache-Control: immutable` (1 yil), brauzer qabul qilsa oldindan siqilgan `.gz`;
+- `index.html`: `no-cache`; fayl ham, API ham bo'lmagan GET (va `Accept: text/html`) shu sahifani oladi; `fetch` bilan JSON so'ragan noma'lum URL 404 oladi;
+- controller'lar doim ustun: `@GetMapping("/narxlar")` odatdagidek ishlaydi;
+- `jreact.reserved-prefixes=/api,/_rpc,/actuator,/error,/__jreact`: shu prefikslar ostidagi noma'lum URL 404 (sahifa emas);
+- `jreact.location=classpath:/jreact/` va `jreact.enabled=false`;
+- dev rejim (`jreact.dev-dir=client/target/classes/jreact`, `jreact dev` o'zi beradi): fayllar to'g'ridan-to'g'ri papkadan, kesh yo'q, sahifaga qayta yuklash skripti qo'shiladi (`/__jreact/version` tekshiriladi), build xatosi sahifada overlay bo'lib chiqadi. Production'da bu endpoint'lar umuman yo'q.
+
+Maven plagini `jrx:bundle` ham beradi (client modulida avtomatik): TeaVM natijasini hash'lab `target/classes/jreact/` ga qo'yadi, `index.html` ni yangilaydi, `manifest.json` yozadi.
+Spring Security ishlatsangiz va `/` ni ochiq qilmasangiz, UI ham login talab qiladi: starter filtr emas, oddiy resource handler.
+
+**Hozircha yo'q** (reja): tip-xavfsiz server chaqiruv (`@ServerApi` + generatsiya, hozir `Http` + `Json`), SSR + hydration, Gradle plagini, `context-path` bilan ishlash (asset yo'llari `/` dan boshlanadi), `shared/` o'zgarganda tezroq qayta yig'ish.
+
 ## Stillar: CSS, Sass, Tailwind
 
 Ha, hammasini ishlatsa bo'ladi. JReact CSS'ni bilmaydi va unga tegmaydi: u faqat `className` va `style` ni DOM'ga beradi. CSS esa oddiy sahifa resursi, shuning uchun istalgan CSS vositasi ishlaydi.
@@ -788,6 +867,7 @@ root.reconciler().setWarningHandler(msg -> log.warn(msg)); // default: System.er
 | `./build.sh dev [port] [ilova...]` | dev server (`tools/dev-server.js`): qayta yig'ish + sahifani yangilash |
 | `./build.sh examples` | Tailwind namunalari (kanban, shop, dashboard, landing, blog, contacts) -> `examples/dist/` (Maven + node) |
 | `./build.sh examples-test` | shuni yig'ib, jsdom'da bosib tekshiradi |
+| `./build.sh spring-e2e` | `jreact new` -> `build` -> jar'ni ishga tushirib, ilovani jsdom'da bosib tekshiradi (Maven, node) |
 | `./build.sh bench [n]` | brauzerda benchmark: JReact vs React 18 vs vanilla (Maven, node, Brave/Chrome) |
 | `./build.sh lsp` | language server jar'i: `build/jrx-lsp.jar` |
 | `./editors/vscode-jrx/install.sh` | VS Code kengaytmasini o'rnatadi (jar, npm, symlink) |
@@ -975,6 +1055,9 @@ jreact/
 ├── jreact-dom/                       # DOM host (paket jreact.dom), TeaVM'siz qismi
 │   └── src/test/.../DomTest.java     # 19 ta test (soxta DOM)
 ├── jreact-web/                       # brauzer bog'lamalari (TeaVM JSO): JReactWeb, JsDomOps, JsTimers...
+├── jreact-spring-boot-starter/       # Spring Boot starter: hash'li assetlar, SPA fallback, dev reload (11 ta JUnit testi)
+├── jreact-cli/                       # `jreact` buyrug'i (picocli): new, dev, build, start, test, doctor, docker; shablon resources/templates/spring
+├── bin/jreact                        # CLI ishga tushiruvchisi
 ├── jreact-lsp/                       # language server: Server, Analyzer, Features, Workspace, Json
 │   └── src/test/.../LspTest.java     # 12 ta test, haqiqiy JSON-RPC oqimi bilan
 ├── editors/vscode-jrx/              # VS Code kengaytmasi: grammar + LSP klienti

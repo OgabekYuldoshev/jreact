@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>{{group}}</groupId>
+        <artifactId>{{name}}</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>{{name}}-client</artifactId>
+    <name>{{name}}-client</name>
+    <description>The UI: .jrx -> .java -> app.js (TeaVM). The jar holds only the built files (jreact/index.html, jreact/assets/...), the server serves them.</description>
+
+    <dependencies>
+        <dependency><groupId>${project.groupId}</groupId><artifactId>{{name}}-shared</artifactId></dependency>
+        <dependency><groupId>dev.jreact</groupId><artifactId>jreact-web</artifactId><version>${jreact.version}</version></dependency>
+        <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso</artifactId><version>${teavm.version}</version></dependency>
+        <dependency><groupId>org.teavm</groupId><artifactId>teavm-classlib</artifactId><version>${teavm.version}</version></dependency>
+        <dependency><groupId>org.teavm</groupId><artifactId>teavm-jso-impl</artifactId><version>${teavm.version}</version></dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- bytecode -> app.js -->
+            <plugin>
+                <groupId>org.teavm</groupId>
+                <artifactId>teavm-maven-plugin</artifactId>
+                <version>${teavm.version}</version>
+                <executions>
+                    <execution>
+                        <id>app-js</id>
+                        <phase>process-classes</phase>
+                        <goals><goal>compile</goal></goals>
+                        <configuration>
+                            <mainClass>{{package}}.client.WebMain</mainClass>
+                            <targetDirectory>${project.build.directory}/web</targetDirectory>
+                            <targetFileName>app.js</targetFileName>
+                            <optimizationLevel>${jreact.optimization}</optimizationLevel>
+                            <minifying>${jreact.minify}</minifying>
+                            <debugInformationGenerated>false</debugInformationGenerated>
+                            <sourceMapsGenerated>false</sourceMapsGenerated>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- src/main/webapp (index.html, favicon...) -> target/web -->
+            <plugin>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <executions>
+                    <execution>
+                        <id>copy-page</id>
+                        <phase>process-classes</phase>
+                        <goals><goal>copy-resources</goal></goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/web</outputDirectory>
+                            <resources><resource><directory>${project.basedir}/src/main/webapp</directory></resource></resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- compile: .jrx -> .java. bundle: hashed app.js/app.css + index.html + .gz -> target/classes/jreact -->
+            <plugin>
+                <groupId>dev.jreact</groupId>
+                <artifactId>jreact-maven-plugin</artifactId>
+                <version>${jreact.version}</version>
+                <executions>
+                    <execution><id>jrx</id><goals><goal>compile</goal></goals></execution>
+                    <execution>
+                        <id>bundle</id>
+                        <goals><goal>bundle</goal></goals>
+                        <configuration>
+                            <hash>${jreact.hash}</hash>
+                            <compress>${jreact.compress}</compress>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- the jar is for the server: only the built files, not the TeaVM-only classes -->
+            <plugin>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.4.2</version>
+                <configuration><includes><include>jreact/**</include></includes></configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,0 +1,57 @@
+package {{package}}.client;
+
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+import static jreact.router.RouterHooks.*;
+import {{package}}.shared.Todo;
+
+/** The list comes from the route's loader (GET /api/todos); the forms post to the route's action. */
+public class TodoPage extends Component<TodoPage.Props> {
+
+    public record Props() {}
+
+    private static final String ICON = "w-8 text-xl leading-none text-slate-400 hover:text-slate-900";
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public Element render(Props props) {
+        List<Todo> todos = (List<Todo>) useLoaderData();
+        boolean busy = useNavigation().state() != DataRouter.NavigationState.IDLE;
+        long newest = todos.stream().mapToLong(Todo::id).max().orElse(0);
+
+        return (
+            <main className="mx-auto max-w-xl px-4 py-12">
+                <h1 className="text-3xl font-bold tracking-tight">Todos</h1>
+                <p className="mt-1 text-sm text-slate-500">Rendered in your browser by JReact, stored by Spring Boot.</p>
+
+                <Form method="post" id="add-form" key={"add-" + newest} className="mt-8 flex gap-2">
+                    <input type="hidden" name="intent" value="add" />
+                    <input id="title" name="title" placeholder="What needs doing?" required={true} maxLength={200}
+                           className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500" />
+                    <button type="submit" className="rounded-lg bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700">Add</button>
+                </Form>
+
+                <ul id="todos" className={"mt-6 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white transition-opacity " + (busy ? "opacity-60" : "")}>
+                    {todos.isEmpty() ? <li className="px-4 py-6 text-center text-slate-400">Nothing to do.</li> : null}
+                    {todos.stream().map(t -> (
+                        <li key={String.valueOf(t.id())} className="flex items-center gap-2 px-4 py-3">
+                            <Form method="post">
+                                <input type="hidden" name="intent" value="toggle" />
+                                <input type="hidden" name="id" value={String.valueOf(t.id())} />
+                                <input type="hidden" name="done" value={t.done() ? "false" : "true"} />
+                                <button type="submit" className={ICON} aria-label="Toggle">{t.done() ? "☑" : "☐"}</button>
+                            </Form>
+                            <span className={"flex-1 " + (t.done() ? "text-slate-400 line-through" : "")}>{t.title()}</span>
+                            <Form method="post">
+                                <input type="hidden" name="intent" value="delete" />
+                                <input type="hidden" name="id" value={String.valueOf(t.id())} />
+                                <button type="submit" className={ICON + " hover:text-red-600"} aria-label="Delete">×</button>
+                            </Form>
+                        </li>)).toList()}
+                </ul>
+            </main>
+        );
+    }
+}

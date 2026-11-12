@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.jreact</groupId>
+        <artifactId>jreact-parent</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>jreact-cli</artifactId>
+    <name>jreact-cli</name>
+    <description>The jreact command: new, dev, build, start, test, doctor, docker</description>
+
+    <properties>
+        <maven.test.skip>false</maven.test.skip>
+        <picocli.version>4.7.7</picocli.version>
+        <junit.version>5.11.4</junit.version>
+        <spring-boot.version>3.5.16</spring-boot.version>
+    </properties>
+
+    <dependencies>
+        <dependency><groupId>info.picocli</groupId><artifactId>picocli</artifactId><version>${picocli.version}</version></dependency>
+        <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>${junit.version}</version><scope>test</scope></dependency>
+    </dependencies>
+
+    <build>
+        <finalName>jreact-cli</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <excludes><exclude>version.properties</exclude></excludes>
+            </resource>
+            <!-- only this file is filtered: it tells the CLI which versions go into a new project -->
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes><include>version.properties</include></includes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals><goal>shade</goal></goals>
+                        <configuration>
+                            <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>dev.jreact.cli.Main</mainClass>
+                                </transformer>
+                            </transformers>
+                            <filters>
+                                <filter><artifact>*:*</artifact><excludes><exclude>META-INF/*.SF</exclude><exclude>META-INF/*.DSA</exclude><exclude>META-INF/*.RSA</exclude></excludes></filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>

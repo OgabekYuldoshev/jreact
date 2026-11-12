@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# The jreact command. Build it once with:  mvn -pl jreact-cli -am package -DskipTests
+# Then put this folder on your PATH, or symlink this file:  ln -s "$PWD/bin/jreact" /usr/local/bin/jreact
+set -euo pipefail
+SELF="$0"
+while [ -L "$SELF" ]; do                       # follow symlinks so the jar is found next to the real script
+  DIR="$(cd "$(dirname "$SELF")" && pwd)"
+  SELF="$(readlink "$SELF")"
+  case "$SELF" in /*) ;; *) SELF="$DIR/$SELF" ;; esac
+done
+HERE="$(cd "$(dirname "$SELF")" && pwd)"
+JAR="${JREACT_CLI_JAR:-$HERE/../jreact-cli/target/jreact-cli.jar}"
+[ -f "$JAR" ] || { echo "jreact: $JAR not found. Build it: mvn -pl jreact-cli -am package -DskipTests" >&2; exit 1; }
+exec java -jar "$JAR" "$@"
