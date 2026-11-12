@@ -21,8 +21,8 @@ server/   Spring Boot: the API, and it serves the built UI
 
 ## How a request flows
 
-1. The browser opens `/`. Spring Boot answers with `index.html` (every URL that is a page, not `/api/...` or `/_rpc/...`, gets it).
-2. `app.js` starts, the router matches the URL and runs the route's loader: `TodoApiClient.list()`.
+1. The browser opens `/`. Spring Boot runs the routes of `client/.../App` for that URL on the server (the loader calls the `TodoService` bean directly), renders the page to HTML and answers with it inside `index.html`, together with the loader's answers. (`jreact dev` skips this and answers with the empty `index.html`; remove `jreact.ssr.app` from `application.properties` to turn it off everywhere.)
+2. `app.js` starts and hydrates that HTML: the router runs the same loader, which takes the embedded answer instead of calling the server again.
 3. `TodoApiClient` is generated from the `TodoApi` interface in `shared/`. It sends `POST /_rpc/TodoApi/list`; Spring Boot calls `TodoService.list()` and answers with JSON; the loader's result (a `List<Todo>`) becomes the page.
 4. A `<Form method="post">` runs the route's action (`TodoApiClient.add(...)`), then the loaders run again and the page shows the new data.
 
