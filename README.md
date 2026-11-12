@@ -67,7 +67,7 @@ git clone <repo-url> jreact
 cd jreact
 
 ./build.sh          # kompilyator -> runtime -> .jsxj -> .java -> javac -> Todo namunasi HTML chiqaradi
-./build.sh test     # barcha testlar (kompilyator 38, scheduler 14, reconciler 56, dom 19, language server 12)
+./build.sh test     # barcha testlar (kompilyator 38, scheduler 14, reconciler 57, dom 19, language server 12)
 ./build.sh dev      # galereya + 5 ilova: http://localhost:5173 (o'zgarsa o'zi qayta yig'iladi)
 ```
 
@@ -251,9 +251,9 @@ Hooks `Component` ichidagi `protected` metodlar. Ular `render()` ichida, **shart
 | Hook | Tavsif |
 |---|---|
 | `State<T> useState(T initial)` | State. O'qish: `get()`, yozish: `set(v)`, funksiya bilan: `update(old -> new)` |
-| `void useEffect(Runnable effect, Object... deps)` | Effekt. `deps` bo'lmasa har renderda ishlaydi |
+| `void useEffect(Runnable effect, Object... deps)` | Effekt. `deps` yo'q = har renderdan keyin, `ONCE` = faqat birinchi renderdan keyin, qiymatlar = o'zgarganda |
 | `void useEffect(Effect effect, Object... deps)` | Cleanup qaytaradigan effekt: `() -> { sub(); return () -> unsub(); }` |
-| `T useMemo(Supplier<T> compute, Object... deps)` | Qimmat hisobni eslab qolish |
+| `T useMemo(Supplier<T> compute, Object... deps)` | Qimmat hisobni eslab qolish. `deps` qoidasi `useEffect` bilan bir xil |
 | `Ref<T> useRef(T initial)` | O'zgaruvchan quti: `ref.current` |
 | `T useContext(Context<T> ctx)` | Eng yaqin provider qiymati, bo'lmasa default. Hook tartibiga kirmaydi, shartli chaqirsa bo'ladi |
 
@@ -267,7 +267,7 @@ return <button onClick={e -> count.update(c -> c + 1)}>+1 ({count.get()})</butto
 
 Qoidalar:
 
-- `deps` berilmasa (yoki bo'sh bo'lsa) effekt va `useMemo` har renderda ishlaydi, `deps` bo'lsa `equals` bilan solishtiriladi. React'dagi `[]` (faqat mount'da) shu yerda yo'q: bir marta ishlatish uchun doimiy qiymat bering, masalan `useEffect(fn, "once")`.
+- `deps` React'dagi kabi: berilmasa har renderda, `ONCE` (React'dagi `[]`, bo'sh massiv) berilsa faqat birinchi renderda, qiymatlar berilsa `equals` bilan solishtiriladi. `useEffect(fn, ONCE)` mount'da ishlaydi, cleanup'i unmount'da chaqiriladi.
 - `State.get()` render paytidagi qiymatni qaytaradi (React closure kabi).
 - Render paytida `set` chaqirish xato. Bir xil qiymatga `set` qilish render'ni ishga tushirmaydi.
 - Effektlar commit'dan keyin alohida vazifada ishlaydi. Keyingi render boshlanishidan oldin kutayotgan effektlar yakunlanadi.
@@ -736,7 +736,6 @@ jreact/
 - DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q.
 - Ustuvorlik root bo'yicha, update bo'yicha emas (lane yo'q): bitta render barcha kutayotgan update'larni oladi. Bo'laklab render faqat `LOW`/`IDLE` (`startTransition`) uchun, uni boshqa update to'xtatib qayta boshlamaydi, faqat tezroq tugatadi.
 - Error boundary render va `useEffect` xatolarini tutadi, event handler xatolarini tutmaydi (React'dagi kabi). `ServerRenderer` (SSR) boundary'da xatoni tutmaydi.
-- `useEffect(fn, [])` (faqat mount) yo'q, doimiy dep bering.
 - `{...spread}` komponentlarda qo'llab-quvvatlanmaydi.
 - Bir xil nomli komponentlar turli paketlarda bo'lsa indeks adashadi.
 - IntelliJ uchun plagin yo'q. VS Code'da `{...}` ichidagi Java uchun avtokomplit yo'q.

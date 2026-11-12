@@ -88,8 +88,8 @@ final class FiberHooks implements Hooks.Dispatcher {
             return;
         }
         HookEffect prev = (HookEffect) h.memoizedState;
-        // no deps = every render, same as the documented API
-        if (deps != null && deps.length > 0 && depsEqual(prev.deps, deps)) return;
+        // deps == null: every render. Empty array: only the first one (React's []).
+        if (deps != null && depsEqual(prev.deps, deps)) return;
         h.memoizedState = schedule(new HookEffect(effect, deps), prev);
     }
 
@@ -106,7 +106,7 @@ final class FiberHooks implements Hooks.Dispatcher {
         Hook h = next(Hook.Kind.MEMO);
         if (!mount()) {
             MemoState prev = (MemoState) h.memoizedState;
-            if (deps != null && deps.length > 0 && depsEqual(prev.deps(), deps)) return (T) prev.value();
+            if (deps != null && depsEqual(prev.deps(), deps)) return (T) prev.value();
         }
         T value = compute.get();
         h.memoizedState = new MemoState(value, deps);

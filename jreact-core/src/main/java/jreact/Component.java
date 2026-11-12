@@ -17,7 +17,20 @@ public abstract class Component<P> {
 
     protected final <T> State<T> useState(T initial) { return Hooks.current().useState(initial); }
 
-    /** Effect without cleanup: {@code useEffect(() -> log("x"), dep1, dep2)}. No deps = every render. */
+    /**
+     * Deps, like React's dependency array: no argument = runs after every render; {@link #ONCE} (an empty
+     * array, React's {@code []}) = only after the first render; values = when one of them is not
+     * {@code equals} to the previous render's.
+     */
+    protected static final Object[] ONCE = new Object[0];
+
+    /** Effect without cleanup, after every render: {@code useEffect(() -> log("x"))}. */
+    protected final void useEffect(Runnable effect) { useEffect(effect, (Object[]) null); }
+
+    /** Effect with cleanup, after every render. */
+    protected final void useEffect(Effect effect) { useEffect(effect, (Object[]) null); }
+
+    /** Effect without cleanup: {@code useEffect(() -> log("x"), dep1, dep2)} or {@code useEffect(fn, ONCE)}. */
     protected final void useEffect(Runnable effect, Object... deps) {
         Hooks.current().useEffect(() -> { effect.run(); return null; }, deps);
     }
@@ -25,6 +38,10 @@ public abstract class Component<P> {
     /** Effect with cleanup: {@code useEffect(() -> { sub(); return () -> unsub(); }, id)}. */
     protected final void useEffect(Effect effect, Object... deps) { Hooks.current().useEffect(effect, deps); }
 
+    /** Recomputed on every render. */
+    protected final <T> T useMemo(Supplier<T> compute) { return useMemo(compute, (Object[]) null); }
+
+    /** Recomputed when a dep changes; {@code useMemo(fn, ONCE)} computes once. */
     protected final <T> T useMemo(Supplier<T> compute, Object... deps) { return Hooks.current().useMemo(compute, deps); }
 
     protected final <T> Ref<T> useRef(T initial) { return Hooks.current().useRef(initial); }

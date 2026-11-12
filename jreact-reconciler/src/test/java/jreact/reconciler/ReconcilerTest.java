@@ -446,6 +446,35 @@ public final class ReconcilerTest {
             eq("[ref=true]", log.toString());
         });
 
+        test("deps like React: none = every render, ONCE = first render only, values = on change", () -> {
+            Env e = new Env();
+            class Deps extends Component<Deps.Props> {
+                record Props(int n) {}
+                public Element render(Props p) {
+                    useEffect(() -> log.add("every"));
+                    useEffect(() -> log.add("once"), ONCE);
+                    useEffect(() -> { log.add("mount"); return () -> log.add("cleanup"); }, ONCE);
+                    useEffect(() -> log.add("n=" + p.n()), p.n());
+                    String all = useMemo(() -> "all" + (++memoAll[0]));
+                    String once = useMemo(() -> "once" + (++memoOnce[0]), ONCE);
+                    return Jsx.el("u", null, null, all + "/" + once);
+                }
+                static final int[] memoAll = {0}, memoOnce = {0};
+            }
+            log.clear();
+            e.render(c(Deps.class, Deps::new, null, new Deps.Props(1)));
+            eq("[every, once, mount, n=1]", log.toString());
+            eq("<u>all1/once1</u>", e.html());
+            log.clear();
+            e.render(c(Deps.class, Deps::new, null, new Deps.Props(1)));
+            e.render(c(Deps.class, Deps::new, null, new Deps.Props(2)));
+            eq("[every, every, n=2]", log.toString());
+            eq("<u>all3/once1</u>", e.html());
+            log.clear();
+            e.root.unmount();
+            eq("[cleanup]", log.toString());
+        });
+
         test("ref is cleared on unmount", () -> {
             Env e = new Env();
             Ref<Object> ref = new Ref<>(null);
