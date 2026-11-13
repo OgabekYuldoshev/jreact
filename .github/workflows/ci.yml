@@ -22,6 +22,11 @@ jobs:
         run: ./build.sh test
       - name: Modules (processor, starter, CLI)
         run: mvn -B -q install -pl jreact-processor,jreact-spring-boot-starter,jreact-cli -am
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 9.8.2
+      - name: Gradle plugin (TestKit)
+        run: ./build.sh gradle-plugin
       - name: Example apps in jsdom
         run: ./build.sh examples-test
       - name: Spring Boot project end to end (jreact new, build, run, click through in jsdom)

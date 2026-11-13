@@ -13,3 +13,5 @@ node_modules/
 # OS
 .DS_Store
 examples/dist/
+jreact-gradle-plugin/build/
+jreact-gradle-plugin/.gradle/

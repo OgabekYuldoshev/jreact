@@ -48,6 +48,7 @@ public class Counter extends Component<Counter.Props> {
 - [Qanday ishlaydi](#qanday-ishlaydi)
 - [Xavfsizlik (XSS)](#xavfsizlik-xss)
 - [Unumdorlik (benchmark)](#unumdorlik-benchmark)
+- [CI](#ci)
 - [Maven Central'ga chiqarish](#maven-centralga-chiqarish)
 - [Muammolarni hal qilish](#muammolarni-hal-qilish)
 - [Loyiha tuzilmasi](#loyiha-tuzilmasi)
@@ -650,6 +651,35 @@ brauzer ->  JReactWeb.createRoot(..).hydrate(..): HTML qabul qilinadi, loader'la
 - Qo'lda: `ServerRenderer.renderToString` ixtiyoriy matnlar orasiga `<!-- -->` qo'yadi; `DomRoot.hydrate(element)` mavjud DOM'ni qabul qiladi.
 - Cheklov: faqat `@ServerApi` javoblari oldindan ulanadi; `Http.get` kabi boshqa so'rovlar serverda ishlamaydi.
 
+### Gradle plagini (`dev.jreact.jrx`)
+
+Maven o'rniga Gradle ishlatsangiz, `jreact-gradle-plugin` shu ishni qiladi (`jrx:compile` va `jrx:bundle` ning Gradle varianti; bundle kodi ikkalasida bir xil: `jreact.compiler.Bundler`):
+
+```groovy
+plugins {
+    id 'java'
+    id 'dev.jreact.jrx'
+}
+repositories { mavenLocal(); mavenCentral() }
+dependencies { implementation 'dev.jreact:jreact-web:0.1.0-SNAPSHOT' }
+
+jreact {
+    // jrxDirs.from('src/main/jrx')                       // standart
+    // webDirectory = layout.buildDirectory.dir('web')    // TeaVM chiqishi (app.js, index.html)
+    // cssFile = layout.buildDirectory.file('tailwind/app.css')
+    // hash = true; compress = true; publicPath = '/'
+}
+```
+
+| Task | Nima qiladi |
+|---|---|
+| `jrxCompile` | `src/main/jrx` dagi `.jrx` -> `build/generated/sources/jrx` (`compileJava` shunga bog'liq; xato `Fayl.jrx:qator:ustun` bilan) |
+| `jrxBundle` | TeaVM chiqishi -> `build/resources/main/jreact` (hash li `assets/app.<hash>.js`, `.gz`, `index.html`, `manifest.json`); `jar` shunga bog'liq |
+
+TeaVM'ning o'zini (`org.teavm` plagini) o'zingiz ulaysiz va `jrxBundle` ni undan keyin ishlating: `jrxBundle { dependsOn 'generateJavaScript' }`. Plagin hozircha `mvn install` dan keyin `mavenLocal()` orqali olinadi. Sinash: `./build.sh gradle-plugin` (TestKit, 3 ta test).
+
+**Hozircha yo'q:** `jreact` CLI faqat Maven loyihalari bilan ishlaydi (`new/dev/build` Gradle'ni bilmaydi), Gradle uchun TeaVM + Spring Boot shabloni yo'q. Plagin TeaVM'ning Gradle plagini bilan birga sinab ko'rilmagan.
+
 ### `jreact-spring-boot-starter`
 
 Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
@@ -664,7 +694,7 @@ Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
 Maven plagini `jrx:bundle` ham beradi (client modulida avtomatik): TeaVM natijasini hash'lab `target/classes/jreact/` ga qo'yadi, `index.html` ni yangilaydi, `manifest.json` yozadi.
 Spring Security ishlatsangiz va `/` ni ochiq qilmasangiz, UI ham login talab qiladi: starter filtr emas, oddiy resource handler.
 
-**Hozircha yo'q** (reja): `@ServerApi` da `Optional`, sana/vaqt va generik tiplar, Gradle plagini, `context-path` bilan ishlash (asset yo'llari `/` dan boshlanadi), `shared/` o'zgarganda tezroq qayta yig'ish.
+**Hozircha yo'q** (reja): `@ServerApi` da `Optional`, sana/vaqt va generik tiplar, `context-path` bilan ishlash (asset yo'llari `/` dan boshlanadi), `shared/` o'zgarganda tezroq qayta yig'ish.
 
 ## Stillar: CSS, Sass, Tailwind
 
@@ -924,7 +954,8 @@ root.reconciler().setWarningHandler(msg -> log.warn(msg)); // default: System.er
 | `./build.sh dev [port] [ilova...]` | dev server (`tools/dev-server.js`): qayta yig'ish + sahifani yangilash |
 | `./build.sh examples` | Tailwind namunalari (kanban, shop, dashboard, landing, blog, contacts) -> `examples/dist/` (Maven + node) |
 | `./build.sh examples-test` | shuni yig'ib, jsdom'da bosib tekshiradi |
-| `./build.sh spring-e2e` | `jreact new` -> `build` -> jar'ni ishga tushirib, ilovani jsdom'da bosib tekshiradi (Maven, node) |
+| `./build.sh gradle-plugin` | Gradle plaginini yig'adi va TestKit bilan sinaydi (Maven, Gradle) |
+| `./build.sh spring-e2e` | `jreact new` -> `build` -> jar'ni ishga tushirib, ilovani jsdom'da bosib tekshiradi (Maven, node). `E2E_BROWSER=1` bilan qo'shimcha haqiqiy Chromium'da (Playwright; birinchi marta `cd examples && npx playwright install chromium`; o'z brauzeringiz uchun `E2E_CHROMIUM=<yo'l>`) |
 | `./build.sh bench [n]` | brauzerda benchmark: JReact vs React 18 vs vanilla (Maven, node, Brave/Chrome) |
 | `./build.sh lsp` | language server jar'i: `build/jrx-lsp.jar` |
 | `./editors/vscode-jrx/install.sh` | VS Code kengaytmasini o'rnatadi (jar, npm, symlink) |
@@ -1047,6 +1078,10 @@ Xulosa: JReact shu jadvalda React 18'dan taxminan 1.4 dan 2.4 baravargacha sekin
 
 Qanday o'qish kerak: bu bitta mashina va bitta jadval, shuning uchun mutlaq raqamlarga emas, nisbatlarga qarang; ikkala tomonda ham `memo` ishlatilmagan (`React.memo`, `MemoComponent`), shuning uchun ularning ta'siri o'lchanmagan. Profil qilinmagan va optimallashtirilmagan: sekinlikning aniq sababi (fiber ajratish, `Attrs` farqlash, TeaVM JSO chaqiruvlari) hali ma'lum emas.
 
+## CI
+
+`.github/workflows/ci.yml` (GitHub Actions) har push va PR da ishlaydi: `./build.sh test`, processor/starter/CLI testlari, `gradle-plugin`, `examples-test` va `spring-e2e`. Workflow GitHub'da hali ishga tushirilmagan (repo'ga push qilingach birinchi natija ko'rinadi).
+
 ## Maven Central'ga chiqarish
 
 Sozlama tayyor (`pom.xml`: metadata, `release` profili), lekin haqiqiy chiqarish uchun sizdan 4 narsa kerak:
@@ -1113,6 +1148,7 @@ jreact/
 │   └── src/test/.../DomTest.java     # 19 ta test (soxta DOM)
 ├── jreact-web/                       # brauzer bog'lamalari (TeaVM JSO): JReactWeb, JsDomOps, JsTimers...
 ├── jreact-spring-boot-starter/       # Spring Boot starter: hash'li assetlar, SPA fallback, dev reload (19 ta JUnit testi, RPC bilan)
+├── jreact-gradle-plugin/             # Gradle plagini dev.jreact.jrx: jrxCompile, jrxBundle (alohida Gradle build, 3 ta TestKit test)
 ├── jreact-api/                       # @ServerApi, Rpc, RpcException, Wire: generatsiya qilingan kod ishlatadigan runtime (JVM va TeaVM)
 ├── jreact-processor/                 # @ServerApi annotation processor: Client, Dispatcher, Wire generatsiyasi (11 ta test)
 ├── jreact-cli/                       # `jreact` buyrug'i (picocli): new, dev, build, start, test, doctor, docker; shablon resources/templates/spring

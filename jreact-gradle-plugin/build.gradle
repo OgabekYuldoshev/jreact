@@ -1,0 +1,42 @@
+plugins {
+    id 'java-gradle-plugin'
+    id 'maven-publish'
+}
+
+group = 'dev.jreact'
+version = '0.1.0-SNAPSHOT'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+repositories {
+    mavenLocal()       // dev.jreact:jreact-compiler comes from `mvn install` of this repository (until it is on Maven Central)
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'dev.jreact:jreact-compiler:0.1.0-SNAPSHOT'
+    testImplementation platform('org.junit:junit-bom:5.11.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation gradleTestKit()
+}
+
+gradlePlugin {
+    plugins {
+        jreact {
+            id = 'dev.jreact.jrx'
+            implementationClass = 'dev.jreact.gradle.JReactPlugin'
+            displayName = 'JReact'
+            description = 'Compiles .jrx files to Java and bundles the TeaVM output for a server (hashed assets, gzip).'
+        }
+    }
+}
+
+tasks.withType(Test).configureEach {
+    useJUnitPlatform()
+    // the functional test builds a sample project that needs the framework jars: they are in ~/.m2 after `mvn install`
+    systemProperty 'jreact.version', version
+}

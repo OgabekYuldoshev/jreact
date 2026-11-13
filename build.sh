@@ -53,6 +53,13 @@ if [[ "${1:-}" == "examples" || "${1:-}" == "examples-test" ]]; then
   exit 0
 fi
 
+# Gradle plugin (dev.jreact.jrx): installs the compiler and core to ~/.m2, then builds and tests the plugin with TestKit
+#   ./build.sh gradle-plugin   (needs Maven and Gradle)
+if [[ "${1:-}" == "gradle-plugin" ]]; then
+  mvn -B -q install -DskipTests -pl jreact-compiler,jreact-core -am
+  exec gradle --no-daemon -p jreact-gradle-plugin build publishToMavenLocal
+fi
+
 # Spring Boot + JReact end to end: jreact new, jreact build, run the jar, click through the app in jsdom
 #   ./build.sh spring-e2e      (needs Maven, node + npm; the first run downloads Tailwind)
 if [[ "${1:-}" == "spring-e2e" ]]; then
