@@ -676,9 +676,38 @@ jreact {
 | `jrxCompile` | `src/main/jrx` dagi `.jrx` -> `build/generated/sources/jrx` (`compileJava` shunga bog'liq; xato `Fayl.jrx:qator:ustun` bilan) |
 | `jrxBundle` | TeaVM chiqishi -> `build/resources/main/jreact` (hash li `assets/app.<hash>.js`, `.gz`, `index.html`, `manifest.json`); `jar` shunga bog'liq |
 
-TeaVM'ning o'zini (`org.teavm` plagini) o'zingiz ulaysiz va `jrxBundle` ni undan keyin ishlating: `jrxBundle { dependsOn 'generateJavaScript' }`. Plagin hozircha `mvn install` dan keyin `mavenLocal()` orqali olinadi. Sinash: `./build.sh gradle-plugin` (TestKit, 3 ta test).
+TeaVM uchun rasmiy `org.teavm` Gradle plagini (0.16.0) ishlatiladi. To'liq ishlaydigan `build.gradle` (todo namunasi bilan sinalgan: `gradle jar` -> `build/resources/main/jreact/assets/app.<hash>.js`):
 
-**Hozircha yo'q:** `jreact` CLI faqat Maven loyihalari bilan ishlaydi (`new/dev/build` Gradle'ni bilmaydi), Gradle uchun TeaVM + Spring Boot shabloni yo'q. Plagin TeaVM'ning Gradle plagini bilan birga sinab ko'rilmagan.
+```groovy
+plugins {
+    id 'java'
+    id 'dev.jreact.jrx' version '0.1.0-SNAPSHOT'
+    id 'org.teavm' version '0.16.0'
+}
+repositories { mavenLocal(); mavenCentral() }
+dependencies {
+    implementation 'dev.jreact:jreact-web:0.1.0-SNAPSHOT'
+    implementation 'org.teavm:teavm-jso:0.16.0'
+    implementation 'org.teavm:teavm-classlib:0.16.0'
+    implementation 'org.teavm:teavm-jso-impl:0.16.0'
+}
+teavm.js {
+    mainClass = 'app.WebMain'
+    targetFileName = 'app.js'
+}
+// TeaVM'ning app.js + sahifa -> build/web; jrxBundle shuni hash li assetlarga aylantiradi
+tasks.register('assembleWeb', Sync) {
+    dependsOn 'generateJavaScript'
+    from(layout.buildDirectory.dir('generated/teavm/js'))
+    from('src/main/webapp')              // index.html
+    into(layout.buildDirectory.dir('web'))
+}
+jrxBundle { dependsOn 'assembleWeb' }
+```
+
+`settings.gradle` da `pluginManagement { repositories { mavenLocal(); gradlePluginPortal() } }` kerak (plagin hozircha `mvn install`/`./build.sh gradle-plugin` dan keyin `mavenLocal()` orqali olinadi). Sinash: `./build.sh gradle-plugin` (TestKit, 3 ta test).
+
+**Hozircha yo'q:** `jreact` CLI faqat Maven loyihalari bilan ishlaydi (`new/dev/build` Gradle'ni bilmaydi), Gradle uchun TeaVM + Spring Boot shabloni yo'q. TeaVM bilan sinov qo'lda qilingan (sahifa brauzerda ochilmagan), avtomatik testda yo'q.
 
 ### `jreact-spring-boot-starter`
 
