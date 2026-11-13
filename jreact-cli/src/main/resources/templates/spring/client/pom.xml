@@ -45,7 +45,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- src/main/webapp (index.html, favicon...) -> target/web -->
+            <!-- src/main/webapp (favicon, images, head.html...) -> target/web -->
             <plugin>
                 <artifactId>maven-resources-plugin</artifactId>
                 <version>3.3.1</version>
@@ -61,7 +61,7 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- compile: .jrx -> .java. bundle: hashed app.js/app.css + index.html + .gz -> target/classes/jreact -->
+            <!-- compile: .jrx -> .java. bundle: hashed app.js/app.css + generated index.html + .gz -> target/classes/jreact -->
             <plugin>
                 <groupId>dev.jreact</groupId>
                 <artifactId>jreact-maven-plugin</artifactId>
@@ -74,6 +74,13 @@
                         <configuration>
                             <hash>${jreact.hash}</hash>
                             <compress>${jreact.compress}</compress>
+                            <!-- index.html is generated at build time; to add to its head (analytics, Open Graph, fonts) put <head>...</head> here
+                                 or HTML in src/main/webapp/head.html. Or write your own src/main/webapp/index.html and this is ignored. -->
+                            <title>{{name}}</title>
+                            <lang>en</lang>
+                            <htmlClass>h-full</htmlClass>
+                            <bodyClass>h-full bg-slate-50 text-slate-900 antialiased</bodyClass>
+                            <rootClass>min-h-full</rootClass>
                         </configuration>
                     </execution>
                 </executions>

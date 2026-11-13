@@ -4,7 +4,6 @@ client/src/main/jrx/__pkg__/client/ErrorPage.jrx
 client/src/main/jrx/__pkg__/client/TodoPage.jrx
 client/src/main/jrx/__pkg__/client/WebMain.jrx
 client/src/main/styles/app.css
-client/src/main/webapp/index.html
 jreact.properties
 README.md
 server/src/main/java/__pkg__/server/Application.java

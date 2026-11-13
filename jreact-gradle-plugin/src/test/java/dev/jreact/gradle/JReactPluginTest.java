@@ -94,4 +94,25 @@ class JReactPluginTest {
         // the jar carries the built UI
         assertFalse(Files.list(project.resolve("build/libs")).findAny().isEmpty());
     }
+
+    @Test
+    void jrxBundleGeneratesIndexFromTheJreactBlock() throws IOException {
+        Files.writeString(project.resolve("build.gradle"), Files.readString(project.resolve("build.gradle")) + """
+                jreact {
+                    title = 'Shelf'
+                    bodyClass = 'bg-white'
+                    head = '<meta name="description" content="books">'
+                }
+                """);
+        Path web = Files.createDirectories(project.resolve("build/web"));
+        Files.writeString(web.resolve("app.js"), "console.log('hi');");
+        Files.writeString(web.resolve("head.html"), "<link rel=\"preconnect\" href=\"https://fonts.example\">");
+
+        assertEquals(TaskOutcome.SUCCESS, gradle("jar").build().task(":jrxBundle").getOutcome());
+        Path out = project.resolve("build/resources/main/jreact");
+        String index = Files.readString(out.resolve("index.html"));
+        assertTrue(index.contains("<title>Shelf</title>") && index.contains("<body class=\"bg-white\">"), index);
+        assertTrue(index.contains("content=\"books\"") && index.contains("fonts.example") && index.contains("<script>main();</script>"), index);
+        assertFalse(Files.exists(out.resolve("head.html")));
+    }
 }

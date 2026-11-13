@@ -40,6 +40,24 @@ public abstract class JrxBundleTask extends DefaultTask {
     @Input
     public abstract Property<String> getPublicPath();
 
+    @Input
+    public abstract Property<String> getTitle();
+
+    @Input
+    public abstract Property<String> getLang();
+
+    @Input
+    public abstract Property<String> getHtmlClass();
+
+    @Input
+    public abstract Property<String> getBodyClass();
+
+    @Input
+    public abstract Property<String> getRootClass();
+
+    @Input
+    public abstract Property<String> getHead();
+
     @OutputDirectory
     public abstract DirectoryProperty getOutputDirectory();
 
@@ -52,6 +70,7 @@ public abstract class JrxBundleTask extends DefaultTask {
         Bundler.Result r = Bundler.bundle(getWebDirectory().get().getAsFile().toPath(),
                 getCssFile().isPresent() ? getCssFile().get().getAsFile().toPath() : null,
                 getOutputDirectory().get().getAsFile().toPath(), getHash().get(), getCompress().get(), getPublicPath().get(),
+                new Bundler.Page(getTitle().get(), getLang().get(), getHtmlClass().get(), getBodyClass().get(), getRootClass().get(), getHead().get()),
                 message -> getLogger().warn("jrxBundle: " + message));
         getLogger().lifecycle("jrxBundle: " + r.message());
     }

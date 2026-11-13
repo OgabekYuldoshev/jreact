@@ -553,7 +553,7 @@ jreact dev                                            # http://localhost:8080
 shop/
 ├── jreact.properties        # loyiha ildizi belgisi (port va modul papkalari)
 ├── shared/                  # ikki tomon ishlatadigan tiplar va @ServerApi interfeyslar: Todo, TodoApi
-├── client/                  # UI: src/main/jrx, src/main/styles/app.css (Tailwind), src/main/webapp/index.html
+├── client/                  # UI: src/main/jrx, src/main/styles/app.css (Tailwind); index.html build vaqtida yaratiladi (src/main/webapp ixtiyoriy: favicon, head.html)
 └── server/                  # Spring Boot: API (TodoService implements TodoApi) va tayyor UI'ni beradi
 ```
 
@@ -739,7 +739,22 @@ Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
 - `jreact.location=classpath:/jreact/` va `jreact.enabled=false`;
 - dev rejim (`jreact.dev-dir=client/target/classes/jreact`, `jreact dev` o'zi beradi): fayllar to'g'ridan-to'g'ri papkadan, kesh yo'q, sahifaga qayta yuklash skripti qo'shiladi (`/__jreact/version` tekshiriladi), build xatosi sahifada overlay bo'lib chiqadi. Production'da bu endpoint'lar umuman yo'q.
 
-Maven plagini `jrx:bundle` ham beradi (client modulida avtomatik): TeaVM natijasini hash'lab `target/classes/jreact/` ga qo'yadi, `index.html` ni yangilaydi, `manifest.json` yozadi.
+Maven plagini `jrx:bundle` ham beradi (client modulida avtomatik): TeaVM natijasini hash'lab `target/classes/jreact/` ga qo'yadi, `index.html` ni yaratadi (yoki o'zingizniki bo'lsa yangilaydi), `manifest.json` yozadi.
+
+**`index.html` ni yozish shart emas.** Spring loyihada (`jreact new`) `src/main/webapp/index.html` yo'q: `jrx:bundle` / `jrxBundle` uni build vaqtida yaratadi (`<div id="root">`, hash li CSS va JS, `main()` chaqiruvi). Sahifaga qo'shiladigan narsalar plagin sozlamasida, `client/pom.xml` da:
+
+```xml
+<configuration>
+    <title>Library</title>
+    <lang>en</lang>
+    <htmlClass>h-full</htmlClass>
+    <bodyClass>h-full bg-slate-50</bodyClass>
+    <rootClass>min-h-full</rootClass>
+    <head><![CDATA[<meta name="description" content="Kitoblar">]]></head>
+</configuration>
+```
+
+Gradle'da shu nomlar `jreact { title = 'Library'; bodyClass = '...'; head = '<meta ...>' }` ichida. Uzunroq narsa (analytics, Open Graph, shrift) uchun `src/main/webapp/head.html` yozing: ichidagi HTML `</head>` oldiga qo'shiladi (sozlamadagi `head` dan keyin). `favicon.svg/.ico/.png` bo'lsa avtomatik ulanadi. To'liq nazorat kerak bo'lsa `src/main/webapp/index.html` yozing: u ishlatiladi (faqat `app.js`/`app.css` yo'llari almashtiriladi), yuqoridagi sozlamalar esa e'tiborga olinmaydi.
 Spring Security ishlatsangiz va `/` ni ochiq qilmasangiz, UI ham login talab qiladi: starter filtr emas, oddiy resource handler.
 
 **Hozircha yo'q** (reja): `@ServerApi` da generik tiplar, `BigDecimal`/`ZonedDateTime`, `shared/` o'zgarganda tezroq qayta yig'ish.

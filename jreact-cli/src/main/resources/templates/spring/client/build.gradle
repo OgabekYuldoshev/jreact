@@ -27,9 +27,16 @@ teavm.js {
 jreact {
     hash = !dev
     compress = !dev
+    // index.html is generated at build time. To add to its head (analytics, Open Graph, fonts) set head = '<meta ...>'
+    // or put HTML in src/main/webapp/head.html. Or write your own src/main/webapp/index.html and these are ignored.
+    title = '{{name}}'
+    lang = 'en'
+    htmlClass = 'h-full'
+    bodyClass = 'h-full bg-slate-50 text-slate-900 antialiased'
+    rootClass = 'min-h-full'
 }
 
-// TeaVM's app.js + src/main/webapp (index.html...) -> build/web; jrxBundle turns that into hashed assets
+// TeaVM's app.js + src/main/webapp (favicon, head.html...) -> build/web; jrxBundle turns that into hashed assets
 tasks.register('assembleWeb', Sync) {
     dependsOn 'generateJavaScript'
     from(layout.buildDirectory.dir('generated/teavm/js'))

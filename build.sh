@@ -112,6 +112,7 @@ if [[ "${1:-}" == "test" ]]; then
   echo "== compiler tests"
   $JAVAC -cp $B/compiler -d $B/compiler-test $(find jreact-compiler/src/test/java -name '*.java')
   java -cp $B/compiler:$B/compiler-test jreact.compiler.TranspilerTest
+  java -cp $B/compiler:$B/compiler-test jreact.compiler.BundlerTest
   echo "== scheduler tests"
   $JAVAC -cp $B/scheduler -d $B/scheduler-test $(find jreact-scheduler/src/test/java -name '*.java')
   java -cp $B/scheduler:$B/scheduler-test jreact.scheduler.SchedulerTest

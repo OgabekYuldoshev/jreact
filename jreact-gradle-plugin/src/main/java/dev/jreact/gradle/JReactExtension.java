@@ -15,6 +15,10 @@ import org.gradle.api.provider.Property;
  *     hash = true                           // content hash in asset names
  *     compress = true                       // .gz next to js, css, html
  *     publicPath = '/'
+ *     // the generated index.html (when src/main/webapp has none)
+ *     title = 'My app'; lang = 'en'
+ *     htmlClass = 'h-full'; bodyClass = 'h-full bg-white'; rootClass = 'min-h-full'
+ *     head = '<meta name="description" content="...">'     // or a file src/main/webapp/head.html
  * }
  * </pre>
  */
@@ -35,4 +39,17 @@ public abstract class JReactExtension {
 
     /** URL prefix of the assets in index.html. */
     public abstract Property<String> getPublicPath();
+
+    public abstract Property<String> getTitle();
+
+    public abstract Property<String> getLang();
+
+    public abstract Property<String> getHtmlClass();
+
+    public abstract Property<String> getBodyClass();
+
+    public abstract Property<String> getRootClass();
+
+    /** Raw HTML for the end of head. */
+    public abstract Property<String> getHead();
 }

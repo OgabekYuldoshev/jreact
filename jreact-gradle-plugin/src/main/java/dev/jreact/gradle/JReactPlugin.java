@@ -26,6 +26,12 @@ public class JReactPlugin implements Plugin<Project> {
         ext.getHash().convention(true);
         ext.getCompress().convention(true);
         ext.getPublicPath().convention("/");
+        ext.getTitle().convention("App");
+        ext.getLang().convention("en");
+        ext.getHtmlClass().convention("");
+        ext.getBodyClass().convention("");
+        ext.getRootClass().convention("");
+        ext.getHead().convention("");
 
         project.getPlugins().withType(JavaPlugin.class, java -> {
             SourceSet main = project.getExtensions().getByType(JavaPluginExtension.class).getSourceSets().getByName(SourceSet.MAIN_SOURCE_SET_NAME);
@@ -52,6 +58,12 @@ public class JReactPlugin implements Plugin<Project> {
                 t.getHash().set(ext.getHash());
                 t.getCompress().set(ext.getCompress());
                 t.getPublicPath().set(ext.getPublicPath());
+                t.getTitle().set(ext.getTitle());
+                t.getLang().set(ext.getLang());
+                t.getHtmlClass().set(ext.getHtmlClass());
+                t.getBodyClass().set(ext.getBodyClass());
+                t.getRootClass().set(ext.getRootClass());
+                t.getHead().set(ext.getHead());
                 t.getOutputDirectory().set(project.getLayout().getBuildDirectory().dir("resources/main/jreact"));
             });
             project.getTasks().named(JavaPlugin.JAR_TASK_NAME, t -> t.dependsOn(bundle));
