@@ -681,6 +681,30 @@ Xatolar kompilyatsiya vaqtida sinfda ko'rinadi: ikki sahifa bir yo'lda (`/books/
 
 Qo'shish kerak: client modulga `jreact-processor` (Maven: `maven-compiler-plugin` ning `annotationProcessorPaths`, Gradle: `annotationProcessor`; `jreact new` shablonida bor). Procesor `dev.jreact.generated.Pages.routes()` va tayyor `PagesApp` (`ClientApp`) yaratadi: `WebMain` da `new PagesApp()`, serverda `jreact.ssr.app=dev.jreact.generated.PagesApp`. Namuna: `examples/fullstack-crud` (6 ta sahifa, bitta layout, 404). Qo'lda `RouteObject` yozish ham mumkin, `Pages.routes()` bilan birga ishlatiladi.
 
+### Sahifa sarlavhasi va meta teglar (`<head>`)
+
+`index.html` endi yaratiladi, shuning uchun har sahifa o'z `<title>` va `<meta>` larini o'zi beradi. Server-side renderda ular HTML'ning `<head>` iga yoziladi (qidiruv tizimlari va havola preview'lari ko'radi), brauzerda navigatsiya bilan almashadi:
+
+```java
+@Page(value = "/books/new", title = "New book · Library")      // statik sarlavha
+
+// ma'lumotga bog'liq sarlavha: komponent ichida
+useHead(Head.title(book.title() + " · Library")
+    .meta("description", book.author())                          // <meta name="description" ...>
+    .property("og:title", book.title())                          // <meta property="og:title" ...> (Open Graph)
+    .link("canonical", "https://example.com/books/" + book.id()));   // <link rel="canonical" ...>
+```
+
+| Qoida | Ma'nosi |
+|---|---|
+| Eng chuqur komponent yutadi | sahifaning sarlavhasi layout'nikini bosadi; layout'ga default sarlavha qo'yish mumkin |
+| Kalit | bir xil `name` / `property` / `rel` li teg takrorlanmaydi, almashtiriladi |
+| Qiymatlar escape qilinadi | `"` `<` `&` xavfsiz |
+| Sahifa ketsa | uning tegi olib tashlanadi, ostidagisi yoki asl sarlavha qaytadi |
+| `<title>` | `index.html` dagisini (`jrx:bundle` ning `title` sozlamasi) almashtiradi; sahifa sarlavha bermasa o'sha qoladi |
+
+Brauzer qo'yadigan teglarda `data-jreact-head` belgisi bor (server ham shuni yozadi), shuning uchun server render qilgan sahifa gidratatsiyada takrorlanmaydi. Namuna: `examples/fullstack-crud` (`BookDetail`).
+
 ### Xavfsizlik (Spring Security)
 
 Spring Security qo'shsangiz hammasi odatdagidek ishlaydi: RPC (`/_rpc/...`) oddiy controller kabi filtr zanjiridan o'tadi, bean metodlaridagi `@PreAuthorize` ishlaydi, server-side render loader'lari ham **joriy foydalanuvchi sifatida** (shu so'rov oqimida) chaqiriladi. Ikki narsa qo'shilgan:

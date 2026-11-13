@@ -9,7 +9,7 @@ import static jreact.router.RouterHooks.*;
 import dev.jreact.examples.library.shared.*;
 
 /** The list: search box, status tabs with counts, the books of this page, and previous/next. All of it is in the URL (?q=&status=&page=). */
-@Page("/")
+@Page(value = "/", title = "Library")
 public class BookList extends Component<BookList.Props> {
 
     public record Props() {}

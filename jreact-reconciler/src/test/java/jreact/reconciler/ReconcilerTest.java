@@ -7,6 +7,7 @@ import jreact.Element;
 import jreact.ErrorBoundary;
 import jreact.Event;
 import jreact.EventHandler;
+import jreact.Head;
 import jreact.Jsx;
 import jreact.MemoComponent;
 import jreact.Ref;
@@ -311,6 +312,43 @@ public final class ReconcilerTest {
             AttrsDiff gone = AttrsDiff.between(prev, new Attrs());
             eq(3, gone.attrCount());
             check(gone.eventCount() == 1 && gone.eventHandler(0) == null, "a removed handler is a null handler");
+        });
+
+        test("useHead: applied as an effect, the deeper component has the greater depth, and the cleanup runs on unmount", () -> {
+            List<String> log = new ArrayList<>();
+            jreact.HeadHost.install((head, depth) -> { log.add("apply " + head.title() + "@" + depth); return () -> log.add("undo " + head.title()); });
+            try {
+                class Child extends Component<Child.Props> {
+                    record Props() {}
+                    public Element render(Props p) { useHead(Head.title("child")); return el("i"); }
+                }
+                class Parent extends Component<Parent.Props> {
+                    record Props(boolean showChild) {}
+                    public Element render(Props p) { useHead(Head.title("parent")); return el("div", p.showChild() ? c(Child.class, Child::new, null, new Child.Props()) : null); }
+                }
+                Env e = new Env();
+                e.render(c(Parent.class, Parent::new, null, new Parent.Props(true)));
+                e.flush();
+                eq("[apply child@3, apply parent@1]", log.toString());          // effects run child first: the depth is what tells who wins
+                log.clear();
+                e.render(c(Parent.class, Parent::new, null, new Parent.Props(false)));
+                e.flush();
+                eq("[undo child]", log.toString());                               // the parent's head did not change: not applied again
+            } finally {
+                jreact.HeadHost.install(null);
+            }
+        });
+
+        test("Head: merge, escaping and the tag key", () -> {
+            Head a = Head.title("A").meta("description", "one").property("og:title", "x");
+            Head b = Head.title("B").meta("description", "two <&\">").link("canonical", "/c");
+            Head m = a.merge(b);
+            eq("B", m.title());
+            eq("<meta property=\"og:title\" content=\"x\" data-jreact-head><meta name=\"description\" content=\"two &lt;&amp;&quot;&gt;\" data-jreact-head><link rel=\"canonical\" href=\"/c\" data-jreact-head>", m.tagsHtml());
+            eq("<title>A &amp; B</title>", Head.title("A & B").titleHtml());
+            eq("", Head.EMPTY.titleHtml());
+            eq("A", Head.title("A").merge(Head.EMPTY).title());                   // no title in the top one: the lower one stays
+            eq(1, Head.title("A").meta("k", "1").meta("k", "2").tags().size());    // the same key replaces
         });
 
         test("mounts a host tree", () -> {

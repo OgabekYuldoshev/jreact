@@ -23,6 +23,13 @@ final class FiberHooks implements Hooks.Dispatcher {
     private Hook currentCursor;         // last committed hook consumed
     private Hook first, last;
 
+    @Override
+    public int depth() {
+        int d = 0;
+        for (Fiber f = wip.ret; f != null; f = f.ret) d++;
+        return d;
+    }
+
     FiberHooks(Reconciler<?> reconciler, Fiber wip, Fiber current) {
         this.reconciler = reconciler; this.wip = wip; this.current = current;
     }

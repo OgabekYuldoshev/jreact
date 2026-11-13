@@ -12,6 +12,9 @@ public final class Hooks {
         <T> T useMemo(Supplier<T> compute, Object[] deps);
         <T> Ref<T> useRef(T initial);
         <T> T useContext(Context<T> context);
+
+        /** How deep in the component tree the rendering component is (the root is 0). Used to let the deepest {@link Head} win. */
+        default int depth() { return 0; }
     }
 
     private static Dispatcher current;

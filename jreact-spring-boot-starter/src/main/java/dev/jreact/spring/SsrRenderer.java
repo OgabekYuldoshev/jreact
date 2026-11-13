@@ -84,13 +84,20 @@ final class SsrRenderer {
                 return new Page(302, null, now.pathname() + now.search());
             }
             Element root = Jsx.c(RouterProvider.class, RouterProvider::new, null, new RouterProvider.Props(router, app.fallback()));
-            String body = ServerRenderer.renderToString(root);
+            jreact.HeadCollector.begin();                     // useHead() and @Page(title) of the components rendered below
+            String body;
+            jreact.Head head;
+            try {
+                body = ServerRenderer.renderToString(root);
+            } finally {
+                head = jreact.HeadCollector.end();
+            }
             int status = 200;
             for (Object error : s.errors().values()) {
                 status = error instanceof ErrorResponse r ? r.status() : 500;
                 break;
             }
-            return new Page(status, assemble(body, answers, contextPath), null);
+            return new Page(status, assemble(body, answers, contextPath, head), null);
         } catch (RuntimeException | IOException e) {
             log.warn("jreact ssr: {} could not be rendered on the server, the browser will render it ({})", uri, e.toString());
             return null;
@@ -100,11 +107,32 @@ final class SsrRenderer {
         }
     }
 
-    private String assemble(String body, Map<String, Object> answers, String contextPath) throws IOException {
+    private static final Pattern TITLE = Pattern.compile("<title>.*?</title>", Pattern.DOTALL | Pattern.CASE_INSENSITIVE);
+
+    /** The collected title replaces the one of index.html; the tags go to the end of head (index.html's own tags with the same key stay: write them only once). */
+    static String withHead(String page, jreact.Head head) {
+        if (head == null || (head.title() == null && head.tags().isEmpty())) return page;
+        String out = page;
+        if (head.title() != null) {
+            Matcher t = TITLE.matcher(out);
+            String title = head.titleHtml();
+            if (t.find()) out = out.substring(0, t.start()) + title + out.substring(t.end());
+            else out = insertBeforeHeadEnd(out, title);
+        }
+        return head.tags().isEmpty() ? out : insertBeforeHeadEnd(out, head.tagsHtml());
+    }
+
+    private static String insertBeforeHeadEnd(String page, String html) {
+        int end = page.toLowerCase(java.util.Locale.ROOT).indexOf("</head>");
+        return end < 0 ? html + page : page.substring(0, end) + html + page.substring(end);
+    }
+
+    private String assemble(String body, Map<String, Object> answers, String contextPath, jreact.Head head) throws IOException {
         String template = index.html(contextPath);
         Matcher m = container.matcher(template);
         if (!m.find()) throw new IOException("index.html has no empty element with the id of jreact.ssr.container-id");
         String data = answers.isEmpty() ? "" : "<script id=\"__jreact_data\" type=\"application/json\">" + Json.stringify(answers) + "</script>";
-        return template.substring(0, m.start()) + m.group(1) + body + m.group(3) + data + template.substring(m.end());
+        String page = template.substring(0, m.start()) + m.group(1) + body + m.group(3) + data + template.substring(m.end());
+        return withHead(page, head);
     }
 }

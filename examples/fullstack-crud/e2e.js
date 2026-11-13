@@ -34,6 +34,8 @@ const check = (name, ok, extra) => { console.log((ok ? 'ok   ' : 'FAIL ') + name
   check('the list shows the first page, sorted by title', titles().length === 8 && titles()[0] === 'A Philosophy of Software Design', titles());
   check('the pager and the status tabs come from the server', $('#pager').textContent.includes('23 books, page 1 of 3') && $('#tabs').textContent.includes('Lost (3)'), $('#pager').textContent);
 
+  check('the title of the page is in the document', d.title === 'Library', d.title);
+
   // paging
   click($('#next'));
   await waitFor('page 2', () => path0() === '/?page=2' && $('#pager').textContent.includes('page 2 of 3'));
@@ -67,6 +69,8 @@ const check = (name, ok, extra) => { console.log((ok ? 'ok   ' : 'FAIL ') + name
   submit($('#book-form'));
   await waitFor('detail', () => $('#book h1') && $('#book h1').textContent === 'JReact in Action');
   check('a valid form creates the book and shows it', $('#book h1').textContent === 'JReact in Action' && $('#book').textContent.includes('Borrowed') && $('#book').textContent.includes('978-1-23456-789-7'), $('#book') && $('#book').textContent);
+  await waitFor('book title', () => d.title === 'JReact in Action · Library');
+  check('the new book is the tab title (useHead)', d.title === 'JReact in Action · Library' && !!d.head.querySelector('meta[name=description]'), d.title);
   const url = w.location.pathname;
   check('the URL is /books/<id>', /^\/books\/\d+$/.test(url), url);
 
@@ -81,6 +85,8 @@ const check = (name, ok, extra) => { console.log((ok ? 'ok   ' : 'FAIL ') + name
 
   // the list counts it
   click($('header a'));
+  await waitFor('title back', () => d.title === 'Library');
+  check('going back to the list brings the list title and removes the book tags (the cleanup)', d.title === 'Library' && !d.head.querySelector('meta[name=description]'), [d.title, !!d.head.querySelector('meta[name=description]')]);
   await waitFor('home', () => $('#pager') && $('#pager').textContent.includes('24 books'));
   check('the list now has 24 books', $('#pager').textContent.includes('24 books'), $('#pager').textContent);
 

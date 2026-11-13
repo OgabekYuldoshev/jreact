@@ -20,6 +20,7 @@ public final class JReactWeb {
 
     public static DomRoot<JsNode> createRoot(JsNode container) {
         if (dev.jreact.api.Rpc.transport() == null) dev.jreact.api.Rpc.transport(new HttpTransport());     // @ServerApi clients work without setup
+        if (jreact.HeadHost.current() == null) jreact.HeadHost.install(new HeadManager());      // useHead() and @Page(title) edit document.head
         preloadServerAnswers();
         return DomRoot.create(new JsDomOps(), container, new EventLoopSchedulerHost(new JsTimers()));
     }

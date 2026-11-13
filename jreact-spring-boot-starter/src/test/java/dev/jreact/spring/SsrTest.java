@@ -29,6 +29,8 @@ class SsrTest {
         ResponseEntity<String> r = get("/", "text/html");
         assertThat(r.getStatusCode().value()).isEqualTo(200);
         String body = r.getBody();
+        assertThat(body).contains("<title>Greetings (2)</title>").doesNotContain("<title>t</title>");                    // the page's title replaces the one of index.html
+        assertThat(body).contains("<meta name=\"description\" content=\"say &quot;hi&quot; &lt;b&gt;\" data-jreact-head></head>");   // tags before </head>, escaped
         assertThat(body).contains("<div id=\"root\"><main><h1>&lt;Greetings&gt; &amp; more</h1><ul><li>a<!-- --> x<!-- -->1</li><li>b<!-- --> x<!-- -->2</li></ul></main></div>");
         assertThat(body).contains("/assets/app.beef.js");           // the rest of index.html is intact
         // the answers the loader got, script safe, keyed like the browser's calls

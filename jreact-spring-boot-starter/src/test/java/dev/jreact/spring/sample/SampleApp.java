@@ -23,6 +23,7 @@ public class SampleApp implements ClientApp {
         @SuppressWarnings("unchecked")
         public Element render(Props p) {
             List<Greeting> all = (List<Greeting>) RouterHooks.useLoaderData();
+            useHead(jreact.Head.title("Greetings (" + all.size() + ")").meta("description", "say \"hi\" <b>"));
             List<Object> items = new ArrayList<>();
             for (Greeting g : all) items.add(Jsx.el("li", g.text(), null, g.text(), " x", g.times()));
             return Jsx.el("main", null, null, Jsx.el("h1", null, null, "<Greetings> & more"), Jsx.el("ul", null, null, items));

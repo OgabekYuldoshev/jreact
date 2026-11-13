@@ -3,6 +3,7 @@ package dev.jreact.examples.library.client;
 import dev.jreact.api.Page;
 import jreact.Component;
 import jreact.Element;
+import jreact.Head;
 import jreact.State;
 import jreact.router.*;
 import static jreact.router.RouterHooks.*;
@@ -22,6 +23,8 @@ public class BookDetail extends Component<BookDetail.Props> {
     @Override
     public Element render(Props props) {
         Book b = (Book) useLoaderData();
+        // the title depends on the data: the book's own, in the browser tab, in search results and in link previews (also in the server rendered HTML)
+        useHead(Head.title(b.title() + " · Library").meta("description", b.author() + ", " + b.year()).property("og:title", b.title()));
         State<Boolean> sure = useState(false);
         return (
             <article id="book" className="max-w-xl">

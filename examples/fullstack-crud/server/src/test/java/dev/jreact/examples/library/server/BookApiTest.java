@@ -98,6 +98,9 @@ class BookApiTest {
         var page = http.exchange("/?q=fowler", HttpMethod.GET, new HttpEntity<>(html), String.class);
         assertThat(page.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(page.getBody()).contains("Refactoring").contains("Patterns of Enterprise").doesNotContain("Clean Code").contains("__jreact_data");
+        assertThat(page.getBody()).contains("<title>Library</title>");
+        var detail = http.exchange("/books/1", HttpMethod.GET, new HttpEntity<>(html), String.class).getBody();          // the title of this book, for the tab and for search engines
+        assertThat(detail).containsPattern("<title>[^<]+ · Library</title>").contains("<meta name=\"description\"").contains("<meta property=\"og:title\"");
         var missing = http.exchange("/books/999999", HttpMethod.GET, new HttpEntity<>(html), String.class);
         assertThat(missing.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(missing.getBody()).contains("There is no book 999999");

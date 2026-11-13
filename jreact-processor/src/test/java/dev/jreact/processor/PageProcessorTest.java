@@ -120,6 +120,23 @@ class PageProcessorTest {
     }
 
     @Test
+    @SuppressWarnings("unchecked")
+    void aStaticTitleWrapsThePageInAHeadScope(@TempDir Path dir) throws Exception {
+        Result r = compile(dir, Map.of(
+                "app.Home", component("app", "@Page(value = \"/\", title = \"Home \\\"quoted\\\" \\\\ page\")", "Home", ""),
+                "app.About", component("app", "@Page(\"/about\")", "About", "")));
+        assertEquals(List.of(), r.errors());
+        List<RouteObject> routes = (List<RouteObject>) r.loader().loadClass("dev.jreact.generated.Pages").getMethod("routes").invoke(null);
+        RouteObject home = routes.stream().filter(x -> "Home".equals(x.id())).findFirst().orElseThrow();
+        RouteObject about = routes.stream().filter(x -> "About".equals(x.id())).findFirst().orElseThrow();
+        assertEquals(jreact.HeadScope.class, home.element().type());
+        jreact.HeadScope.Props props = (jreact.HeadScope.Props) home.element().props();
+        assertEquals("Home \"quoted\" \\ page", props.head().title());
+        assertEquals("app.Home", props.child().type().getName());
+        assertEquals("app.About", about.element().type().getName());            // no title: no wrapper
+    }
+
+    @Test
     void mistakesAreCompileErrorsOnTheClass(@TempDir Path dir) throws Exception {
         assertTrue(first(dir, Map.of(
                 "app.BookDetail", component("app", "@Page(\"/books/:id\")", "BookDetail", ""),

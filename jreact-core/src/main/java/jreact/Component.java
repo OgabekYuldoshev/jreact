@@ -38,6 +38,19 @@ public abstract class Component<P> {
     /** Effect with cleanup: {@code useEffect(() -> { sub(); return () -> unsub(); }, id)}. */
     protected final void useEffect(Effect effect, Object... deps) { Hooks.current().useEffect(effect, deps); }
 
+    /**
+     * Puts the title and tags of {@code head} into {@code <head>}: on the server while the page is rendered, in the browser as an effect
+     * (so it follows navigation). The deepest component wins, so a page overrides its layout. See {@link Head}.
+     */
+    protected final void useHead(Head head) {
+        if (HeadCollector.collecting()) { HeadCollector.add(head); return; }
+        int depth = Hooks.current().depth();
+        Hooks.current().useEffect(() -> {
+            HeadHost host = HeadHost.current();
+            return host == null ? null : host.apply(head, depth);
+        }, new Object[] { head });
+    }
+
     /** Recomputed on every render. */
     protected final <T> T useMemo(Supplier<T> compute) { return useMemo(compute, (Object[]) null); }
 

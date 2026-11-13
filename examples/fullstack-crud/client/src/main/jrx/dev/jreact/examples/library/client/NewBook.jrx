@@ -7,7 +7,7 @@ import jreact.router.*;
 import dev.jreact.examples.library.shared.*;
 
 /** /books/new: the create form (BookForm); its action saves. */
-@Page("/books/new")
+@Page(value = "/books/new", title = "New book · Library")
 public class NewBook extends Component<NewBook.Props> {
 
     public record Props() {}

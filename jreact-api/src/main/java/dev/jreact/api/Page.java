@@ -21,6 +21,7 @@ import java.lang.annotation.Target;
  * <ul>
  *   <li>{@code "/"} is the home page, {@code "/books/:id"} has a parameter ({@code a.params().get("id")}), {@code "/docs/*"} matches the rest of the URL.</li>
  *   <li>A page is nested in the {@link Layout} whose path is the longest prefix of its path. A page at the same path as a layout is that layout's index page.</li>
+ *   <li>{@code title}: the page's {@code <title>}; dynamic titles and {@code <meta>} tags: {@code useHead(Head.title(...).meta(...))}.</li>
  *   <li>{@code error}: shown instead of the page when its loader or action fails (a component with an empty {@code Props}).</li>
  *   <li>Two optional {@code public static} methods, found by name: {@code loader(DataArgs)} and {@code action(DataArgs)}; they may return a {@code Promise}.</li>
  * </ul>
@@ -32,6 +33,12 @@ import java.lang.annotation.Target;
 public @interface Page {
     /** The URL path, from the root of the app (the servlet context path is added by the router). */
     String value();
+
+    /**
+     * The page's {@code <title>} (also in the server rendered HTML). For a title that depends on the data, call {@code useHead(Head.title(...))}
+     * in the component instead; the deepest wins.
+     */
+    String title() default "";
 
     /** Component shown when this page's loader or action fails; {@code Void.class} (default): the closest layout's error page, else the built in one. */
     Class<?> error() default Void.class;

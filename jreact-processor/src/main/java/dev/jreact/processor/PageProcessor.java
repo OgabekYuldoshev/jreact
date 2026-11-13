@@ -44,13 +44,14 @@ public final class PageProcessor extends AbstractProcessor {
         final String path;
         final List<String> segments;
         final TypeElement error;
+        final String title;
         final boolean loader, action;
         String id;
         Node parent;                                         // the enclosing layout (null: top level)
         final List<Node> children = new ArrayList<>();
 
-        Node(boolean layout, TypeElement type, String path, List<String> segments, TypeElement error, boolean loader, boolean action) {
-            this.layout = layout; this.type = type; this.path = path; this.segments = segments; this.error = error; this.loader = loader; this.action = action;
+        Node(boolean layout, TypeElement type, String path, List<String> segments, TypeElement error, String title, boolean loader, boolean action) {
+            this.title = title; this.layout = layout; this.type = type; this.path = path; this.segments = segments; this.error = error; this.loader = loader; this.action = action;
         }
     }
 
@@ -95,11 +96,13 @@ public final class PageProcessor extends AbstractProcessor {
 
         String path = null;
         TypeElement error = null;
+        String title = "";
         for (AnnotationMirror m : type.getAnnotationMirrors()) {
             if (!((TypeElement) m.getAnnotationType().asElement()).getQualifiedName().contentEquals(annotation.getQualifiedName())) continue;
             for (Map.Entry<? extends ExecutableElement, ? extends AnnotationValue> v : processingEnv.getElementUtils().getElementValuesWithDefaults(m).entrySet()) {
                 String name = v.getKey().getSimpleName().toString();
                 if (name.equals("value")) path = (String) v.getValue().getValue();
+                if (name.equals("title")) title = (String) v.getValue().getValue();
                 if (name.equals("error") && v.getValue().getValue() instanceof TypeMirror t && t.getKind() == TypeKind.DECLARED) {
                     TypeElement te = (TypeElement) ((DeclaredType) t).asElement();
                     if (!te.getQualifiedName().contentEquals("java.lang.Void")) error = te;
@@ -110,7 +113,7 @@ public final class PageProcessor extends AbstractProcessor {
         if (segments == null) return null;
         if (error != null && !isEmptyPropsComponent(error, e, "the error page of " + type.getSimpleName() + " (" + what + ")")) return null;
         boolean loader = hasStatic(type, "loader", e), action = hasStatic(type, "action", e);
-        return new Node(layout, type, "/" + String.join("/", segments), segments, error, loader, action);
+        return new Node(layout, type, "/" + String.join("/", segments), segments, error, title, loader, action);
     }
 
     /** True when {@code type} has {@code public static X name(DataArgs)}; a method of that name with another shape is an error on the class (reported as an error, which fails the build). */
@@ -263,7 +266,12 @@ public final class PageProcessor extends AbstractProcessor {
         else if (n.layout && n.segments.isEmpty()) b.append("RouteObject.of(\"/\")");
         else b.append("RouteObject.of(\"").append(String.join("/", rel)).append("\")");
         b.append(".id(\"").append(n.id).append("\")");
-        b.append(".element(").append(component(n.type)).append(")");
+        // a static title wraps the page in a HeadScope (the page's own useHead is deeper, so it wins)
+        String element = component(n.type);
+        if (n.title != null && !n.title.isEmpty()) {
+            element = "Jsx.c(jreact.HeadScope.class, jreact.HeadScope::new, null, new jreact.HeadScope.Props(jreact.Head.title(\"" + javaString(n.title) + "\"), " + element + "))";
+        }
+        b.append(".element(").append(element).append(")");
         // a page's error replaces the page (the layouts around it stay); a layout's error is a boundary INSIDE the layout: its header stays, the children are replaced
         if (n.error != null && !n.layout) b.append(".errorElement(").append(component(n.error)).append(")");
         if (n.loader) b.append(".loader(").append(n.type.getQualifiedName()).append("::loader)");
@@ -279,6 +287,17 @@ public final class PageProcessor extends AbstractProcessor {
             } else {
                 b.append(".children(\n").append(String.join(",\n", kids)).append(")");
             }
+        }
+        return b.toString();
+    }
+
+    private static String javaString(String s) {
+        StringBuilder b = new StringBuilder();
+        for (char c : s.toCharArray()) {
+            if (c == '"' || c == '\\') b.append('\\').append(c);
+            else if (c == '\n') b.append("\\n");
+            else if (c < 0x20) b.append(String.format("\\u%04x", (int) c));
+            else b.append(c);
         }
         return b.toString();
     }

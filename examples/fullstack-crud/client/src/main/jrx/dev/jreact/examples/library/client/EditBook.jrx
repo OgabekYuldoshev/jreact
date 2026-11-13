@@ -7,7 +7,7 @@ import jreact.router.*;
 import dev.jreact.examples.library.shared.*;
 
 /** /books/:id/edit: the same form, filled in by the loader; its action saves. */
-@Page("/books/:id/edit")
+@Page(value = "/books/:id/edit", title = "Edit book · Library")
 public class EditBook extends Component<EditBook.Props> {
 
     public record Props() {}

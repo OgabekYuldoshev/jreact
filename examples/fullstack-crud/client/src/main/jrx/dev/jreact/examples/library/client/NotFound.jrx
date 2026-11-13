@@ -6,7 +6,7 @@ import jreact.Element;
 import jreact.router.*;
 
 /** "/*" matches every URL that no other page has: a 404 page inside the layout. */
-@Page("/*")
+@Page(value = "/*", title = "Not found · Library")
 public class NotFound extends Component<NotFound.Props> {
 
     public record Props() {}
