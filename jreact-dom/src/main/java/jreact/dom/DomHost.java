@@ -69,8 +69,8 @@ public final class DomHost<N> implements HostConfig<N> {
 
     @Override
     public void finalizeInitialChildren(N instance, Attrs initial) {
-        initial.values().forEach((name, value) -> applyAttribute(instance, name, value));
-        initial.events().forEach((name, handler) -> setHandler(instance, name, handler));
+        for (int i = 0, n = initial.attrSize(); i < n; i++) applyAttribute(instance, initial.attrName(i), initial.attrValue(i));
+        for (int i = 0, n = initial.eventSize(); i < n; i++) setHandler(instance, initial.eventName(i), initial.eventHandler(i));
     }
 
     @Override public void appendInitialChild(N parent, N child) { ops.appendChild(parent, child); }
@@ -83,8 +83,8 @@ public final class DomHost<N> implements HostConfig<N> {
 
     @Override
     public void commitUpdate(N instance, AttrsDiff diff) {
-        diff.attrs().forEach((name, value) -> applyAttribute(instance, name, value));
-        diff.events().forEach((name, handler) -> setHandler(instance, name, handler));
+        for (int i = 0, n = diff.attrCount(); i < n; i++) applyAttribute(instance, diff.attrName(i), diff.attrValue(i));
+        for (int i = 0, n = diff.eventCount(); i < n; i++) setHandler(instance, diff.eventName(i), diff.eventHandler(i));
     }
 
     @Override public void commitTextUpdate(N textInstance, String oldText, String newText) {

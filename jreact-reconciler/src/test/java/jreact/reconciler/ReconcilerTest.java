@@ -277,6 +277,42 @@ public final class ReconcilerTest {
     // ================================================================ tests
 
     public static void main(String[] args) {
+        test("Attrs keeps insertion order, replaces in place, allows null values, views agree", () -> {
+            jreact.EventHandler h = ev -> {};
+            Attrs a = new Attrs().attr("a", 1).attr("b", null).attr("c", "x").attr("a", 2).on("onClick", h).on("onInput", null);
+            eq(3, a.attrSize());
+            eq("a=2,b=null,c=x", a.values().toString().replace("{", "").replace("}", "").replace(" ", ""));
+            eq(2, a.attrValue(a.attrIndex("a", -1)));
+            eq(-1, a.attrIndex("zzz", -1));
+            eq(2, a.eventSize());
+            eq("[a, b, c]", a.values().keySet().toString());
+            a.attr("d", 4);                                    // the cached map view is rebuilt after a change
+            eq(4, a.values().size());
+            Attrs spread = new Attrs().attr("a", 0).spread(a);
+            eq("[a, b, c, d]", spread.values().keySet().toString());
+            eq(2, spread.values().get("a"));
+            eq(0, new Attrs().attrSize());
+            for (int i = 0; i < 20; i++) a.attr("k" + i, i);   // grows past the first array
+            eq(24, a.attrSize());
+            eq(19, a.values().get("k19"));
+        });
+
+        test("AttrsDiff: nothing changed is the shared empty diff; changes, removals and handlers are found", () -> {
+            jreact.EventHandler h1 = ev -> {}, h2 = ev -> {};
+            Attrs prev = new Attrs().attr("className", "a").attr("id", "x").attr("title", "t").on("onClick", h1);
+            Attrs same = new Attrs().attr("className", "a").attr("id", "x").attr("title", "t").on("onClick", h1);
+            check(AttrsDiff.between(prev, same) == AttrsDiff.between(same, prev), "no change must be the one shared EMPTY");
+            check(AttrsDiff.between(prev, prev).isEmpty() && AttrsDiff.between(prev, same).isEmpty(), "equal attrs are an empty diff");
+            Attrs next = new Attrs().attr("title", "t").attr("className", "b").attr("hidden", true).on("onClick", h2).on("onInput", h1);   // other order, id gone
+            AttrsDiff d = AttrsDiff.between(prev, next);
+            eq("{id=null, className=b, hidden=true}", d.attrs());
+            eq(2, d.eventCount());
+            check(d.eventHandler(0) == h2 && d.eventName(0).equals("onClick") && d.eventName(1).equals("onInput"), "handlers");
+            AttrsDiff gone = AttrsDiff.between(prev, new Attrs());
+            eq(3, gone.attrCount());
+            check(gone.eventCount() == 1 && gone.eventHandler(0) == null, "a removed handler is a null handler");
+        });
+
         test("mounts a host tree", () -> {
             Env e = new Env();
             e.render(Jsx.el("div", null, new Attrs().attr("className", "a"), "hi ", Jsx.el("b", null, null, "x")));

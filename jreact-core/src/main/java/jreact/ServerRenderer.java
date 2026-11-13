@@ -57,9 +57,10 @@ public final class ServerRenderer {
                             + (Safety.isBlockedTag(e.tag()) ? "script elements are not supported" : "not a valid tag name"));
                 }
                 sb.append('<').append(e.tag());
-                for (Map.Entry<String, Object> a : e.attrs().values().entrySet()) {
-                    String name = a.getKey();
-                    Object v = a.getValue();
+                Attrs attrs = e.attrs();
+                for (int ai = 0; ai < attrs.attrSize(); ai++) {
+                    String name = attrs.attrName(ai);
+                    Object v = attrs.attrValue(ai);
                     if (v == null || Boolean.FALSE.equals(v)) continue;
                     if (!Safety.isValidAttributeName(name) || Safety.isInlineHandlerAttribute(name)) continue;
                     if (name.equals("style") && !(v instanceof CharSequence)) {

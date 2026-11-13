@@ -1127,18 +1127,18 @@ Natija (Apple M5, Brave/Chrome 157, ms, kam = yaxshi):
 
 | senariy | vanilla DOM | React 18 | JReact | JReact / React | JReact dev rejimi |
 |---|---:|---:|---:|---:|---:|
-| create1k | 8.3 | 10.2 | 18.5 | 1.81x | 18.7 |
-| replace1k | 8.3 | 13.6 | 19.5 | 1.43x | 21.2 |
-| update10th | 1.9 | 2.5 | 5.1 | 2.04x | 8.3 |
-| swap | 0.5 | 9 | 12.8 | 1.42x | 16.6 |
-| remove | 0.4 | 1 | 5.8 | 5.80x | 3.9 |
-| append1k | 9.4 | 11.2 | 27.1 | 2.42x | 25.7 |
-| clear | 0.7 | 1.6 | 1.1 | 0.69x | 1 |
-| create10k | 79.1 | 226.6 | 305.1 | 1.35x | 321.7 |
+| create1k | 8.4 | 10 | 17.3 | 1.73x | 17.6 |
+| replace1k | 8.1 | 12.2 | 18.8 | 1.54x | 19 |
+| update10th | 2 | 2.4 | 3.5 | 1.46x | 4.1 |
+| swap | 0.4 | 9.4 | 11.4 | 1.21x | 11.7 |
+| remove | 0.4 | 1 | 2.2 | 2.20x | 2.6 |
+| append1k | 8.9 | 11.7 | 25 | 2.14x | 23.8 |
+| clear | 0.7 | 1.8 | 1.3 | 0.72x | 1.3 |
+| create10k | 76.8 | 191.2 | 304.1 | 1.59x | 300.9 |
 
-Bundle: JReact (TeaVM, shu jadval ilovasi) `app.js` 166 KB, gzip 58 KB. React 18 `react` + `react-dom` 139 KB, gzip 46 KB (ilovasiz). Kichik ilovada (Todo) `app.js` ~120 KB (gzip ~45 KB).
+Bundle: JReact (TeaVM, shu jadval ilovasi) `app.js` 214 KB, gzip 70 KB (gidratatsiya kodi bilan; avvalgi 166 KB eski o'lchov edi). React 18 `react` + `react-dom` 139 KB, gzip 46 KB (ilovasiz). Kichik ilovada (Todo) `app.js` ~120 KB (gzip ~45 KB).
 
-Xulosa: JReact shu jadvalda React 18'dan taxminan 1.4 dan 2.4 baravargacha sekinroq (`remove` da ~6x; sababi o'rganilmagan, ikkalasi ham 999 ta o'zgarmagan qatorni qayta render qiladi). Qo'lda yozilgan vanilla DOM'dan 2 dan 30 baravargacha sekin (`swap`, `remove` da eng katta farq). 60 FPS uchun kadr 16 ms: oddiy ilovada (yuzlab qator) bu yetarli, 10 000 qatorli jadvalda (300 ms) emas. Dev rejimi (`setDevMode(true)`, standart) ishlashga sezilarli ta'sir qilmaydi, lekin ishlab chiqarishda `root.reconciler().setDevMode(false)` qiling (ogohlantirishlar kerak emas).
+Xulosa: JReact shu jadvalda React 18'dan taxminan 1.2 dan 2.2 baravargacha sekinroq. `remove` avval ~6x edi: sababi har host element uchun 4 ta `LinkedHashMap` (Attrs va AttrsDiff) ajratilishi edi; endi atributlar kichik massivlarda, o'zgarish yo'q bo'lsa diff hech narsa ajratmaydi (`remove` 5.8 -> 2.2 ms, `update10th` 5.1 -> 3.5 ms). Qo'lda yozilgan vanilla DOM'dan 2 dan 30 baravargacha sekin (`swap`, `remove` da eng katta farq). 60 FPS uchun kadr 16 ms: oddiy ilovada (yuzlab qator) bu yetarli, 10 000 qatorli jadvalda (300 ms) emas. Dev rejimi (`setDevMode(true)`, standart) ishlashga sezilarli ta'sir qilmaydi, lekin ishlab chiqarishda `root.reconciler().setDevMode(false)` qiling (ogohlantirishlar kerak emas).
 
 Qanday o'qish kerak: bu bitta mashina va bitta jadval, shuning uchun mutlaq raqamlarga emas, nisbatlarga qarang; ikkala tomonda ham `memo` ishlatilmagan (`React.memo`, `MemoComponent`), shuning uchun ularning ta'siri o'lchanmagan. Profil qilinmagan va optimallashtirilmagan: sekinlikning aniq sababi (fiber ajratish, `Attrs` farqlash, TeaVM JSO chaqiruvlari) hali ma'lum emas.
 
@@ -1238,7 +1238,7 @@ jreact/
 - JReact hali Maven Central'ga chiqarilmagan: o'z ilovangiz uchun `mvn install` bilan lokal o'rnatiladi.
 - CSS Modules va CSS-in-JS yo'q. Sass/Tailwind Maven build'iga ulanmagan, alohida buyruq bilan yig'iladi.
 - DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q (xavfsizlik uchun ham, qarang [Xavfsizlik](#xavfsizlik-xss)).
-- Tezlik: React 18'dan 1.4-2.4x sekinroq (qarang [Unumdorlik](#unumdorlik-benchmark)), profil qilinmagan.
+- Tezlik: React 18'dan 1.2-2.2x sekinroq (qarang [Unumdorlik](#unumdorlik-benchmark)).
 - Ustuvorlik root bo'yicha, update bo'yicha emas (lane yo'q): bitta render barcha kutayotgan update'larni oladi. Bo'laklab render faqat `LOW`/`IDLE` (`startTransition`) uchun, uni boshqa update to'xtatib qayta boshlamaydi, faqat tezroq tugatadi.
 - Error boundary render va `useEffect` xatolarini tutadi, event handler xatolarini tutmaydi (React'dagi kabi). `ServerRenderer` (SSR) boundary'da xatoni tutmaydi.
 - `{...spread}` komponentlarda qo'llab-quvvatlanmaydi.
