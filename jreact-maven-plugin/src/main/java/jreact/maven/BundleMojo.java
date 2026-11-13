@@ -1,6 +1,5 @@
 package jreact.maven;
 
-import org.apache.maven.plugin.AbstractMojo;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
@@ -17,7 +16,7 @@ import java.io.IOException;
  * The output goes to {@code target/classes/jreact} so that it lands in the module's jar and a Spring Boot server finds it on its classpath.
  */
 @Mojo(name = "bundle", defaultPhase = LifecyclePhase.PROCESS_CLASSES, threadSafe = true)
-public class BundleMojo extends AbstractMojo {
+public class BundleMojo extends AbstractPageMojo {
 
     /** The TeaVM result: app.js, index.html and the other files of src/main/webapp. */
     @Parameter(defaultValue = "${project.build.directory}/web", property = "jreact.webDirectory")
@@ -42,32 +41,11 @@ public class BundleMojo extends AbstractMojo {
     @Parameter(defaultValue = "/", property = "jreact.publicPath")
     private String publicPath;
 
-    /** The generated index.html (used only when src/main/webapp has no index.html of its own). */
-    @Parameter(defaultValue = "App", property = "jreact.title")
-    private String title;
-
-    @Parameter(defaultValue = "en", property = "jreact.lang")
-    private String lang;
-
-    /** CSS classes of the html, body and root elements (Tailwind utilities, for example). */
-    @Parameter(property = "jreact.htmlClass")
-    private String htmlClass;
-
-    @Parameter(property = "jreact.bodyClass")
-    private String bodyClass;
-
-    @Parameter(property = "jreact.rootClass")
-    private String rootClass;
-
-    /** Raw HTML for the end of head (analytics, Open Graph tags, fonts). Longer content: put it in src/main/webapp/head.html. */
-    @Parameter(property = "jreact.head")
-    private String head;
-
     @Override
     public void execute() throws MojoExecutionException {
         try {
             Bundler.Result r = Bundler.bundle(webDirectory.toPath(), cssFile == null ? null : cssFile.toPath(), outputDirectory.toPath(),
-                    hash, compress, publicPath, new Bundler.Page(title, lang, htmlClass, bodyClass, rootClass, head), message -> getLog().warn("jrx:bundle: " + message));
+                    hash, compress, publicPath, page(), message -> getLog().warn("jrx:bundle: " + message));
             getLog().info("jrx:bundle: " + r.message());
         } catch (IOException e) {
             throw new MojoExecutionException("jrx:bundle failed: " + e.getMessage(), e);

@@ -102,6 +102,20 @@ public final class Bundler {
         return new Result(true, jsName, cssName, message);
     }
 
+    /**
+     * For a plain TeaVM build (no hashing, no server): writes {@code index.html} next to {@code app.js} in the web folder, with relative
+     * {@code app.js}/{@code app.css} references. An existing file is replaced, so the caller decides whether the project has a page of its own.
+     *
+     * @param css whether to link {@code app.css} (the stylesheet is written somewhere else, by the Tailwind step, so it need not exist yet)
+     */
+    public static void writePage(Path web, boolean css, Page page) throws IOException {
+        Path index = web.resolve("index.html");
+        Path headFile = web.resolve("head.html");
+        String fragment = Files.isRegularFile(headFile) ? Files.readString(headFile, StandardCharsets.UTF_8) : "";
+        Files.createDirectories(web);
+        Files.writeString(index, generate(page, "", "app.js", css ? "app.css" : null, icon(web), fragment), StandardCharsets.UTF_8);
+    }
+
     /** The favicon in the web folder, if any (relative name). */
     private static String icon(Path web) {
         for (String name : List.of("favicon.svg", "favicon.ico", "favicon.png")) if (Files.isRegularFile(web.resolve(name))) return name;

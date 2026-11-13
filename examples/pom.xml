@@ -47,6 +47,7 @@
                     <version>${project.version}</version>
                     <executions>
                         <execution><id>jrx</id><goals><goal>compile</goal></goals></execution>
+                        <execution><id>page</id><goals><goal>page</goal></goals></execution>
                     </executions>
                 </plugin>
                 <plugin>

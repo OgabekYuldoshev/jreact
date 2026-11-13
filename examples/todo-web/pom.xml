@@ -48,6 +48,19 @@
                             <indexDirectories><directory>${todo.src}/java</directory></indexDirectories>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>page</id>
+                        <goals><goal>page</goal></goals>
+                        <configuration>
+                            <title>JReact Todo</title>
+                            <lang>uz</lang>
+                            <head><![CDATA[<style>
+                                body { font-family: system-ui, sans-serif; max-width: 32rem; margin: 2rem auto; padding: 0 1rem; }
+                                .todo.done span { text-decoration: line-through; opacity: .6; }
+                                li { margin: .25rem 0; }
+                            </style>]]></head>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 

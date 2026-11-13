@@ -16,6 +16,6 @@ final class Native {
     @JSBody(script = "return location.search.indexOf('dev') >= 0;")
     static native boolean devMode();
 
-    @JSBody(params = {"s"}, script = "window.__result = s; document.getElementById('result').textContent = s;")
+    @JSBody(params = {"s"}, script = "window.__result = s; var e = document.getElementById('result'); if (e) e.textContent = s;")
     static native void publish(String s);
 }

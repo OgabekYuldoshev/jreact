@@ -48,6 +48,15 @@ public final class BundlerTest {
         String mine = Files.readString(out.resolve("index.html"));
         check("own index.html is kept", mine.startsWith("<title>mine</title>") && !mine.contains("Vali") && mine.contains(own.jsName()) && mine.contains(own.cssName()), mine);
 
+        // plain browser build: relative paths next to app.js, a stale index.html is replaced
+        Path plainWeb = Files.createDirectories(tmp.resolve("plain"));
+        Files.writeString(plainWeb.resolve("index.html"), "stale");
+        Bundler.writePage(plainWeb, true, new Bundler.Page("Todo", "uz", "", "", "", "<style>li{}</style>"));
+        String relative = Files.readString(plainWeb.resolve("index.html"));
+        check("writePage: relative app.js and app.css, head, replaces the old file", relative.contains("src=\"app.js\"") && relative.contains("href=\"app.css\"") && relative.contains("<style>li{}</style>") && relative.contains("lang=\"uz\"") && !relative.contains("stale"), relative);
+        Bundler.writePage(plainWeb, false, Bundler.Page.DEFAULT);
+        check("writePage without css has no stylesheet link", !Files.readString(plainWeb.resolve("index.html")).contains("stylesheet"), "");
+
         System.out.println(passed + " passed" + (failures.isEmpty() ? "" : ", " + failures.size() + " FAILED"));
         for (String f : failures) System.out.println("FAIL " + f);
         if (!failures.isEmpty()) System.exit(1);

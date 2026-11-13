@@ -108,7 +108,7 @@ mening-ilovam/
     ├── jrx/app/
     │   ├── Counter.jrx                 # komponent
     │   └── WebMain.jrx                 # kirish nuqtasi (mainClass app.WebMain)
-    └── webapp/index.html                # sahifa
+    └── webapp/                          # ixtiyoriy: favicon, head.html (index.html build vaqtida yaratiladi)
 ```
 
 `pom.xml` da faqat `groupId`/`artifactId` ni o'zgartiring. Oddiy Java fayllaringiz bo'lsa `src/main/java` ga qo'ying (papka bo'lmasa kompilyator uni o'tkazib yuboradi).
@@ -132,7 +132,7 @@ public class WebMain {
 }
 ```
 
-**4. Sahifa** (`index.html`): TeaVM `main()` funksiyasini yaratadi, uni o'zingiz chaqirasiz:
+**4. Sahifa** (`index.html`): `mvn package` uni `target/web` ga yaratadi (sarlavha, til, klasslar `pom.xml` dagi `jrx:page` sozlamasida, to'liq nazorat uchun o'z `src/main/webapp/index.html` ingizni yozing). Ichida TeaVM yaratgan `main()` ni chaqirish bor:
 
 ```html
 <div id="root"></div>
@@ -714,7 +714,7 @@ teavm.js {
 tasks.register('assembleWeb', Sync) {
     dependsOn 'generateJavaScript'
     from(layout.buildDirectory.dir('generated/teavm/js'))
-    from('src/main/webapp')              // index.html
+    from('src/main/webapp')              // favicon, head.html...
     into(layout.buildDirectory.dir('web'))
 }
 jrxBundle { dependsOn 'assembleWeb' }
@@ -775,7 +775,7 @@ Sass va Tailwind'ni haqiqatan sinab ko'rdim: andoza ilovada `.scss` ning o'zgaru
 
 ### Oddiy CSS
 
-`.css` faylni `src/main/webapp/` ga qo'ying (Maven shu papkani butunlay `target/web` ga ko'chiradi) va `index.html` ga ulang:
+`.css` faylni `src/main/webapp/` ga qo'ying (Maven shu papkani butunlay `target/web` ga ko'chiradi). `app.css` nomli fayl bo'lsa yaratilgan `index.html` unga o'zi ulanadi; o'z `index.html` ingizda esa qo'lda ulang:
 
 ```html
 <link rel="stylesheet" href="app.css">
@@ -865,7 +865,7 @@ python3 -m http.server -d examples/dist 8080     # http://localhost:8080
 
 To'liq fullstack misol: `examples/fullstack-crud` ("Library"): Spring Boot + Spring Data JPA (H2) + JReact. Kitoblar CRUD, qidiruv, status filtri, sahifalash, server validatsiyasi (422), 404 sahifa, SSR + hydration, `@ServerApi` orqali tipli RPC. Ishga tushirish va tuzilma: `examples/fullstack-crud/README.md`.
 
-Har ilova: `src/main/jrx` (komponentlar), `src/main/java` (ma'lumot modellari), `src/main/styles/app.css` (`@import "tailwindcss"; @source ...`), `src/main/webapp/index.html`. Maven `.jrx` ni kompilyatsiya qilib `app.js` yasaydi, Tailwind CLI esa `.jrx`/`.java` ichidagi klass satrlarini topib `app.css` yasaydi. Umumiy sozlama `examples/pom.xml` da (4 ilova shuni meros qiladi), Tailwind va jsdom `examples/package.json` da.
+Har ilova: `src/main/jrx` (komponentlar), `src/main/java` (ma'lumot modellari), `src/main/styles/app.css` (`@import "tailwindcss"; @source ...`). `index.html` ni `jrx:page` yaratadi (sarlavha va klasslar ilovaning `pom.xml` ida). Maven `.jrx` ni kompilyatsiya qilib `app.js` yasaydi, Tailwind CLI esa `.jrx`/`.java` ichidagi klass satrlarini topib `app.css` yasaydi. Umumiy sozlama `examples/pom.xml` da (4 ilova shuni meros qiladi), Tailwind va jsdom `examples/package.json` da.
 
 ## Error boundary
 
@@ -1222,11 +1222,11 @@ jreact/
 │   └── src/test/.../LspTest.java     # 12 ta test, haqiqiy JSON-RPC oqimi bilan
 ├── editors/vscode-jrx/              # VS Code kengaytmasi: grammar + LSP klienti
 ├── tools/dev-server.js               # dev server: hamma namuna ilovalar, live reload
-├── templates/web-app/                # o'z ilovangiz uchun andoza (pom.xml, Counter, WebMain, index.html)
+├── templates/web-app/                # o'z ilovangiz uchun andoza (pom.xml, Counter, WebMain)
 └── examples/
     ├── todo/                         # namunaviy ilova (.jrx), JVM'da HTML chiqaradi
     ├── todo-web/                     # shu ilova brauzerda + jsdom smoke testi
-    ├── kanban/ shop/ dashboard/ landing/ blog/ contacts/   # Tailwind bilan 6 ta ilova (pom.xml, src/main/{jrx,java,styles,webapp})
+    ├── kanban/ shop/ dashboard/ landing/ blog/ contacts/   # Tailwind bilan 6 ta ilova (pom.xml, src/main/{jrx,java,styles})
     ├── gallery/                      # to'rttasini bog'lovchi bosh sahifa
     ├── pom.xml, package.json         # umumiy Maven sozlamasi; Tailwind CLI + jsdom
     └── smoke.js                      # 4 ilova uchun jsdom testi

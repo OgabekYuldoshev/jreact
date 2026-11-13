@@ -31,6 +31,15 @@
                 <version>${jreact.version}</version>
                 <executions>
                     <execution><id>jrx</id><goals><goal>compile</goal></goals></execution>
+                    <!-- index.html next to app.js, generated: title, language, classes, extra <head> HTML (or write your own src/main/webapp/index.html) -->
+                    <execution>
+                        <id>page</id>
+                        <goals><goal>page</goal></goals>
+                        <configuration>
+                            <title>Mening ilovam</title>
+                            <lang>uz</lang>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <!-- bytecode -> app.js -->

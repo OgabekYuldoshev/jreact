@@ -15,7 +15,21 @@
 
     <build>
         <plugins>
-            <plugin><groupId>dev.jreact</groupId><artifactId>jreact-maven-plugin</artifactId></plugin>
+            <plugin>
+                <groupId>dev.jreact</groupId>
+                <artifactId>jreact-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>page</id>
+                        <configuration>
+                            <title>JReact Kanban</title>
+                            <htmlClass>h-full</htmlClass>
+                            <bodyClass>h-full bg-slate-100 text-slate-900 antialiased</bodyClass>
+                            <rootClass>min-h-full</rootClass>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin><groupId>org.teavm</groupId><artifactId>teavm-maven-plugin</artifactId></plugin>
             <plugin><artifactId>maven-resources-plugin</artifactId></plugin>
         </plugins>
