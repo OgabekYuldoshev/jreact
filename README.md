@@ -1271,7 +1271,7 @@ Sozlama tayyor (`pom.xml`: metadata, `release` profili), lekin haqiqiy chiqarish
 3. **Hisob va kalit.** [central.sonatype.com](https://central.sonatype.com) da token oling va `~/.m2/settings.xml` ga `<server><id>central</id>...` qilib qo'ying. GPG kalit yarating va uni ochiq serverga yuklang.
 4. **Versiya.** `0.1.0-SNAPSHOT` ni release versiyaga o'zgartiring: `mvn versions:set -DnewVersion=0.1.0` (`templates/web-app` va README'dagi `jreact.version` ni ham).
 
-Tekshirish (imzosiz, yuklamaydi): `mvn -Prelease -Dgpg.skip package` hamma modul uchun `-sources.jar` va `-javadoc.jar` yasaydi. Chiqarish: `mvn -Prelease deploy`. `release` profili namunalarni (`examples`) o'chiradi, shuning uchun faqat kutubxona modullari yuklanadi. `autoPublish` o'chiq: yuklangach Central portalida natijani ko'rib, qo'lda "Publish" bosasiz.
+Tekshirish (imzosiz, yuklamaydi): `mvn -Prelease -Dgpg.skip package` hamma modul uchun `-sources.jar` va `-javadoc.jar` yasaydi. Chiqarish: `v0.1.0` kabi tag push qiling, `.github/workflows/release.yml` versiyani tagdan oladi, testlarni yurgizadi va `mvn -Prelease deploy` qiladi (secrets: `CENTRAL_USERNAME`, `CENTRAL_TOKEN`, `GPG_PRIVATE_KEY`, `GPG_PASSPHRASE`). Qo'lda: `mvn -Prelease deploy`. `release` profili namunalarni (`examples`) o'chiradi, shuning uchun faqat kutubxona modullari yuklanadi. `autoPublish` o'chiq: yuklangach Central portalida natijani ko'rib, qo'lda "Publish" bosasiz.
 
 Imzo va yuklash bosqichi shu loyihada sinalmagan (kalit va token yo'q), faqat `package` bosqichigacha tekshirilgan.
 
