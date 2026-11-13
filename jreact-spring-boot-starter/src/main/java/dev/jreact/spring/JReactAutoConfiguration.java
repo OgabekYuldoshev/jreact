@@ -44,7 +44,7 @@ public class JReactAutoConfiguration {
         Resource index;
         try { index = locationOf(props, loader).createRelative("index.html"); }
         catch (IOException e) { throw new IllegalStateException("bad jreact.location: " + e.getMessage(), e); }
-        IndexHtml html = new IndexHtml(index, props.isDev());
+        IndexHtml html = new IndexHtml(index, props.isDev(), props.getLoginUrl());
         SsrRenderer renderer = null;
         String app = props.getSsr().getApp();
         if (app != null && !app.isBlank() && !props.isDev()) {      // dev: the client changes all the time, the browser renders

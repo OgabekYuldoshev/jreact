@@ -39,6 +39,8 @@ class RpcController {
     /** Bean Validation (jakarta.validation) is optional: its classes are only touched when it is on the classpath. */
     private static final boolean BEAN_VALIDATION = org.springframework.util.ClassUtils.isPresent("jakarta.validation.ConstraintViolationException", RpcController.class.getClassLoader());
 
+    private static final boolean SPRING_SECURITY = org.springframework.util.ClassUtils.isPresent("org.springframework.security.core.context.SecurityContextHolder", RpcController.class.getClassLoader());
+
     private record Target(RpcDispatcher dispatcher, Object bean) {}
 
     private final Map<String, Target> targets = new LinkedHashMap<>();
@@ -107,7 +109,11 @@ class RpcController {
                 return error(refused.status(), refused.getMessage(), refused.fields());
             }
             HttpStatusCode security = securityStatus(e);
-            if (security != null) return error(security.value(), security.value() == 401 ? "authentication required" : "access denied");
+            if (security != null) {
+                // @PreAuthorize throws AccessDeniedException also for nobody-signed-in: that is a 401 (the page should ask for a login), not a 403
+                int code = security.value() == 403 && SPRING_SECURITY && AuthStatus.deniedAnonymous(e) ? 401 : security.value();
+                return error(code, code == 401 ? "authentication required" : "access denied");
+            }
             log.error("jreact rpc: {}/{} failed", api, method, e);
             return error(500, "Internal error");       // details stay in the log
         }

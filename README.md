@@ -642,7 +642,7 @@ Reflection yo'q, shuning uchun brauzerda (TeaVM) ham ishlaydi. Nima ketadi: `POS
 | `RpcException(422, xabar, Map.of("title", "..."))` | maydonlar bo'yicha xabarlar: brauzerda `ErrorResponse.fields()` |
 | Bean Validation (`@Valid`, `@NotBlank`, `@Size`, `@Min`...) | 422 va har maydon uchun xabar, kod yozmasdan (pastga qarang) |
 | Boshqa exception | 500 va `Internal error` (tafsilot faqat server logida) |
-| `AccessDeniedException` / `AuthenticationException` (Spring Security) | 403 / 401 |
+| `AccessDeniedException` / `AuthenticationException` (Spring Security) | 403 / 401 (hech kim kirmagan bo'lsa `AccessDeniedException` ham 401) |
 | Faqat `POST` + `application/json` | cross-site HTML forma boshqa tur yubora olmaydi (415); CSRF tokeni va Spring Security zanjiri odatdagidek ishlaydi |
 
 Har bir metod ochiq HTTP endpoint: ruxsatni serverda tekshiring (`@PreAuthorize`), argumentlarni validatsiya qiling. Interfeysga bitta bean mos kelishi kerak, aks holda server ishga tushmaydi (aniq xabar bilan).
@@ -680,6 +680,34 @@ public class AppLayout extends Component<AppLayout.Props> { ... }
 Xatolar kompilyatsiya vaqtida sinfda ko'rinadi: ikki sahifa bir yo'lda (`/books/:id` va `/books/{bookId}` bir xil), `Props` bo'sh record emas, `loader` imzosi noto'g'ri, yo'l `/` bilan boshlanmaydi, public bo'lmagan sinf va hokazo.
 
 Qo'shish kerak: client modulga `jreact-processor` (Maven: `maven-compiler-plugin` ning `annotationProcessorPaths`, Gradle: `annotationProcessor`; `jreact new` shablonida bor). Procesor `dev.jreact.generated.Pages.routes()` va tayyor `PagesApp` (`ClientApp`) yaratadi: `WebMain` da `new PagesApp()`, serverda `jreact.ssr.app=dev.jreact.generated.PagesApp`. Namuna: `examples/fullstack-crud` (6 ta sahifa, bitta layout, 404). Qo'lda `RouteObject` yozish ham mumkin, `Pages.routes()` bilan birga ishlatiladi.
+
+### Xavfsizlik (Spring Security)
+
+Spring Security qo'shsangiz hammasi odatdagidek ishlaydi: RPC (`/_rpc/...`) oddiy controller kabi filtr zanjiridan o'tadi, bean metodlaridagi `@PreAuthorize` ishlaydi, server-side render loader'lari ham **joriy foydalanuvchi sifatida** (shu so'rov oqimida) chaqiriladi. Ikki narsa qo'shilgan:
+
+**1. CSRF, bir qatorda.** Brauzer kodi (`Http`, RPC klientlari, `<Form>`) `XSRF-TOKEN` cookie'sini har o'zgartiruvchi so'rovda `X-XSRF-TOKEN` sarlavhasiga ko'chiradi. Spring Security bu cookie'ni o'zi yozmaydi, shuning uchun:
+
+```java
+@Bean
+SecurityFilterChain chain(HttpSecurity http) throws Exception {
+    return http
+        .with(JReactSecurityConfigurer.jreact(), c -> {})          // dev.jreact.spring.security: cookie, token handler, filtr
+        .authorizeHttpRequests(a -> a.requestMatchers("/assets/**", "/login").permitAll().anyRequest().authenticated())
+        .formLogin(Customizer.withDefaults())
+        .build();
+}
+```
+
+Usiz CSRF yoqilgan bo'lsa brauzerning har chaqiruvi 403 oladi. (Cookie JavaScript o'qiy oladigan bo'ladi: bu SPA uchun Spring hujjatidagi standart sozlama; hujumchi boshqa saytdan cookie qo'ya olmaydi.)
+
+**2. 401 va 403 ajratiladi.** `@PreAuthorize` rad etsa: hech kim kirmagan bo'lsa **401** (`authentication required`), kirgan lekin ruxsati yo'q bo'lsa **403** (`access denied`).
+
+**3. Login sahifasiga yo'naltirish** (ixtiyoriy): `application.properties` da `jreact.login-url=/login`.
+- Server: loader 401 bersa (masalan `@PreAuthorize` li API) sahifa o'rniga `302 /login?next=<sahifa>`.
+- Brauzer: istalgan chaqiruv 401 olsa `/login?next=<joriy sahifa>` ga o'tadi (login sahifasining o'zida emas).
+- Property bo'lmasa 401 oddiy `ErrorResponse(401)` bo'lib `errorElement` ga tushadi.
+
+Namuna testlar: `jreact-spring-boot-starter/.../SecurityTest` (CSRF cookie va sarlavha, 401/403, login redirect).
 
 ### Validatsiya (Bean Validation)
 

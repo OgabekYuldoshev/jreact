@@ -20,6 +20,7 @@ public class JReactProperties {
     private boolean enabled = true;
     private String location = "classpath:/jreact/";
     private List<String> reservedPrefixes = List.of("/api", "/_rpc", "/actuator", "/error", "/__jreact");
+    private String loginUrl;
     private String devDir;
     private String devErrorFile;
     private final Ssr ssr = new Ssr();
@@ -39,6 +40,13 @@ public class JReactProperties {
     }
 
     public Ssr getSsr() { return ssr; }
+
+    /**
+     * Where a user who is not signed in goes (for example {@code /login}, Spring Security's form login page). A page whose loader answers 401 gets
+     * a 302 to it with {@code ?next=<the page>}; in the browser, a call that answers 401 navigates there too. Empty (default): the app shows the 401 itself.
+     */
+    public String getLoginUrl() { return loginUrl; }
+    public void setLoginUrl(String loginUrl) { this.loginUrl = loginUrl; }
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }

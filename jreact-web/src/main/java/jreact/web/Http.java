@@ -44,6 +44,18 @@ public final class Http {
         return b.endsWith("/") ? b.substring(0, b.length() - 1) : b;
     }
 
+    /** When the server named a login page ({@code jreact.login-url}) a 401 navigates there, with {@code ?next=} the current page. Does nothing on the login page itself. */
+    private static void goToLogin() {
+        String login = meta("jreact-login");
+        if (login != null && !login.isEmpty()) redirect(login.startsWith("/") ? base() + login : login);
+    }
+
+    @JSBody(params = {"login"}, script = "var path = login.split('?')[0]; if (location.pathname === path) return; location.assign(login + (login.indexOf('?') < 0 ? '?' : '&') + 'next=' + encodeURIComponent(location.pathname + location.search));")
+    private static native void redirect(String login);
+
+    @JSBody(params = {"name"}, script = "var m = document.querySelector('meta[name=\"' + name + '\"]'); return m ? m.getAttribute('content') : null;")
+    private static native String meta(String name);
+
     @JSBody(script = "var m = document.querySelector('meta[name=\"jreact-base\"]'); return m ? m.getAttribute('content') : null;")
     private static native String meta();
 
@@ -70,6 +82,7 @@ public final class Http {
             if (!r.ok()) {
                 Object data;
                 try { data = r.json(); } catch (RuntimeException notJson) { data = r.body(); }
+                if (r.status() == 401) goToLogin();            // jreact.login-url: sign in, then come back
                 throw new ErrorResponse(r.status(), r.statusText(), data);
             }
             return r.json();

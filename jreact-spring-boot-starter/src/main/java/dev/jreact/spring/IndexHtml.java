@@ -21,9 +21,14 @@ final class IndexHtml {
     private final boolean dev;
     private String cached;
 
-    IndexHtml(Resource index, boolean dev) {
+    private final String loginUrl;
+
+    IndexHtml(Resource index, boolean dev) { this(index, dev, null); }
+
+    IndexHtml(Resource index, boolean dev, String loginUrl) {
         this.index = index;
         this.dev = dev;
+        this.loginUrl = loginUrl == null || loginUrl.isBlank() ? null : loginUrl;
     }
 
     String html(String contextPath) throws IOException {
@@ -32,7 +37,16 @@ final class IndexHtml {
             html = new String(index.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
             if (!dev) cached = html;
         }
-        return adapt(html, contextPath == null ? "" : contextPath);
+        String out = adapt(html, contextPath == null ? "" : contextPath);
+        if (loginUrl != null) out = withMeta(out, "jreact-login", loginUrl);
+        return out;
+    }
+
+    /** {@code <meta name="jreact-login" content="/login">}: the browser side goes there when a call answers 401. */
+    private static String withMeta(String html, String name, String content) {
+        String meta = "<meta name=\"" + name + "\" content=\"" + content.replace("&", "&amp;").replace("\"", "&quot;") + "\">";
+        Matcher head = HEAD.matcher(html);
+        return head.find() ? html.substring(0, head.end()) + meta + html.substring(head.end()) : meta + html;
     }
 
     static String adapt(String html, String contextPath) {

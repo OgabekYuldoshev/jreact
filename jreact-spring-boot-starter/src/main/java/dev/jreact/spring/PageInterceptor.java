@@ -22,11 +22,13 @@ final class PageInterceptor implements HandlerInterceptor {
     private final IndexHtml index;
     private final boolean dev;
     private final SpaResourceResolver pages;
+    private final String loginUrl;
 
     PageInterceptor(SsrRenderer renderer, IndexHtml index, JReactProperties props) {
         this.renderer = renderer;
         this.index = index;
         this.dev = props.isDev();
+        this.loginUrl = props.getLoginUrl() == null || props.getLoginUrl().isBlank() ? null : props.getLoginUrl();
         this.pages = new SpaResourceResolver(props.getReservedPrefixes());
     }
 
@@ -45,6 +47,12 @@ final class PageInterceptor implements HandlerInterceptor {
         if (page != null && page.redirect() != null) {
             response.setStatus(302);
             response.setHeader("Location", contextPath + page.redirect());
+            return false;
+        }
+        if (page != null && page.status() == 401 && loginUrl != null && !path.equals(loginUrl)) {      // a loader needs a signed in user: ask for a login, then come back
+            String back = request.getQueryString() == null ? path : path + "?" + request.getQueryString();
+            response.setStatus(302);
+            response.setHeader("Location", contextPath + loginUrl + "?next=" + java.net.URLEncoder.encode(contextPath + back, StandardCharsets.UTF_8));
             return false;
         }
         String html;
