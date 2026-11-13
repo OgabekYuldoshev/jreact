@@ -46,6 +46,29 @@ class RpcTest {
     }
 
     @Test
+    void beanValidationOnARecordIsA422WithAMessagePerField() {
+        assertThat(rpc("join", "[{\"name\":\"Ada\",\"age\":30}]").getBody()).isEqualTo("{\"name\":\"Ada\",\"age\":30}");
+        ResponseEntity<String> r = rpc("join", "[{\"name\":\" \",\"age\":5}]");
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(r.getBody()).contains("\"fields\":{").contains("\"name\":\"must not be blank\"").contains("\"age\":\"must be greater than or equal to 18\"");
+        assertThat(r.getBody()).contains("\"message\":\"").contains("age must be greater than or equal to 18");
+        assertThat(rpc("join", "[{\"name\":\"much too long name\",\"age\":30}]").getBody()).contains("\"name\":\"size must be between 0 and 10\"");
+    }
+
+    @Test
+    void beanValidationOnAParameterNamesTheParameter() {
+        assertThat(rpc("shout", "[\"hey\"]").getBody()).isEqualTo("\"HEY\"");
+        ResponseEntity<String> r = rpc("shout", "[\"way too long\"]");
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+        assertThat(r.getBody()).contains("\"fields\":{\"word\":\"size must be between 0 and 5\"}");
+    }
+
+    @Test
+    void rpcExceptionCanCarryFields() {
+        assertThat(rpc("greet", "[\"Ada\", -1]").getBody()).doesNotContain("fields");        // no fields: the old body
+    }
+
+    @Test
     void aVoidMethodAnswersNull() {
         ResponseEntity<String> r = rpc("ping", "[]");
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);

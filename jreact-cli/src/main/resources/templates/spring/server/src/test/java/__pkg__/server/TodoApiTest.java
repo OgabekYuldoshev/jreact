@@ -52,7 +52,7 @@ class TodoApiTest {
     void validationAndTypeErrors() {
         ResponseEntity<String> empty = rpc("add", "[\"  \"]");
         assertThat(empty.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-        assertThat(empty.getBody()).contains("title must be 1 to 200 characters");
+        assertThat(empty.getBody()).contains("The title must be 1 to 200 characters.").contains("\"fields\":{\"title\":");
         ResponseEntity<String> wrongType = rpc("setDone", "[\"seven\", true]");
         assertThat(wrongType.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(wrongType.getBody()).contains("id: expected an integer");

@@ -1,6 +1,7 @@
 package dev.jreact.examples.library.shared;
 
 import dev.jreact.api.ServerApi;
+import jakarta.validation.Valid;
 
 import java.util.Map;
 import java.util.Optional;
@@ -19,9 +20,9 @@ public interface BookApi {
     Book get(long id);
 
     /** 422 with a message when the input is not valid. */
-    Book create(BookInput input);
+    Book create(@Valid BookInput input);
 
-    Book update(long id, BookInput input);
+    Book update(long id, @Valid BookInput input);
 
     void delete(long id);
 

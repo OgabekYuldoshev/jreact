@@ -639,12 +639,43 @@ Reflection yo'q, shuning uchun brauzerda (TeaVM) ham ishlaydi. Nima ketadi: `POS
 | Overload, generik metod/record, `Map<Integer,..>` | kompilyatsiya xatosi |
 | Noto'g'ri argument | 400, joyi ko'rsatiladi: `title: expected a string, got a number`, `numbers[1]: expected an integer` |
 | `RpcException(status, xabar)` | brauzerda `ErrorResponse(status, ..., xabar)`: route'ning `errorElement`'iga tushadi |
+| `RpcException(422, xabar, Map.of("title", "..."))` | maydonlar bo'yicha xabarlar: brauzerda `ErrorResponse.fields()` |
+| Bean Validation (`@Valid`, `@NotBlank`, `@Size`, `@Min`...) | 422 va har maydon uchun xabar, kod yozmasdan (pastga qarang) |
 | Boshqa exception | 500 va `Internal error` (tafsilot faqat server logida) |
 | `AccessDeniedException` / `AuthenticationException` (Spring Security) | 403 / 401 |
 | Faqat `POST` + `application/json` | cross-site HTML forma boshqa tur yubora olmaydi (415); CSRF tokeni va Spring Security zanjiri odatdagidek ishlaydi |
 
 Har bir metod ochiq HTTP endpoint: ruxsatni serverda tekshiring (`@PreAuthorize`), argumentlarni validatsiya qiling. Interfeysga bitta bean mos kelishi kerak, aks holda server ishga tushmaydi (aniq xabar bilan).
 `JReactWeb.createRoot` HTTP transportni o'zi o'rnatadi; testda `Rpc.transport(...)` bilan soxta transport berish mumkin. Maven'da `maven-compiler-plugin` ning `annotationProcessorPaths` ida `jreact-processor` ko'rsatiladi (shablon shunday: JDK 23+ processor'ni classpath'dan o'zi topmaydi).
+
+### Validatsiya (Bean Validation)
+
+Qoidalarni `shared` modulda API'ning o'zida annotatsiya bilan yozing (Java dev'lar buni biladi), serverdagi bean'ga `@Validated` qo'ying:
+
+```java
+@ServerApi
+public interface BookApi {
+    Book create(@Valid BookInput input);                 // record parametr: @Valid
+    Todo add(@NotBlank @Size(max = 200) String title);   // oddiy parametr: to'g'ridan-to'g'ri
+}
+
+public record BookInput(@NotBlank String title, @Min(1000) @Max(9999) int year) {}
+
+@Service @Validated
+class BookService implements BookApi { ... }             // qoidalar metod ishga tushishidan oldin tekshiriladi
+```
+
+Buzilish bo'lsa server **422** qaytaradi: `{"message": "...", "fields": {"title": "must not be blank", "year": "..."}}`. Maydon nomi record komponenti (`title`, ichma-ich bo'lsa `address.city`) yoki parametr nomi (`-parameters` bilan kompilyatsiya qilingan bo'lishi kerak: shablonlarda yoqilgan). `message` ichida maydon nomi bor (`title must not be blank`); o'zingiz `message = "The title must be 1 to 200 characters."` deb bosh harf bilan jumla yozsangiz, u o'z holicha qo'yiladi. Brauzerda:
+
+```java
+.recover(error -> {
+    if (error instanceof ErrorResponse r && r.status() == 422) return new FormError(String.valueOf(r.data()), r.fields());
+    ...
+})
+// formada: <span>{FormError.of(result, "title")}</span>
+```
+
+`shared` ga `jakarta.validation-api` (faqat annotatsiyalar, brauzerga hech narsa qo'shmaydi), serverga `spring-boot-starter-validation` kerak; ikkalasi `jreact new` shablonida bor. Qoida annotatsiyada ifodalanmasa (masalan "yil kelajakda emas") `RpcException(422, xabar, Map.of("year", xabar))` tashlang. Namuna: `examples/fullstack-crud`.
 
 ### Server-side rendering va hydration
 

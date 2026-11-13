@@ -1,6 +1,8 @@
 package {{package}}.shared;
 
 import dev.jreact.api.ServerApi;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
@@ -17,7 +19,8 @@ import java.util.List;
 public interface TodoApi {
     List<Todo> list();
 
-    Todo add(String title);
+    /** The rules are Bean Validation annotations: a violation reaches the browser as a 422 with a message per field (ErrorResponse.fields()). Use @Valid for a record parameter. */
+    Todo add(@NotBlank(message = "The title must be 1 to 200 characters.") @Size(max = 200, message = "The title must be 1 to 200 characters.") String title);
 
     Todo setDone(long id, boolean done);
 

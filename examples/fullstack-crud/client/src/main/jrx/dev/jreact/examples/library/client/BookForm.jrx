@@ -9,7 +9,7 @@ import dev.jreact.examples.library.shared.*;
 
 /**
  * The create form (route books/new, no loader) and the edit form (books/:id/edit, the loader gives the book): one component for both.
- * The form posts to its route's action; a refusal from the server comes back as FormError (useActionData) and is shown above the fields.
+ * The form posts to its route's action; a refusal from the server comes back as FormError (useActionData): the summary above the fields, each field's message under it.
  */
 public class BookForm extends Component<BookForm.Props> {
 
@@ -32,13 +32,16 @@ public class BookForm extends Component<BookForm.Props> {
                     : null}
                 <label className="block text-sm font-medium">Title
                     <input id="title" name="title" value={creating ? "" : book.title()} maxLength={200} required={true} className={FIELD} />
+                    {FormError.of(result, "title") != null ? <span id="title-error" className="mt-1 block text-xs text-red-600">{FormError.of(result, "title")}</span> : null}
                 </label>
                 <label className="block text-sm font-medium">Author
                     <input id="author" name="author" value={creating ? "" : book.author()} maxLength={120} required={true} className={FIELD} />
+                    {FormError.of(result, "author") != null ? <span id="author-error" className="mt-1 block text-xs text-red-600">{FormError.of(result, "author")}</span> : null}
                 </label>
                 <div className="grid grid-cols-2 gap-4">
                     <label className="block text-sm font-medium">Year published
                         <input id="year" name="year" type="number" value={creating ? "2024" : String.valueOf(book.year())} className={FIELD} />
+                    {FormError.of(result, "year") != null ? <span id="year-error" className="mt-1 block text-xs text-red-600">{FormError.of(result, "year")}</span> : null}
                     </label>
                     <label className="block text-sm font-medium">Status
                         <select id="status" name="status" value={creating ? "AVAILABLE" : book.status().name()} className={FIELD}>
@@ -48,6 +51,7 @@ public class BookForm extends Component<BookForm.Props> {
                 </div>
                 <label className="block text-sm font-medium">ISBN (optional)
                     <input id="isbn" name="isbn" value={creating ? "" : book.isbn().orElse("")} className={FIELD} />
+                    {FormError.of(result, "isbn") != null ? <span id="isbn-error" className="mt-1 block text-xs text-red-600">{FormError.of(result, "isbn")}</span> : null}
                 </label>
                 <div className="flex gap-3">
                     <button id="save" type="submit" disabled={saving} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">{saving ? "Saving..." : "Save"}</button>

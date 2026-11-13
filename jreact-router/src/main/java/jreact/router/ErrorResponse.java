@@ -9,12 +9,17 @@ public final class ErrorResponse extends RuntimeException {
     private final int status;
     private final String statusText;
     private final transient Object data;
+    private final transient java.util.Map<String, String> fields;
 
-    public ErrorResponse(int status, String statusText, Object data) {
+    public ErrorResponse(int status, String statusText, Object data) { this(status, statusText, data, null); }
+
+    /** {@code fields}: messages per form field, as the server's validation gives them (see {@link #fields()}). */
+    public ErrorResponse(int status, String statusText, Object data, java.util.Map<String, String> fields) {
         super(status + " " + statusText, null, false, false);
         this.status = status;
         this.statusText = statusText;
         this.data = data;
+        this.fields = fields == null ? java.util.Map.of() : fields;
     }
 
     public ErrorResponse(int status, String statusText) { this(status, statusText, null); }
@@ -25,6 +30,9 @@ public final class ErrorResponse extends RuntimeException {
 
     /** Whatever was given as {@code data}, or null. */
     public Object data() { return data; }
+
+    /** Messages per field when the server refused a form (HTTP 422 with validation errors); empty otherwise. Keys are the field names, e.g. {@code title} or {@code address.city}. */
+    public java.util.Map<String, String> fields() { return fields; }
 
     /** True when the thing from {@code useRouteError()} is an ErrorResponse (and not an exception thrown by code). */
     public static boolean isErrorResponse(Object error) { return error instanceof ErrorResponse; }

@@ -4,6 +4,7 @@ import dev.jreact.api.RpcException;
 import {{package}}.shared.Todo;
 import {{package}}.shared.TodoApi;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -13,9 +14,10 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * The server side of {@link TodoApi}: an ordinary Spring bean, so transactions, @PreAuthorize and injected repositories work as usual.
  * In memory to keep the template small: swap the list for a repository.
- * Throw {@link RpcException} to answer with a status; any other exception is a 500 that does not leak its message.
+ * Bean Validation rules on {@link TodoApi} answer 422 by themselves; throw {@link RpcException} for other statuses; any other exception is a 500 that does not leak its message.
  */
 @Service
+@Validated                 // turns on the Bean Validation annotations of TodoApi
 class TodoService implements TodoApi {
 
     private final List<Todo> todos = new CopyOnWriteArrayList<>(List.of(
@@ -29,9 +31,7 @@ class TodoService implements TodoApi {
 
     @Override
     public Todo add(String title) {
-        String clean = title == null ? "" : title.strip();
-        if (clean.isEmpty() || clean.length() > 200) throw new RpcException(422, "title must be 1 to 200 characters");
-        Todo todo = new Todo(ids.incrementAndGet(), clean, false, LocalDate.now());
+        Todo todo = new Todo(ids.incrementAndGet(), title.strip(), false, LocalDate.now());      // the annotations on TodoApi.add were checked already
         todos.add(todo);
         return todo;
     }

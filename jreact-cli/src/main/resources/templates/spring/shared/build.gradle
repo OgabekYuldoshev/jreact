@@ -5,6 +5,7 @@ plugins {
 
 dependencies {
     api "dev.jreact:jreact-api:${jreactVersion}"
+    api 'jakarta.validation:jakarta.validation-api:3.0.2'     // @NotBlank, @Size... on the API: the server checks them
     // generates TodoApiClient (browser), TodoApiDispatcher (server) and the JSON conversion from every @ServerApi interface
     annotationProcessor "dev.jreact:jreact-processor:${jreactVersion}"
 }

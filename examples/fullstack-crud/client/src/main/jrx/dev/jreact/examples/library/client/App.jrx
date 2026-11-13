@@ -56,12 +56,12 @@ public class App implements ClientApp {
             input = new BookInput(f.get("title", ""), f.get("author", ""), Integer.parseInt(f.get("year", "").strip()),
                 BookStatus.valueOf(f.get("status", "AVAILABLE")), Optional.of(f.get("isbn", "")));
         } catch (RuntimeException notANumber) {
-            return Promise.resolved(new FormError("The year must be a number."));
+            return Promise.resolved(new FormError("The year must be a number.", java.util.Map.of("year", "The year must be a number.")));
         }
         Promise<Book> saved = id == null ? BookApiClient.create(input) : BookApiClient.update(id, input);
         return saved.then(book -> (Object) Redirect.to("/books/" + book.id()))
             .recover(error -> {
-                if (error instanceof ErrorResponse r && r.status() == 422) return new FormError(String.valueOf(r.data()));
+                if (error instanceof ErrorResponse r && r.status() == 422) return new FormError(String.valueOf(r.data()), r.fields());
                 if (error instanceof RuntimeException e) throw e;
                 throw new IllegalStateException(error);
             });

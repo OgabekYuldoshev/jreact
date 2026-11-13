@@ -23,7 +23,9 @@ public final class HttpTransport implements Rpc.Transport {
     public Promise<Object> call(String api, String method, List<Object> args) {
         return Http.json("POST", prefix + api + "/" + method, args).recover(error -> {
             if (error instanceof ErrorResponse r && r.data() instanceof Map<?, ?> m && m.get("message") instanceof String text) {
-                throw new ErrorResponse(r.status(), r.statusText(), text);
+                java.util.Map<String, String> fields = new java.util.LinkedHashMap<>();
+                if (m.get("fields") instanceof Map<?, ?> f) for (Map.Entry<?, ?> e : f.entrySet()) fields.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
+                throw new ErrorResponse(r.status(), r.statusText(), text, fields);
             }
             if (error instanceof RuntimeException e) throw e;
             throw new IllegalStateException(error);

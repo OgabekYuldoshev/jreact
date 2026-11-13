@@ -11,6 +11,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
 import java.time.Year;
@@ -24,6 +25,7 @@ import java.util.Optional;
  * {@link RpcException} answers with its status and message (the browser shows the message); any other exception is a 500 that does not leak details.
  */
 @Service
+@Validated                  // Bean Validation: the @Valid BookInput of BookApi is checked before a method runs (422 with a message per field)
 @Transactional
 class BookService implements BookApi {
 
@@ -86,18 +88,15 @@ class BookService implements BookApi {
         return books.findById(id).orElseThrow(() -> new RpcException(404, "There is no book " + id + "."));
     }
 
-    /** Trims and checks the input; the message of the first problem goes to the form. */
+    /** The rules that annotations cannot say: trimming, a year not in the future, the ISBN shape. Throws a 422 with the field's name. */
     static BookInput validated(BookInput in) {
-        if (in == null) throw new RpcException(400, "no input");
-        String title = in.title() == null ? "" : in.title().strip();
-        String author = in.author() == null ? "" : in.author().strip();
-        if (title.isEmpty() || title.length() > 200) throw new RpcException(422, "The title must be 1 to 200 characters.");
-        if (author.isEmpty() || author.length() > 120) throw new RpcException(422, "The author must be 1 to 120 characters.");
-        if (in.year() < 1000 || in.year() > Year.now().getValue() + 1) throw new RpcException(422, "The year must be between 1000 and " + (Year.now().getValue() + 1) + ".");
-        if (in.status() == null) throw new RpcException(422, "Choose a status.");
+        int latest = Year.now().getValue() + 1;
+        if (in.year() > latest) throw new RpcException(422, "The year must be between 1000 and " + latest + ".", Map.of("year", "The year must be between 1000 and " + latest + "."));
         Optional<String> isbn = in.isbn() == null ? Optional.empty() : in.isbn().map(String::strip).filter(s -> !s.isEmpty());
-        if (isbn.isPresent() && !isbn.get().matches("[0-9Xx-]{10,17}")) throw new RpcException(422, "The ISBN has 10 or 13 digits (dashes allowed).");
-        return new BookInput(title, author, in.year(), in.status(), isbn);
+        if (isbn.isPresent() && !isbn.get().matches("[0-9Xx-]{10,17}")) {
+            throw new RpcException(422, "The ISBN has 10 or 13 digits (dashes allowed).", Map.of("isbn", "The ISBN has 10 or 13 digits (dashes allowed)."));
+        }
+        return new BookInput(in.title().strip(), in.author().strip(), in.year(), in.status(), isbn);
     }
 
     private static Book toBook(BookEntity e) {

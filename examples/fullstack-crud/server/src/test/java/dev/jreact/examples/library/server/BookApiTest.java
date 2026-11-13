@@ -72,7 +72,9 @@ class BookApiTest {
         assertThat(rpc("create", "[" + input("T", " ", 2000, "AVAILABLE", null) + "]").getBody()).contains("The author must be");
         ResponseEntity<String> year = rpc("create", "[" + input("T", "A", 12, "AVAILABLE", null) + "]");
         assertThat(year.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
-        assertThat(year.getBody()).contains("The year must be between 1000 and");
+        assertThat(year.getBody()).contains("The year must be between 1000 and").contains("\"fields\":{\"year\":");      // the message is also given per field
+        ResponseEntity<String> both = rpc("create", "[" + input(" ", "", 12, "AVAILABLE", null) + "]");
+        assertThat(both.getBody()).contains("\"title\":\"The title must be").contains("\"author\":\"The author must be").contains("\"year\":");
         assertThat(rpc("create", "[" + input("T", "A", 2000, "AVAILABLE", "not-an-isbn") + "]").getBody()).contains("The ISBN has 10 or 13 digits");
         // a wrong type is a 400 that names the place
         ResponseEntity<String> bad = rpc("create", "[{\"title\":\"T\",\"author\":\"A\",\"year\":\"x\",\"status\":\"AVAILABLE\",\"isbn\":null}]");

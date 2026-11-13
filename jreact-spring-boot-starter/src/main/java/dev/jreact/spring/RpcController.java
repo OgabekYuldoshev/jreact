@@ -36,6 +36,9 @@ class RpcController {
 
     private static final Logger log = LoggerFactory.getLogger(RpcController.class);
 
+    /** Bean Validation (jakarta.validation) is optional: its classes are only touched when it is on the classpath. */
+    private static final boolean BEAN_VALIDATION = org.springframework.util.ClassUtils.isPresent("jakarta.validation.ConstraintViolationException", RpcController.class.getClassLoader());
+
     private record Target(RpcDispatcher dispatcher, Object bean) {}
 
     private final Map<String, Target> targets = new LinkedHashMap<>();
@@ -95,10 +98,14 @@ class RpcController {
             Object result = target.dispatcher().invoke(target.bean(), method, args);
             return new Result(200, Json.stringify(result));
         } catch (RpcException e) {
-            return error(e.status(), e.getMessage());
+            return error(e.status(), e.getMessage(), e.fields());
         } catch (ResponseStatusException e) {
             return error(e.getStatusCode().value(), e.getReason() != null ? e.getReason() : HttpStatus.valueOf(e.getStatusCode().value()).getReasonPhrase());
         } catch (RuntimeException e) {
+            if (BEAN_VALIDATION && ConstraintViolations.isViolation(e)) {
+                RpcException refused = ConstraintViolations.toRpcException(e);
+                return error(refused.status(), refused.getMessage(), refused.fields());
+            }
             HttpStatusCode security = securityStatus(e);
             if (security != null) return error(security.value(), security.value() == 401 ? "authentication required" : "access denied");
             log.error("jreact rpc: {}/{} failed", api, method, e);
@@ -116,8 +123,13 @@ class RpcController {
         return null;
     }
 
-    private static Result error(int status, String message) {
-        return new Result(status, Json.stringify(Map.of("message", message == null ? "" : message)));
+    private static Result error(int status, String message) { return error(status, message, Map.of()); }
+
+    private static Result error(int status, String message, Map<String, String> fields) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("message", message == null ? "" : message);
+        if (!fields.isEmpty()) body.put("fields", fields);
+        return new Result(status, Json.stringify(body));
     }
 
     private static ResponseEntity<String> respond(Result r) {

@@ -58,7 +58,9 @@ final class SsrRenderer {
             if (!r.ok()) {
                 String message = value instanceof Map<?, ?> m && m.get("message") instanceof String s ? s : "error";
                 org.springframework.http.HttpStatus known = org.springframework.http.HttpStatus.resolve(r.status());
-                return Promise.rejected(new ErrorResponse(r.status(), known == null ? "Error" : known.getReasonPhrase(), message));
+                Map<String, String> fields = new java.util.LinkedHashMap<>();
+                if (value instanceof Map<?, ?> m && m.get("fields") instanceof Map<?, ?> f) for (Map.Entry<?, ?> e : f.entrySet()) fields.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
+                return Promise.rejected(new ErrorResponse(r.status(), known == null ? "Error" : known.getReasonPhrase(), message, fields));
             }
             Map<String, Object> rec = recording.get();
             if (rec != null) rec.put(Rpc.key(api, method, args), value);

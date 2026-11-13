@@ -59,6 +59,7 @@ const check = (name, ok, extra) => { console.log((ok ? 'ok   ' : 'FAIL ') + name
   submit($('#book-form'));
   await waitFor('error', () => $('#form-error'));
   check('the server refuses a bad year, the message is shown on the form', $('#form-error') && $('#form-error').textContent.startsWith('The year must be between 1000'), $('#form-error') && $('#form-error').textContent);
+  check('the message is also shown under the field', $('#year-error') && $('#year-error').textContent.startsWith('The year must be between 1000'), $('#year-error') && $('#year-error').textContent);
   check('what was typed is still there', $('#title').value === 'JReact in Action', $('#title').value);
 
   // create: the fixed form is saved and the page goes to the new book

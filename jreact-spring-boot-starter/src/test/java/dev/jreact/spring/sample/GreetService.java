@@ -4,6 +4,7 @@ import dev.jreact.api.RpcException;
 
 import java.util.List;
 
+@org.springframework.validation.annotation.Validated
 public class GreetService implements GreetApi {
 
     /** Looks like Spring Security's exception: the starter maps it by name to 403. */
@@ -19,6 +20,10 @@ public class GreetService implements GreetApi {
     @Override public List<Greeting> all() { return List.of(new Greeting("a", 1), new Greeting("b", 2)); }
 
     @Override public void ping() {}
+
+    @Override public Signup join(Signup form) { return form; }
+
+    @Override public String shout(String word) { return word.toUpperCase(); }
 
     @Override public Booking book(String who, java.time.LocalDate day, java.util.Optional<String> note) {
         return new Booking(who, day, note, day.atTime(9, 30), java.time.Instant.parse("2026-11-13T04:30:00Z"));
