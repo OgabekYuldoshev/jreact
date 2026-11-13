@@ -17,12 +17,14 @@ final class Templates {
     static final Pattern NAME = Pattern.compile("[a-z][a-z0-9]*(-[a-z0-9]+)*");
     static final Pattern PACKAGE = Pattern.compile("[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*");
 
-    record Params(String name, String group, String pkg, Versions versions) {}
+    record Params(String name, String group, String pkg, String build, Versions versions) {}
 
     /** The files a new project consists of (relative to the project folder, after name mapping). */
-    static List<String> files() {
+    static List<String> files(String build) {
         List<String> out = new ArrayList<>();
-        for (String line : read("index.txt").split("\n")) if (!line.isBlank()) out.add(line.strip());
+        for (String index : List.of("index.txt", "index-" + build + ".txt")) {
+            for (String line : read(index).split("\n")) if (!line.isBlank()) out.add(line.strip());
+        }
         return out;
     }
 
@@ -30,7 +32,7 @@ final class Templates {
     static List<Path> generate(Path target, Params p) throws IOException {
         if (Files.exists(target) && !isEmptyDir(target)) throw new IOException(target + " already exists and is not empty");
         List<Path> written = new ArrayList<>();
-        for (String file : files()) {
+        for (String file : files(p.build())) {
             Path out = target.resolve(mapPath(file, p));
             Files.createDirectories(out.getParent());
             Files.writeString(out, render(read(file), p), StandardCharsets.UTF_8);
@@ -47,7 +49,7 @@ final class Templates {
     static String render(String text, Params p) {
         return text.replace("{{name}}", p.name()).replace("{{group}}", p.group()).replace("{{package}}", p.pkg())
                 .replace("{{jreactVersion}}", p.versions().jreact()).replace("{{springBootVersion}}", p.versions().springBoot())
-                .replace("{{teavmVersion}}", p.versions().teavm());
+                .replace("{{teavmVersion}}", p.versions().teavm()).replace("{{build}}", p.build());
     }
 
     private static String read(String file) {

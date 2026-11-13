@@ -1,0 +1,21 @@
+// Settings shared by the three modules. `jreact dev` passes -Pjreact.dev=true for fast, unoptimized rebuilds.
+allprojects {
+    group = '{{group}}'
+    version = '0.1.0-SNAPSHOT'
+    ext {
+        jreactVersion = '{{jreactVersion}}'
+        teavmVersion = '{{teavmVersion}}'
+        dev = project.hasProperty('jreact.dev')
+    }
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+    plugins.withType(JavaPlugin) {
+        java { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }   // TeaVM reads Java 17 bytecode
+        tasks.withType(JavaCompile).configureEach {
+            options.encoding = 'UTF-8'
+            options.compilerArgs << '-parameters'     // Spring reads @PathVariable names from the bytecode
+        }
+    }
+}

@@ -1,0 +1,43 @@
+// The UI: .jrx -> .java -> app.js (TeaVM). The jar holds the built files (jreact/index.html, jreact/assets/...) that the server serves,
+// and the UI classes it uses to render the first page.
+import org.teavm.gradle.api.OptimizationLevel
+
+plugins {
+    id 'java'
+    id 'dev.jreact.jrx' version '{{jreactVersion}}'
+    id 'org.teavm' version '{{teavmVersion}}'
+}
+
+dependencies {
+    implementation project(':shared')
+    implementation "dev.jreact:jreact-web:${jreactVersion}"
+    implementation "org.teavm:teavm-jso:${teavmVersion}"
+    implementation "org.teavm:teavm-classlib:${teavmVersion}"
+    implementation "org.teavm:teavm-jso-impl:${teavmVersion}"
+}
+
+teavm.js {
+    mainClass = '{{package}}.client.WebMain'
+    targetFileName = 'app.js'
+    optimization = dev ? OptimizationLevel.BALANCED : OptimizationLevel.AGGRESSIVE
+    obfuscated = !dev
+    debugInformation = false
+}
+
+jreact {
+    hash = !dev
+    compress = !dev
+}
+
+// TeaVM's app.js + src/main/webapp (index.html...) -> build/web; jrxBundle turns that into hashed assets
+tasks.register('assembleWeb', Sync) {
+    dependsOn 'generateJavaScript'
+    from(layout.buildDirectory.dir('generated/teavm/js'))
+    from('src/main/webapp')
+    into(layout.buildDirectory.dir('web'))
+}
+jrxBundle { dependsOn 'assembleWeb' }
+
+jar {
+    include 'jreact/**', '**/*.class'
+}

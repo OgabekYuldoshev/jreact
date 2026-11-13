@@ -1,0 +1,4 @@
+client/pom.xml
+pom.xml
+server/pom.xml
+shared/pom.xml

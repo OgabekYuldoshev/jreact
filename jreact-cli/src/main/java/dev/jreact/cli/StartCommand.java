@@ -18,7 +18,7 @@ final class StartCommand implements Callable<Integer> {
     public Integer call() throws Exception {
         Project project = Project.find(Path.of("."));
         Path jar = BuildCommand.findJar(project);
-        if (jar == null) throw new IllegalStateException("no jar in " + project.serverDir().resolve("target") + ". Run: jreact build");
+        if (jar == null) throw new IllegalStateException("no jar in " + BuildTool.of(project).jarDirectory() + ". Run: jreact build");
         List<String> cmd = new ArrayList<>(List.of(javaExecutable(), "-jar", jar.toString()));
         cmd.add("--server.port=" + (port != null ? port : project.port()));
         Ui.info("http://localhost:" + (port != null ? port : project.port()));
@@ -28,6 +28,6 @@ final class StartCommand implements Callable<Integer> {
     }
 
     static String javaExecutable() {
-        return Path.of(System.getProperty("java.home"), "bin", Maven.windows() ? "java.exe" : "java").toString();
+        return Path.of(System.getProperty("java.home"), "bin", BuildTool.windows() ? "java.exe" : "java").toString();
     }
 }

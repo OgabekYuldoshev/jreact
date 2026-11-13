@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,8 +16,8 @@ import java.util.stream.Stream;
 /**
  * {@code jreact dev}: the Spring Boot server (devtools) plus a watcher.
  * <ul>
- *   <li>client/ changes: Tailwind + {@code mvn process-classes} (jrx -> java -> TeaVM, unoptimized), the server sees the new files, the page reloads</li>
- *   <li>server/ changes: {@code mvn compile}, devtools restarts Spring</li>
+ *   <li>client/ changes: Tailwind + {@code mvn process-classes} (Gradle: {@code jrxBundle}) (jrx -> java -> TeaVM, unoptimized), the server sees the new files, the page reloads</li>
+ *   <li>server/ changes: {@code mvn compile} (Gradle: {@code classes}), devtools restarts Spring</li>
  *   <li>shared/ changes: both sides are rebuilt and the server is restarted</li>
  * </ul>
  * A failed build is shown in the browser (an overlay) and in the terminal, and the last good UI keeps running.
@@ -30,6 +29,7 @@ final class DevCommand implements Callable<Integer> {
     Integer port;
 
     private Project project;
+    private BuildTool tool;
     private Tailwind tailwind;
     private Process server;
     private int serverPort;
@@ -37,6 +37,7 @@ final class DevCommand implements Callable<Integer> {
     @Override
     public Integer call() throws Exception {
         project = Project.find(Path.of("."));
+        tool = BuildTool.of(project);
         serverPort = port != null ? port : project.port();
         tailwind = Tailwind.ensure(Versions.load());
 
@@ -53,19 +54,19 @@ final class DevCommand implements Callable<Integer> {
         Ui.info("");
 
         Map<Path, Long> shared = scan(project.sharedDir()), client = scan(project.clientDir()), serverSrc = scan(project.serverDir());
-        Map<Path, Long> poms = scanPoms();
+        Map<Path, Long> poms = scanBuildFiles();
         while (true) {
             Thread.sleep(400);
             if (!server.isAlive()) { Ui.fail("the server stopped (exit " + server.exitValue() + ")"); return server.exitValue() == 0 ? 0 : 1; }
             Map<Path, Long> nowShared = scan(project.sharedDir()), nowClient = scan(project.clientDir()), nowServer = scan(project.serverDir());
-            Map<Path, Long> nowPoms = scanPoms();
+            Map<Path, Long> nowPoms = scanBuildFiles();
             boolean sharedChanged = !nowShared.equals(shared), clientChanged = !nowClient.equals(client), serverChanged = !nowServer.equals(serverSrc);
             boolean pomChanged = !nowPoms.equals(poms);
             shared = nowShared; client = nowClient; serverSrc = nowServer; poms = nowPoms;
             if (!sharedChanged && !clientChanged && !serverChanged && !pomChanged) continue;
             Thread.sleep(150);          // an editor saves several files: let it finish
 
-            if (pomChanged) Ui.warn("a pom.xml changed: stop (Ctrl+C) and run `jreact dev` again to pick it up");
+            if (pomChanged) Ui.warn("a build file (pom.xml / build.gradle) changed: stop (Ctrl+C) and run `jreact dev` again to pick it up");
             if (sharedChanged) {
                 long t0 = System.nanoTime();
                 String error = buildAll();
@@ -79,7 +80,7 @@ final class DevCommand implements Callable<Integer> {
                 }
                 if (serverChanged) {
                     long t0 = System.nanoTime();
-                    Maven.Result r = Maven.capture(project, mvn("-q", "-pl", project.server(), "compile"), Map.of());
+                    BuildTool.Result r = tool.capture(tool.compileServer(), Map.of());
                     if (r.ok()) { clearError(); Ui.ok("server compiled, Spring restarts " + secs(t0)); } else report("server", r.output());
                 }
             }
@@ -94,11 +95,8 @@ final class DevCommand implements Callable<Integer> {
     private String buildAll() throws IOException, InterruptedException {
         String css = css();
         if (css != null) { writeError(css); return css; }
-        // "." is the parent pom: the server module resolves shared and client from the local repository and needs it there too
-        List<String> args = mvn("-q", "-pl", ".," + project.shared() + "," + project.client(), "install", "-DskipTests");
-        args.addAll(Maven.DEV_PROPS);
-        Maven.Result r = Maven.capture(project, args, Map.of());
-        if (!r.ok()) { writeError(Maven.tail(r.output(), 60)); return Maven.tail(r.output(), 60); }
+        BuildTool.Result r = tool.capture(tool.buildAll(), Map.of());
+        if (!r.ok()) { writeError(BuildTool.tail(r.output(), 60)); return BuildTool.tail(r.output(), 60); }
         clearError();
         return null;
     }
@@ -106,17 +104,13 @@ final class DevCommand implements Callable<Integer> {
     private String buildClient() throws IOException, InterruptedException {
         String css = css();
         if (css != null) return css;
-        List<String> args = mvn("-q", "-pl", project.client(), "process-classes");
-        args.addAll(Maven.DEV_PROPS);
-        Maven.Result r = Maven.capture(project, args, Map.of());
-        return r.ok() ? null : Maven.tail(r.output(), 60);
+        BuildTool.Result r = tool.capture(tool.buildClient(), Map.of());
+        return r.ok() ? null : BuildTool.tail(r.output(), 60);
     }
 
     private String css() throws IOException, InterruptedException {
         return tailwind == null ? null : tailwind.build(project, false);
     }
-
-    private static List<String> mvn(String... args) { return new ArrayList<>(List.of(args)); }
 
     // ---------------------------------------------------------------- the server
 
@@ -125,7 +119,7 @@ final class DevCommand implements Callable<Integer> {
         env.put("JREACT_DEVDIR", project.devDir().toString());              // serve the UI straight from the client's output
         env.put("JREACT_DEVERRORFILE", project.errorFile().toString());
         env.put("SERVER_PORT", String.valueOf(serverPort));
-        server = Maven.start(project, mvn("-q", "-pl", project.server(), "spring-boot:run"), env);
+        server = tool.start(tool.runServer(), env);
     }
 
     private void restartServer() throws IOException, InterruptedException {
@@ -162,11 +156,9 @@ final class DevCommand implements Callable<Integer> {
 
     // ---------------------------------------------------------------- watching: a poll of mtimes and sizes (WatchService is slow on macOS)
 
-    private Map<Path, Long> scanPoms() {
+    private Map<Path, Long> scanBuildFiles() {
         Map<Path, Long> out = new HashMap<>();
-        for (Path p : List.of(project.root().resolve("pom.xml"), project.sharedDir().resolve("pom.xml"), project.clientDir().resolve("pom.xml"), project.serverDir().resolve("pom.xml"))) {
-            stamp(p, out);
-        }
+        for (Path p : tool.buildFiles()) stamp(p, out);
         return out;
     }
 

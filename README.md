@@ -547,7 +547,7 @@ cd shop
 jreact dev                                            # http://localhost:8080
 ```
 
-`jreact new` uch modulli Maven loyihasi yaratadi (TeaVM server klasslarini yig'a olmaydi, shuning uchun bitta modul bo'lmaydi):
+`jreact new` uch modulli Maven loyihasi yaratadi (Gradle uchun `--build gradle`, quyida) (TeaVM server klasslarini yig'a olmaydi, shuning uchun bitta modul bo'lmaydi):
 
 ```
 shop/
@@ -559,16 +559,30 @@ shop/
 
 | Buyruq | Vazifasi |
 |---|---|
-| `jreact new <nom> [--group g] [--package p] [--dir d]` | loyiha yaratadi (nom: kichik harf, raqam, `-`) |
+| `jreact new <nom> [--group g] [--package p] [--build maven\|gradle] [--dir d]` | loyiha yaratadi (nom: kichik harf, raqam, `-`) |
 | `jreact dev [--port n]` | Spring Boot (devtools) + kuzatuvchi: `client/` o'zgarsa Tailwind + `.jrx` + TeaVM qayta yig'iladi (~5 s) va sahifa o'zi yangilanadi; `server/` o'zgarsa kompilyatsiya + Spring qayta ishga tushadi; `shared/` o'zgarsa ikkalasi va server qayta yig'iladi |
-| `jreact build [--skip-tests] [-- <mvn args>]` | optimallashgan build: minify, hash'li fayl nomlari (`app.3f9a1c2b.js`), gzip, Tailwind (minify), testlar, bitta `server/target/*.jar` |
+| `jreact build [--skip-tests] [-- <mvn/gradle args>]` | optimallashgan build: minify, hash'li fayl nomlari (`app.3f9a1c2b.js`), gzip, Tailwind (minify), testlar, bitta `server/target/*.jar` (Gradle: `server/build/libs/*.jar`) |
 | `jreact start [--port n]` | shu jar'ni ishga tushiradi |
-| `jreact test` | barcha modullarning testlari (`mvn test`) |
-| `jreact doctor` | Java 17+, Maven, JReact lokal repoda, Tailwind, port, modul papkalari |
+| `jreact test` | barcha modullarning testlari (`mvn test` / `gradle test`) |
+| `jreact doctor` | Java 17+, Maven yoki Gradle, JReact lokal repoda, Tailwind, port, modul papkalari |
 | `jreact docker [--force]` | jar'ni ishga tushiruvchi `Dockerfile` (avval `jreact build`) |
 
 CLI'ni yig'ish: `mvn -pl jreact-cli -am package` (`jreact-cli/target/jreact-cli.jar`, faqat JDK 17+ kerak).
 Tailwind mustaqil binary sifatida `~/.jreact/` ga bir marta yuklab olinadi (Node kerak emas; o'zingiznikini `TAILWINDCSS=/yo'l/tailwindcss` bilan bering).
+
+### Gradle bilan: `jreact new --build gradle`
+
+Shu loyiha Gradle bilan ham yaratiladi (`settings.gradle`, `build.gradle` ildizda, `shared/`, `client/`, `server/` ichida `build.gradle`). Barcha buyruqlar (`dev`, `build`, `start`, `test`, `doctor`, `docker`) `jreact.properties` dagi `build=gradle` ni o'qib, Gradle bilan ishlaydi:
+
+| | Maven | Gradle |
+|---|---|---|
+| UI (dev, tez) | `mvn -pl client process-classes` + `-Djreact.*` | `gradle :client:jrxBundle -Pjreact.dev=true` |
+| server (dev) | `spring-boot:run` | `:server:bootRun` |
+| jar | `server/target/*.jar` | `server/build/libs/*.jar` |
+| TeaVM | `teavm-maven-plugin` | `org.teavm` Gradle plagini |
+| `.jrx` va bundle | `jreact-maven-plugin` | `dev.jreact.jrx` (`jreact-gradle-plugin`) |
+
+`./gradlew` bo'lsa shu ishlatiladi, yo'q bo'lsa PATH dagi `gradle` (wrapper yaratilmaydi). JReact va Gradle plagini hozircha `mavenLocal()` dan olinadi: `mvn install -DskipTests` va `./build.sh gradle-plugin`. Sinash: `E2E_BUILD=gradle ./build.sh spring-e2e` (Maven bilan bir xil tekshiruvlar: SSR, hydration, context path).
 
 ### So'rov qanday o'tadi
 
@@ -708,7 +722,7 @@ jrxBundle { dependsOn 'assembleWeb' }
 
 `settings.gradle` da `pluginManagement { repositories { mavenLocal(); gradlePluginPortal() } }` kerak (plagin hozircha `mvn install`/`./build.sh gradle-plugin` dan keyin `mavenLocal()` orqali olinadi). Sinash: `./build.sh gradle-plugin` (TestKit, 3 ta test).
 
-**Hozircha yo'q:** `jreact` CLI faqat Maven loyihalari bilan ishlaydi (`new/dev/build` Gradle'ni bilmaydi), Gradle uchun TeaVM + Spring Boot shabloni yo'q. TeaVM bilan sinov qo'lda qilingan (sahifa brauzerda ochilmagan), avtomatik testda yo'q.
+Spring Boot loyihasi uchun to'liq shablon: `jreact new --build gradle` (yuqoridagi bo'lim). TeaVM bilan sinov `E2E_BUILD=gradle ./build.sh spring-e2e` da, qo'lda yozilgan namuna bilan emas.
 
 ### Context path (`server.servlet.context-path=/shop`)
 
@@ -1114,7 +1128,7 @@ Qanday o'qish kerak: bu bitta mashina va bitta jadval, shuning uchun mutlaq raqa
 
 ## CI
 
-`.github/workflows/ci.yml` (GitHub Actions) har push va PR da ishlaydi: `./build.sh test`, processor/starter/CLI testlari, `gradle-plugin`, `examples-test` va `spring-e2e`. Workflow GitHub'da hali ishga tushirilmagan (repo'ga push qilingach birinchi natija ko'rinadi).
+`.github/workflows/ci.yml` (GitHub Actions) har push va PR da ishlaydi: `./build.sh test`, processor/starter/CLI testlari, `gradle-plugin`, `examples-test`, `spring-e2e` (Maven loyiha) va `E2E_BUILD=gradle spring-e2e` (Gradle loyiha). Workflow GitHub'da hali ishga tushirilmagan (repo'ga push qilingach birinchi natija ko'rinadi).
 
 ## Maven Central'ga chiqarish
 

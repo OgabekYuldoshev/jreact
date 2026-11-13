@@ -13,10 +13,10 @@ server/   Spring Boot: the API, and it serves the built UI
 | | |
 |---|---|
 | `jreact dev` | server on http://localhost:8080, rebuilds the UI on every change and reloads the browser |
-| `jreact build` | optimized build, one runnable jar: `server/target/{{name}}-server-0.1.0-SNAPSHOT.jar` |
+| `jreact build` | optimized build, one runnable jar: `server/target/*.jar` (Maven) or `server/build/libs/*.jar` (Gradle, see `build=` in jreact.properties) |
 | `jreact start` | runs that jar |
 | `jreact test` | runs the tests |
-| `jreact doctor` | checks Java, Maven and the tools the commands need |
+| `jreact doctor` | checks Java, Maven or Gradle and the tools the commands need |
 | `jreact docker` | writes a Dockerfile for the jar |
 
 ## How a request flows

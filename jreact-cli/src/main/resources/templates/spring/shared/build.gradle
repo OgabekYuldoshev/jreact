@@ -1,0 +1,10 @@
+// Types and @ServerApi interfaces used by both sides. Compiled for the JVM (server) and for the browser (TeaVM).
+plugins {
+    id 'java-library'
+}
+
+dependencies {
+    api "dev.jreact:jreact-api:${jreactVersion}"
+    // generates TodoApiClient (browser), TodoApiDispatcher (server) and the JSON conversion from every @ServerApi interface
+    annotationProcessor "dev.jreact:jreact-processor:${jreactVersion}"
+}

@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.util.Properties;
 
 /** A JReact project on disk: the folder with jreact.properties (shared/, client/, server/ next to it). */
-record Project(Path root, String shared, String client, String server, int port) {
+record Project(Path root, String shared, String client, String server, int port, String build) {
 
     static final String MARKER = "jreact.properties";
 
@@ -27,19 +27,24 @@ record Project(Path root, String shared, String client, String server, int port)
             throw new IllegalStateException("cannot read " + root.resolve(MARKER) + ": " + e.getMessage(), e);
         }
         return new Project(root, p.getProperty("shared", "shared"), p.getProperty("client", "client"), p.getProperty("server", "server"),
-                Integer.parseInt(p.getProperty("port", "8080").strip()));
+                Integer.parseInt(p.getProperty("port", "8080").strip()), p.getProperty("build", "maven").strip());
     }
+
+    boolean gradle() { return build.equals("gradle"); }
+
+    /** The build output folder of a module: target (Maven) or build (Gradle). */
+    private Path out(Path module) { return module.resolve(gradle() ? "build" : "target"); }
 
     Path sharedDir() { return root.resolve(shared); }
     Path clientDir() { return root.resolve(client); }
     Path serverDir() { return root.resolve(server); }
 
     /** Where {@code jrx:bundle} writes in dev (unhashed): the server serves straight from here. */
-    Path devDir() { return clientDir().resolve("target/classes/jreact"); }
+    Path devDir() { return gradle() ? clientDir().resolve("build/resources/main/jreact") : clientDir().resolve("target/classes/jreact"); }
 
     /** The CLI writes the build error here; the page shows it. */
-    Path errorFile() { return clientDir().resolve("target/jreact-error.txt"); }
+    Path errorFile() { return out(clientDir()).resolve("jreact-error.txt"); }
 
     Path cssInput() { return clientDir().resolve("src/main/styles/app.css"); }
-    Path cssOutput() { return clientDir().resolve("target/tailwind/app.css"); }
+    Path cssOutput() { return out(clientDir()).resolve("tailwind/app.css"); }
 }

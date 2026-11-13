@@ -19,6 +19,9 @@ final class NewCommand implements Callable<Integer> {
     @Option(names = "--package", description = "Java package (default: <group>.<name without dashes>)")
     String pkg;
 
+    @Option(names = "--build", defaultValue = "maven", description = "build tool: maven or gradle (default: ${DEFAULT-VALUE})")
+    String build;
+
     @Option(names = "--dir", description = "where to create it (default: ./<name>)")
     Path dir;
 
@@ -28,8 +31,9 @@ final class NewCommand implements Callable<Integer> {
         if (!Templates.PACKAGE.matcher(group).matches()) throw new IllegalArgumentException("bad --group \"" + group + "\" (like com.example)");
         String javaPackage = pkg != null ? pkg : group + "." + name.replace("-", "");
         if (!Templates.PACKAGE.matcher(javaPackage).matches()) throw new IllegalArgumentException("bad --package \"" + javaPackage + "\"");
+        if (!build.equals("maven") && !build.equals("gradle")) throw new IllegalArgumentException("--build must be maven or gradle, not \"" + build + "\"");
         Path target = dir != null ? dir : Path.of(name);
-        var written = Templates.generate(target, new Templates.Params(name, group, javaPackage, Versions.load()));
+        var written = Templates.generate(target, new Templates.Params(name, group, javaPackage, build, Versions.load()));
         Ui.ok("created " + target + " (" + written.size() + " files)");
         Ui.info("");
         Ui.info("  cd " + target);

@@ -1,5 +1,4 @@
 _gitignore
-client/pom.xml
 client/src/main/jrx/__pkg__/client/App.jrx
 client/src/main/jrx/__pkg__/client/ErrorPage.jrx
 client/src/main/jrx/__pkg__/client/TodoPage.jrx
@@ -7,13 +6,10 @@ client/src/main/jrx/__pkg__/client/WebMain.jrx
 client/src/main/styles/app.css
 client/src/main/webapp/index.html
 jreact.properties
-pom.xml
 README.md
-server/pom.xml
 server/src/main/java/__pkg__/server/Application.java
 server/src/main/java/__pkg__/server/TodoService.java
 server/src/main/resources/application.properties
 server/src/test/java/__pkg__/server/TodoApiTest.java
-shared/pom.xml
 shared/src/main/java/__pkg__/shared/Todo.java
 shared/src/main/java/__pkg__/shared/TodoApi.java

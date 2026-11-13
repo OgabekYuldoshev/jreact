@@ -1,0 +1,10 @@
+// {{name}}: shared (types and @ServerApi interfaces), client (the UI, TeaVM), server (Spring Boot)
+pluginManagement {
+    repositories {
+        mavenLocal()          // JReact comes from `mvn install` of the JReact repository until it is on Maven Central
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = '{{name}}'
+include 'shared', 'client', 'server'

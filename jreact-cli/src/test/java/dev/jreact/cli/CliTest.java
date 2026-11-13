@@ -26,16 +26,18 @@ class CliTest {
         Path root = Path.of("src/main/resources/templates/spring");
         Set<String> onDisk;
         try (Stream<Path> walk = Files.walk(root)) {
-            onDisk = walk.filter(Files::isRegularFile).map(p -> root.relativize(p).toString().replace('\\', '/')).filter(n -> !n.equals("index.txt")).collect(Collectors.toSet());
+            onDisk = walk.filter(Files::isRegularFile).map(p -> root.relativize(p).toString().replace('\\', '/')).filter(n -> !n.startsWith("index")).collect(Collectors.toSet());
         }
-        assertEquals(onDisk, new HashSet<>(Templates.files()), "templates/spring/index.txt must list exactly the template files");
+        Set<String> listed = new HashSet<>(Templates.files("maven"));
+        listed.addAll(Templates.files("gradle"));
+        assertEquals(onDisk, listed, "templates/spring/index*.txt must list exactly the template files");
     }
 
     @Test
     void generatesAProjectWithEveryPlaceholderFilled(@TempDir Path dir) throws IOException {
         Path target = dir.resolve("shop");
-        var written = Templates.generate(target, new Templates.Params("shop", "com.acme", "com.acme.shop", V));
-        assertEquals(Templates.files().size(), written.size());
+        var written = Templates.generate(target, new Templates.Params("shop", "com.acme", "com.acme.shop", "maven", V));
+        assertEquals(Templates.files("maven").size(), written.size());
         assertTrue(Files.isRegularFile(target.resolve("jreact.properties")));
         assertTrue(Files.isRegularFile(target.resolve(".gitignore")));
         assertTrue(Files.isRegularFile(target.resolve("client/src/main/jrx/com/acme/shop/client/WebMain.jrx")));
@@ -56,9 +58,42 @@ class CliTest {
     }
 
     @Test
+    void generatesAGradleProject(@TempDir Path dir) throws IOException {
+        Path target = dir.resolve("shop");
+        var written = Templates.generate(target, new Templates.Params("shop", "com.acme", "com.acme.shop", "gradle", V));
+        assertEquals(Templates.files("gradle").size(), written.size());
+        assertFalse(Files.exists(target.resolve("pom.xml")), "no Maven files in a Gradle project");
+        assertTrue(Files.readString(target.resolve("settings.gradle")).contains("rootProject.name = 'shop'"));
+        assertTrue(Files.readString(target.resolve("client/build.gradle")).contains("mainClass = 'com.acme.shop.client.WebMain'"));
+        assertTrue(Files.readString(target.resolve("client/build.gradle")).contains("id 'dev.jreact.jrx' version '1.2.3'"));
+        try (Stream<Path> walk = Files.walk(target)) {
+            for (Path f : walk.filter(Files::isRegularFile).toList()) assertFalse(Files.readString(f).contains("{{"), f + " still has a placeholder");
+        }
+        Project p = Project.load(target);
+        assertTrue(p.gradle());
+        assertEquals(target.resolve("client/build/resources/main/jreact"), p.devDir());
+        assertEquals(target.resolve("client/build/tailwind/app.css"), p.cssOutput());
+        BuildTool tool = BuildTool.of(p);
+        assertEquals("Gradle", tool.name());
+        assertEquals(List.of(":client:jrxBundle", "-Pjreact.dev=true"), tool.buildClient());
+        assertEquals(List.of("build", "-x", "test"), tool.packageJar(true, List.of()));
+    }
+
+    @Test
+    void aMavenProjectKeepsItsLayout(@TempDir Path dir) throws IOException {
+        Path target = dir.resolve("shop");
+        Templates.generate(target, new Templates.Params("shop", "com.acme", "com.acme.shop", "maven", V));
+        Project p = Project.load(target);
+        assertFalse(p.gradle());
+        assertEquals(target.resolve("client/target/classes/jreact"), p.devDir());
+        assertEquals("Maven", BuildTool.of(p).name());
+        assertEquals(target.resolve("server/target"), BuildTool.of(p).jarDirectory());
+    }
+
+    @Test
     void refusesANonEmptyFolder(@TempDir Path dir) throws IOException {
         Files.writeString(dir.resolve("keep.txt"), "mine");
-        assertThrows(IOException.class, () -> Templates.generate(dir, new Templates.Params("shop", "com.acme", "com.acme.shop", V)));
+        assertThrows(IOException.class, () -> Templates.generate(dir, new Templates.Params("shop", "com.acme", "com.acme.shop", "maven", V)));
         assertEquals("mine", Files.readString(dir.resolve("keep.txt")));
     }
 

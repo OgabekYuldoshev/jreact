@@ -31,3 +31,5 @@ jobs:
         run: ./build.sh examples-test
       - name: Spring Boot project end to end (jreact new, build, run, click through in jsdom)
         run: ./build.sh spring-e2e
+      - name: Gradle project end to end (jreact new --build gradle)
+        run: E2E_BUILD=gradle ./build.sh spring-e2e

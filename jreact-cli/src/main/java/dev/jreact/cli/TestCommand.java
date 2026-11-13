@@ -9,18 +9,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
-@Command(name = "test", description = "Runs the tests of every module (mvn test).")
+@Command(name = "test", description = "Runs the tests of every module (mvn test / gradle test).")
 final class TestCommand implements Callable<Integer> {
 
-    @Parameters(arity = "0..*", paramLabel = "<maven args>", description = "extra arguments for Maven, after --")
-    List<String> mavenArgs = new ArrayList<>();
+    @Parameters(arity = "0..*", paramLabel = "<build tool args>", description = "extra arguments for Maven or Gradle, after --")
+    List<String> toolArgs = new ArrayList<>();
 
     @Override
     public Integer call() throws Exception {
         Project project = Project.find(Path.of("."));
-        List<String> args = new ArrayList<>(List.of("test"));
-        args.addAll(Maven.DEV_PROPS);        // tests do not need the optimized client
-        args.addAll(mavenArgs);
-        return Maven.inherit(project, args, Map.of());
+        BuildTool tool = BuildTool.of(project);
+        return tool.inherit(tool.test(toolArgs), Map.of());
     }
 }

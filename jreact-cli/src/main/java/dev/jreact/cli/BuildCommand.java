@@ -19,8 +19,8 @@ final class BuildCommand implements Callable<Integer> {
     @Option(names = "--skip-tests", description = "do not run the tests")
     boolean skipTests;
 
-    @Parameters(arity = "0..*", paramLabel = "<maven args>", description = "extra arguments for Maven, after --")
-    List<String> mavenArgs = new ArrayList<>();
+    @Parameters(arity = "0..*", paramLabel = "<build tool args>", description = "extra arguments for Maven or Gradle, after --")
+    List<String> toolArgs = new ArrayList<>();
 
     @Override
     public Integer call() throws Exception {
@@ -36,10 +36,8 @@ final class BuildCommand implements Callable<Integer> {
         }
 
         Ui.step("build (TeaVM, optimized: takes a minute)");
-        List<String> args = new ArrayList<>(List.of("package"));
-        if (skipTests) args.add("-DskipTests");
-        args.addAll(mavenArgs);
-        int code = Maven.inherit(project, args, Map.of());
+        BuildTool tool = BuildTool.of(project);
+        int code = tool.inherit(tool.packageJar(skipTests, toolArgs), Map.of());
         if (code != 0) { Ui.fail("the build failed"); return code; }
 
         Path jar = findJar(project);
@@ -52,11 +50,11 @@ final class BuildCommand implements Callable<Integer> {
 
     /** The runnable (repackaged) jar of the server module. */
     static Path findJar(Project project) throws IOException {
-        Path target = project.serverDir().resolve("target");
+        Path target = BuildTool.of(project).jarDirectory();
         if (!Files.isDirectory(target)) return null;
         try (Stream<Path> files = Files.list(target)) {
             return files.filter(f -> f.getFileName().toString().endsWith(".jar") && !f.getFileName().toString().endsWith("-sources.jar")
-                    && !f.getFileName().toString().endsWith(".original")).findFirst().orElse(null);
+                    && !f.getFileName().toString().endsWith(".original") && !f.getFileName().toString().endsWith("-plain.jar")).findFirst().orElse(null);
         }
     }
 }

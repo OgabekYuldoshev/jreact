@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# E2E_BUILD=gradle runs it with a Gradle project (needs Gradle; installs the plugin to ~/.m2).
 # End to end: jreact new -> jreact build (Tailwind, TeaVM, tests, Spring Boot jar) -> run the jar -> click through the app in jsdom.
 #   ./build.sh spring-e2e        (needs Maven, node + npm, internet for the first Tailwind download)
 set -euo pipefail
@@ -10,16 +11,18 @@ trap 'kill "${SERVER:-0}" 2>/dev/null || true; rm -rf "$WORK"' EXIT
 
 echo "== install JReact (plugin, web, starter, cli)"
 mvn -B -q install -DskipTests -pl jreact-cli,jreact-spring-boot-starter,jreact-web,jreact-maven-plugin -am
+BUILD="${E2E_BUILD:-maven}"
+if [ "$BUILD" = gradle ]; then gradle --no-daemon -q -p jreact-gradle-plugin publishToMavenLocal; fi
 (cd examples && npm install --silent --no-audit --no-fund)
 
 echo "== jreact new"
-"$ROOT/bin/jreact" new e2eapp --group com.acme --dir "$WORK/e2eapp"
+"$ROOT/bin/jreact" new e2eapp --group com.acme --build "$BUILD" --dir "$WORK/e2eapp"
 cd "$WORK/e2eapp"
 
 echo "== jreact build"
 "$ROOT/bin/jreact" build > "$WORK/build.log" 2>&1 || { tail -40 "$WORK/build.log"; exit 1; }
-grep -E "Tests run:.*Fail" "$WORK/build.log" | tail -1
-JAR="$(ls server/target/*.jar | grep -v original | head -1)"
+grep -E "Tests run:.*Fail" "$WORK/build.log" | tail -1 || true
+if [ "$BUILD" = gradle ]; then JAR="$(ls server/build/libs/*.jar | grep -v plain | head -1)"; else JAR="$(ls server/target/*.jar | grep -v original | head -1)"; fi
 echo "built $JAR"
 
 echo "== run the jar on port $PORT"

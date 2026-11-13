@@ -1,0 +1,20 @@
+// Spring Boot: the API, and the built client (served by jreact-spring-boot-starter). `gradle build` gives one runnable jar.
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '{{springBootVersion}}'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+dependencies {
+    implementation project(':shared')
+    // the built UI (jreact/index.html, jreact/assets/...) and its classes for server side rendering.
+    // Its own dependencies (TeaVM, jreact-web) are for the browser, not for this JVM
+    implementation(project(':client')) { transitive = false }
+    implementation "dev.jreact:jreact-spring-boot-starter:${jreactVersion}"
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') { useJUnitPlatform() }
