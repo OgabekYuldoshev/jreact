@@ -1,0 +1,14 @@
+package dev.jreact.examples.library.client;
+
+import jreact.router.*;
+import jreact.web.JReactWeb;
+import jreact.web.Routers;
+
+public class WebMain {
+
+    public static void main(String[] args) {
+        App app = new App();
+        // the server already put the page into index.html (jreact.ssr.app): hydrate takes that HTML over instead of building it again
+        JReactWeb.createRoot("root").hydrate(<RouterProvider router={Routers.createBrowserRouter(app.routes())} fallbackElement={app.fallback()} />);
+    }
+}

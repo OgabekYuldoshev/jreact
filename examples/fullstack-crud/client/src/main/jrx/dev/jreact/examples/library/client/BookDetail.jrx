@@ -1,0 +1,43 @@
+package dev.jreact.examples.library.client;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.State;
+import jreact.router.*;
+import static jreact.router.RouterHooks.*;
+import dev.jreact.examples.library.shared.*;
+
+/** One book, with Edit and a two step Delete (the second step is the form post to the route's action). */
+public class BookDetail extends Component<BookDetail.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        Book b = (Book) useLoaderData();
+        State<Boolean> sure = useState(false);
+        return (
+            <article id="book" className="max-w-xl">
+                <Link to="/" className="text-sm text-indigo-600 hover:underline">← All books</Link>
+                <h1 className="mt-3 text-3xl font-bold tracking-tight">{b.title()}</h1>
+                <p className="mt-1 text-lg text-slate-600">{b.author()}</p>
+                <dl className="mt-6 grid grid-cols-[8rem_1fr] gap-y-2 text-sm">
+                    <dt className="text-slate-500">Published</dt><dd>{b.year()}</dd>
+                    <dt className="text-slate-500">Status</dt><dd><span className={BookList.badge(b.status())}>{b.status().label()}</span></dd>
+                    <dt className="text-slate-500">ISBN</dt><dd>{b.isbn().orElse("not known")}</dd>
+                    <dt className="text-slate-500">Added</dt><dd>{b.addedOn().toString()}</dd>
+                </dl>
+                <div className="mt-8 flex items-center gap-3">
+                    <Link to={"/books/" + b.id() + "/edit"} id="edit" className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">Edit</Link>
+                    {sure.get()
+                        ? <Form method="post" action={"/books/" + b.id() + "/delete"} id="delete-form" className="flex items-center gap-2">
+                              <span className="text-sm text-red-700">Delete this book?</span>
+                              <button type="submit" id="confirm-delete" className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Yes, delete</button>
+                              <button type="button" id="cancel-delete" className="rounded-lg px-3 py-2 text-sm hover:bg-slate-100" onClick={e -> sure.set(false)}>No</button>
+                          </Form>
+                        : <button type="button" id="delete" className="rounded-lg px-4 py-2 text-sm text-red-700 hover:bg-red-50" onClick={e -> sure.set(true)}>Delete</button>}
+                </div>
+            </article>
+        );
+    }
+}

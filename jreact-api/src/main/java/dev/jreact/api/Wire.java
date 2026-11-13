@@ -31,6 +31,7 @@ public final class Wire {
 
     public static long longv(Object j, String path) {
         if (j instanceof Long l) return l;
+        if (j instanceof Integer || j instanceof Short || j instanceof Byte) return ((Number) j).longValue();   // in-process calls (SSR) pass Java boxes, not parsed JSON
         if (j instanceof Double d && d == Math.rint(d) && Math.abs(d) < 9e15) return (long) (double) d;
         throw bad(path, "an integer", j);
     }

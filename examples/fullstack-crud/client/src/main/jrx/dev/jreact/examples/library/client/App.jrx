@@ -1,0 +1,89 @@
+package dev.jreact.examples.library.client;
+
+import java.util.List;
+import java.util.Optional;
+import dev.jreact.api.ClientApp;
+import jreact.Element;
+import jreact.router.*;
+import dev.jreact.examples.library.shared.*;
+
+/**
+ * The routes of the app: every page is a route with a loader (what it shows) and, for forms, an action (what it does).
+ * The browser renders them, and the Spring Boot server renders the first page from the same routes (see jreact.ssr.app).
+ * All data comes from BookApiClient, generated from the BookApi interface in shared/.
+ *
+ *   /                    the list: search (?q=), status filter (?status=), pages (?page=)
+ *   /books/new           the create form
+ *   /books/:id           one book
+ *   /books/:id/edit      the edit form
+ *   /books/:id/delete    only an action: deletes and goes back to the list
+ */
+public class App implements ClientApp {
+
+    @Override
+    public List<RouteObject> routes() {
+        return List.of(
+            RouteObject.of("/").id("root").element(<Layout />).errorElement(<ErrorPage />).children(
+                // an error in a page (a 404 from the server, a failed call) shows inside the layout, the header stays
+                RouteObject.layout().errorElement(<ErrorPage />).children(
+                    RouteObject.indexRoute().id("list").element(<BookList />)
+                        .loader(a -> {
+                            SearchParams q = a.request().searchParams();
+                            return BookApiClient.list(q.get("q", ""), status(q.get("status")), number(q.get("page"), 1))
+                                .thenCompose(page -> BookApiClient.counts().then(counts -> new ListData(page, counts)));
+                        }),
+                    RouteObject.of("books/new").id("new").element(<BookForm />)
+                        .action(a -> save(null, a)),
+                    RouteObject.of("books/:id").id("book").element(<BookDetail />)
+                        .loader(a -> BookApiClient.get(id(a))),
+                    RouteObject.of("books/:id/edit").id("edit").element(<BookForm />)
+                        .loader(a -> BookApiClient.get(id(a)))
+                        .action(a -> save(id(a), a)),
+                    RouteObject.of("books/:id/delete")
+                        .action(a -> BookApiClient.delete(id(a)).then(done -> (Object) Redirect.to("/"))))));
+    }
+
+    @Override
+    public Element fallback() { return <p className="p-8 text-slate-500">Loading...</p>; }
+
+    // ---------------------------------------------------------------- the create and edit action
+
+    /** Reads the form, asks the server to create ({@code id == null}) or update, then goes to the book. A refusal (422) stays on the form. */
+    static Promise<Object> save(Long id, DataArgs a) {
+        SearchParams f = a.request().form();
+        BookInput input;
+        try {
+            input = new BookInput(f.get("title", ""), f.get("author", ""), Integer.parseInt(f.get("year", "").strip()),
+                BookStatus.valueOf(f.get("status", "AVAILABLE")), Optional.of(f.get("isbn", "")));
+        } catch (RuntimeException notANumber) {
+            return Promise.resolved(new FormError("The year must be a number."));
+        }
+        Promise<Book> saved = id == null ? BookApiClient.create(input) : BookApiClient.update(id, input);
+        return saved.then(book -> (Object) Redirect.to("/books/" + book.id()))
+            .recover(error -> {
+                if (error instanceof ErrorResponse r && r.status() == 422) return new FormError(String.valueOf(r.data()));
+                if (error instanceof RuntimeException e) throw e;
+                throw new IllegalStateException(error);
+            });
+    }
+
+    // ---------------------------------------------------------------- reading the URL
+
+    static long id(DataArgs a) {
+        try {
+            return Long.parseLong(a.params().get("id"));
+        } catch (NumberFormatException e) {
+            throw new ErrorResponse(404, "Not Found", "There is no book " + a.params().get("id") + ".");
+        }
+    }
+
+    static int number(String text, int fallback) {
+        try { return text == null ? fallback : Math.max(Integer.parseInt(text), 1); } catch (NumberFormatException e) { return fallback; }
+    }
+
+    static Optional<BookStatus> status(String text) {
+        if (text == null || text.isEmpty()) return Optional.empty();
+        for (BookStatus s : BookStatus.values()) if (s.name().equals(text)) return Optional.of(s);
+        return Optional.empty();
+    }
+}

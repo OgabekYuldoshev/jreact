@@ -1,0 +1,77 @@
+package dev.jreact.examples.library.client;
+
+import java.util.List;
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+import static jreact.router.RouterHooks.*;
+import dev.jreact.examples.library.shared.*;
+
+/** The list: search box, status tabs with counts, the books of this page, and previous/next. All of it is in the URL (?q=&status=&page=). */
+public class BookList extends Component<BookList.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        ListData data = (ListData) useLoaderData();
+        BookPage page = data.page();
+        SearchParams params = useSearchParams().params();
+        String q = params.get("q", "");
+        String current = params.get("status", "");
+        long all = data.counts().values().stream().mapToLong(Long::longValue).sum();
+
+        return (
+            <div>
+                <Form method="get" id="search-form" className="flex gap-2">
+                    <input id="q" name="q" type="search" value={q} placeholder="Search title or author"
+                           className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 outline-none focus:border-indigo-500" />
+                    {current.isEmpty() ? null : <input type="hidden" name="status" value={current} />}
+                    <button type="submit" className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">Search</button>
+                </Form>
+
+                <nav id="tabs" className="mt-4 flex flex-wrap gap-2 text-sm">
+                    <Link to={"/" + query(params.without("status").without("page"))} className={tab(current.isEmpty())}>All ({all})</Link>
+                    {List.of(BookStatus.values()).stream().map(s -> (
+                        <Link key={s.name()} to={"/" + query(params.with("status", s.name()).without("page"))} className={tab(current.equals(s.name()))}>
+                            {s.label()} ({data.counts().getOrDefault(s.name(), 0L)})
+                        </Link>)).toList()}
+                </nav>
+
+                <ul id="books" className="mt-4 divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+                    {page.items().isEmpty() ? <li className="px-4 py-8 text-center text-slate-400">No books found.</li> : null}
+                    {page.items().stream().map(b -> (
+                        <li key={String.valueOf(b.id())} className="flex items-center justify-between gap-4 px-4 py-3">
+                            <div className="min-w-0">
+                                <Link to={"/books/" + b.id()} className="block truncate font-medium text-indigo-700 hover:underline">{b.title()}</Link>
+                                <p className="truncate text-sm text-slate-500">{b.author()}, {b.year()}</p>
+                            </div>
+                            <span className={badge(b.status())}>{b.status().label()}</span>
+                        </li>)).toList()}
+                </ul>
+
+                <div id="pager" className="mt-4 flex items-center justify-between text-sm text-slate-500">
+                    <span>{page.total()} books, page {page.page()} of {page.pages()}</span>
+                    <span className="flex gap-2">
+                        {page.page() > 1 ? <Link to={"/" + query(params.with("page", String.valueOf(page.page() - 1)))} id="prev" className="rounded border border-slate-300 px-3 py-1 hover:bg-slate-100">Previous</Link> : null}
+                        {page.page() < page.pages() ? <Link to={"/" + query(params.with("page", String.valueOf(page.page() + 1)))} id="next" className="rounded border border-slate-300 px-3 py-1 hover:bg-slate-100">Next</Link> : null}
+                    </span>
+                </div>
+            </div>
+        );
+    }
+
+    static String query(SearchParams p) { return p.isEmpty() ? "" : "?" + p; }
+
+    static String tab(boolean active) {
+        return "rounded-full px-3 py-1 " + (active ? "bg-slate-900 text-white" : "bg-slate-200 text-slate-700 hover:bg-slate-300");
+    }
+
+    static String badge(BookStatus s) {
+        return "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium " + switch (s) {
+            case AVAILABLE -> "bg-green-100 text-green-800";
+            case BORROWED -> "bg-amber-100 text-amber-800";
+            case LOST -> "bg-red-100 text-red-800";
+        };
+    }
+}

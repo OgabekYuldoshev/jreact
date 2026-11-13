@@ -848,6 +848,8 @@ Yig'ish va ko'rish:
 python3 -m http.server -d examples/dist 8080     # http://localhost:8080
 ```
 
+To'liq fullstack misol: `examples/fullstack-crud` ("Library"): Spring Boot + Spring Data JPA (H2) + JReact. Kitoblar CRUD, qidiruv, status filtri, sahifalash, server validatsiyasi (422), 404 sahifa, SSR + hydration, `@ServerApi` orqali tipli RPC. Ishga tushirish va tuzilma: `examples/fullstack-crud/README.md`.
+
 Har ilova: `src/main/jrx` (komponentlar), `src/main/java` (ma'lumot modellari), `src/main/styles/app.css` (`@import "tailwindcss"; @source ...`), `src/main/webapp/index.html`. Maven `.jrx` ni kompilyatsiya qilib `app.js` yasaydi, Tailwind CLI esa `.jrx`/`.java` ichidagi klass satrlarini topib `app.css` yasaydi. Umumiy sozlama `examples/pom.xml` da (4 ilova shuni meros qiladi), Tailwind va jsdom `examples/package.json` da.
 
 ## Error boundary

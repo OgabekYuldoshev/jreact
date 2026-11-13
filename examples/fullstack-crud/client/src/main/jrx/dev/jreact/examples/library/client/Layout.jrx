@@ -1,0 +1,30 @@
+package dev.jreact.examples.library.client;
+
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+import static jreact.router.RouterHooks.*;
+
+/** The frame of every page: the header, and the page of the current route in the Outlet. */
+public class Layout extends Component<Layout.Props> {
+
+    public record Props() {}
+
+    @Override
+    public Element render(Props props) {
+        boolean loading = useNavigation().state() == DataRouter.NavigationState.LOADING;
+        return (
+            <div className="min-h-screen">
+                <header className="border-b border-slate-200 bg-white">
+                    <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+                        <Link to="/" className="text-xl font-bold tracking-tight">📚 Library</Link>
+                        <Link to="/books/new" id="new-book" className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700">New book</Link>
+                    </div>
+                </header>
+                <main className={"mx-auto max-w-4xl px-4 py-8 transition-opacity " + (loading ? "opacity-50" : "opacity-100")}>
+                    <Outlet />
+                </main>
+            </div>
+        );
+    }
+}
