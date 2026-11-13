@@ -108,6 +108,26 @@ public final class TranspilerTest {
         error("stray brace", "x = <p>a } b</p>;", 1, 10, "unexpected '}'");
         error("unclosed container", "x = <p>{foo(</p>;", 1, 8, "unclosed '{'");
 
+        // ---- position map: Java copied from the source maps both ways, rewritten JSX does not
+        {
+            String src = "class A { Object f(java.util.List<String> xs) {\n  return <ul class=\"a\">{xs.size()}<b>{xs.get(0)}</b></ul>;\n} }";
+            PropsIndex ix = new PropsIndex();
+            ix.scan(src);
+            JsxTranspiler.Mapped m = new JsxTranspiler("A.jrx", src, ix).transpileMapped();
+            check("mapped java equals plain java", m.java().equals(new JsxTranspiler("A.jrx", src, ix).transpile()), m.java());
+            boolean all = true;
+            String bad = "";
+            for (String needle : new String[]{"class A", "xs.size()", "xs.get(0)", "return"}) {
+                int at = src.indexOf(needle);
+                int g = m.toGenerated(at + needle.length() - 1);
+                boolean ok = g >= 0 && m.java().charAt(g) == src.charAt(at + needle.length() - 1) && m.toSource(g) == at + needle.length() - 1;
+                if (!ok) { all = false; bad += needle + "@" + g + " "; }
+            }
+            check("mapped: source <-> generated offsets", all, bad);
+            check("mapped: JSX syntax has no generated offset", m.toGenerated(src.indexOf("class=\"a\"") + 2) == -1, "");
+            check("mapped: markers are gone", m.java().chars().noneMatch(c -> c >= 0xE000 && c <= 0xE002), "");
+        }
+
         System.out.println();
         System.out.println(passed + " passed, " + failures.size() + " failed");
         if (!failures.isEmpty()) {

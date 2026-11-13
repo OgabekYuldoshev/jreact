@@ -32,6 +32,29 @@ public final class JsxTranspiler {
     private int pos = 0, line = 1, col = 1;
     private StringBuilder out = new StringBuilder();
 
+    // Position map (editor tooling only): every run of Java copied 1:1 from the source is wrapped in
+    // RUN_START + source offset + RUN_MID ... RUN_END; transpileMapped() strips them and records where each run landed.
+    private static final char RUN_START = '\uE000', RUN_MID = '\uE001', RUN_END = '\uE002';
+    private boolean mapped;
+    private boolean inRun;
+
+    /** The generated Java and where the Java copied from the source ended up: {@code runs} is triples (generated offset, source offset, length). */
+    public record Mapped(String java, int[] runs) {
+        /** Offset in the generated Java for a source offset, or -1 when that spot was rewritten (JSX syntax). */
+        public int toGenerated(int srcOffset) {
+            for (int i = 0; i < runs.length; i += 3)
+                if (srcOffset >= runs[i + 1] && srcOffset <= runs[i + 1] + runs[i + 2]) return runs[i] + (srcOffset - runs[i + 1]);
+            return -1;
+        }
+
+        /** Offset in the source for an offset in the generated Java, or -1 when it is not copied code. */
+        public int toSource(int genOffset) {
+            for (int i = 0; i < runs.length; i += 3)
+                if (genOffset >= runs[i] && genOffset <= runs[i] + runs[i + 2]) return runs[i + 1] + (genOffset - runs[i]);
+            return -1;
+        }
+    }
+
     // Last significant Java token: decides whether '<' starts JSX or is less-than / generics.
     private boolean lastWasValue = false;
     private String lastWord = "";
@@ -48,6 +71,38 @@ public final class JsxTranspiler {
         return out.toString();
     }
 
+    /** Like {@link #transpile()}, plus the position map. */
+    public Mapped transpileMapped() {
+        mapped = true;
+        javaCode(false, line, col);
+        String raw = out.toString();
+        StringBuilder java = new StringBuilder(raw.length());
+        List<Integer> runs = new ArrayList<>();
+        int genStart = 0, srcStart = 0;
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (c == RUN_START) {
+                int mid = raw.indexOf(RUN_MID, i);
+                srcStart = Integer.parseInt(raw.substring(i + 1, mid));
+                genStart = java.length();
+                i = mid;
+            } else if (c == RUN_END) {
+                runs.add(genStart); runs.add(srcStart); runs.add(java.length() - genStart);
+            } else {
+                java.append(c);
+            }
+        }
+        return new Mapped(java.toString(), runs.stream().mapToInt(Integer::intValue).toArray());
+    }
+
+    private void runStart() {
+        if (mapped && !inRun) { out.append(RUN_START).append(pos).append(RUN_MID); inRun = true; }
+    }
+
+    private void runEnd() {
+        if (mapped && inRun) { out.append(RUN_END); inRun = false; }
+    }
+
     // ------------------------------------------------------------------ Java pass-through
 
     /**
@@ -57,8 +112,12 @@ public final class JsxTranspiler {
     private void javaCode(boolean inContainer, int openLine, int openCol) {
         int depth = 0;
         if (inContainer) { lastWasValue = false; lastPunct = '{'; prevPunct = 0; }
+        boolean wasRun = inRun;
+        inRun = false;
+        try {
         while (pos < src.length()) {
             char c = peek(0);
+            if (c != '<' || !jsxAllowed() || !(Character.isLetter(peek(1)) || peek(1) == '>')) runStart();
             if (c == '/' && peek(1) == '/') {
                 while (pos < src.length() && peek(0) != '\n') copy();
             } else if (c == '/' && peek(1) == '*') {
@@ -81,6 +140,7 @@ public final class JsxTranspiler {
                 if (inContainer && depth == 0) return;
                 depth--; copy(); markPunct('}');
             } else if (c == '<' && jsxAllowed() && (Character.isLetter(peek(1)) || peek(1) == '>')) {
+                runEnd();
                 out.append(parseElement());
                 markValue("");
             } else if (Character.isJavaIdentifierStart(c)) {
@@ -97,6 +157,10 @@ public final class JsxTranspiler {
             }
         }
         if (inContainer) throw error(openLine, openCol, "unclosed '{' in JSX expression");
+        } finally {
+            runEnd();
+            inRun = wasRun;
+        }
     }
 
     /** '<' starts JSX only where an expression may begin: after = ( , ? : { [ && || -> return yield. */
@@ -477,6 +541,7 @@ public final class JsxTranspiler {
     }
 
     private static boolean isBlankJava(String code) {
+        code = code.replaceAll("\uE000\\d+\uE001|\uE002", "");
         return code.replaceAll("(?s)/\\*.*?\\*/", "").replaceAll("//[^\n]*", "").isBlank();
     }
 

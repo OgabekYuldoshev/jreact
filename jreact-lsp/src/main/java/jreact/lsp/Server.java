@@ -98,8 +98,14 @@ public final class Server {
                     synchronized (lock) { ws.close(uri); versions.remove(uri); cancel(uri); }
                     publish(uri, List.of());
                 }
-                case "textDocument/completion" -> respond(id, withDoc(params, (text, off) -> Features.completion(ws, text, off), List.of()));
-                case "textDocument/hover" -> respond(id, withDoc(params, (text, off) -> Features.hover(ws, text, off), null));
+                case "textDocument/completion" -> {
+                    Object tags = withDoc(params, (text, off) -> Features.tagAt(text, off) != null ? Features.completion(ws, text, off) : null, null);
+                    respond(id, tags != null ? tags : javaQuery(params, true));
+                }
+                case "textDocument/hover" -> {
+                    Object tags = withDoc(params, (text, off) -> Features.hover(ws, text, off), null);
+                    respond(id, tags != null ? tags : javaQuery(params, false));
+                }
                 case "textDocument/definition" -> respond(id, withDoc(params, (text, off) -> Features.definition(ws, text, off), null));
                 default -> { if (id != null) respondError(id, -32601, "method not found: " + method); }
             }
@@ -123,6 +129,35 @@ public final class Server {
             Object r = q.run(text, off);
             return r == null ? none : r;
         }
+    }
+
+    /** Completion or hover of the Java in the file, answered by javac off the lock (it takes a moment). */
+    @SuppressWarnings("unchecked")
+    private Object javaQuery(Map<String, Object> params, boolean completion) {
+        String uri = (String) ((Map<String, Object>) params.get("textDocument")).get("uri");
+        Map<String, Object> pos = (Map<String, Object>) params.get("position");
+        Analyzer.Input input;
+        String text;
+        int off;
+        synchronized (lock) {
+            text = ws.text(uri);
+            if (text == null || !uri.endsWith(".jrx") || scratch == null) return completion ? List.of() : null;
+            off = Workspace.offsetOf(text, ((Number) pos.get("line")).intValue(), ((Number) pos.get("character")).intValue());
+            input = new Analyzer.Input(uri, ws.jrxFiles(), ws.index(), ws.javaSourceRoots(), new ArrayList<>(ws.classpath));
+        }
+        Path dir = scratch.resolve("query");
+        if (completion) {
+            List<Object> items = JavaSupport.complete(input, text, off, dir);
+            return items == null ? List.of() : items;
+        }
+        String md = JavaSupport.hover(input, text, off, dir);
+        if (md == null) return null;
+        Map<String, Object> contents = new LinkedHashMap<>();
+        contents.put("kind", "markdown");
+        contents.put("value", md);
+        Map<String, Object> r = new LinkedHashMap<>();
+        r.put("contents", contents);
+        return r;
     }
 
     @SuppressWarnings("unchecked")
@@ -152,7 +187,7 @@ public final class Server {
         sync.put("change", 1);
         sync.put("save", save);
         Map<String, Object> completion = new LinkedHashMap<>();
-        completion.put("triggerCharacters", List.of("<"));
+        completion.put("triggerCharacters", List.of("<", "."));
         Map<String, Object> caps = new LinkedHashMap<>();
         caps.put("textDocumentSync", sync);
         caps.put("completionProvider", completion);

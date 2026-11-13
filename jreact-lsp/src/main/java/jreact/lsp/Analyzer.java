@@ -64,43 +64,21 @@ final class Analyzer {
         JavaCompiler jc = ToolProvider.getSystemJavaCompiler();
         String text = in.jrx().get(in.uri());
         if (jc == null || text == null) return out;
-        String generated;
+        JsxTranspiler.Mapped mapped;
         try {
-            generated = new JsxTranspiler(name(in.uri()), text, in.index()).transpile();
+            mapped = new JsxTranspiler(name(in.uri()), text, in.index()).transpileMapped();
         } catch (RuntimeException e) {
             return out;                                   // reported by parse()
         }
+        String generated = mapped.java();
         try {
-            Path gen = scratch.resolve("gen"), classes = scratch.resolve("classes");
-            deleteTree(gen);
-            Files.createDirectories(gen);
-            Files.createDirectories(classes);
-            // the other .jrx files, as Java, so components defined in them resolve
-            for (Map.Entry<String, String> e : in.jrx().entrySet()) {
-                if (e.getKey().equals(in.uri())) continue;
-                try {
-                    String other = new JsxTranspiler(name(e.getKey()), e.getValue(), in.index()).transpile();
-                    Path target = gen.resolve(relativeJavaPath(e.getKey(), e.getValue()));
-                    Files.createDirectories(target.getParent());
-                    Files.writeString(target, other, StandardCharsets.UTF_8);
-                } catch (RuntimeException ignored) {}
-            }
-            List<String> sp = new ArrayList<>();
-            sp.add(gen.toString());
-            for (Path r : in.javaRoots()) sp.add(r.toString());
-            List<String> opts = new ArrayList<>(List.of("-proc:none", "-implicit:none", "-Xlint:none", "-encoding", "UTF-8",
-                    "-d", classes.toString(), "-sourcepath", String.join(File.pathSeparator, sp)));
-            if (!in.classpath().isEmpty()) opts.addAll(List.of("-classpath", String.join(File.pathSeparator, in.classpath())));
-
-            String rel = relativeJavaPath(in.uri(), text);
-            JavaFileObject src = new SimpleJavaFileObject(URI.create("string:///" + rel.replace('\\', '/')), JavaFileObject.Kind.SOURCE) {
-                @Override public CharSequence getCharContent(boolean ignore) { return generated; }
-            };
+            List<String> opts = prepare(in, scratch);
+            JavaFileObject src = source(in, text, generated);
             DiagnosticCollector<JavaFileObject> dc = new DiagnosticCollector<>();
             try (StandardJavaFileManager fm = jc.getStandardFileManager(dc, Locale.ENGLISH, StandardCharsets.UTF_8)) {
                 jc.getTask(null, fm, dc, opts, null, List.of(src)).call();
             }
-            String[] genLines = generated.split("\n", -1), srcLines = text.split("\n", -1);
+            String[] srcLines = text.split("\n", -1);
             for (Diagnostic<? extends JavaFileObject> d : dc.getDiagnostics()) {
                 if (d.getSource() != src || d.getLineNumber() < 1) continue;
                 int line = (int) d.getLineNumber() - 1;
@@ -108,12 +86,16 @@ final class Analyzer {
                         : d.getKind() == Diagnostic.Kind.WARNING || d.getKind() == Diagnostic.Kind.MANDATORY_WARNING ? 2 : 3;
                 String l = line < srcLines.length ? srcLines[line] : "";
                 int col, endCol;
-                boolean sameLine = line < genLines.length && genLines[line].equals(l);
-                if (sameLine && d.getColumnNumber() > 0) {
-                    col = (int) d.getColumnNumber() - 1;
-                    endCol = d.getEndPosition() > d.getStartPosition() ? col + (int) (d.getEndPosition() - d.getStartPosition()) : col + 1;
-                    endCol = Math.min(endCol, Math.max(l.length(), col + 1));
-                } else {                                  // the line had JSX: columns moved, mark the code on the line
+                int from = d.getStartPosition() >= 0 ? mapped.toSource((int) d.getStartPosition()) : -1;
+                int to = d.getEndPosition() >= 0 ? mapped.toSource((int) d.getEndPosition()) : -1;
+                if (from >= 0) {                          // the error is in code copied from the source: exact, also on JSX lines
+                    int[] a = Workspace.lineCol(text, from);
+                    line = a[0];
+                    col = a[1];
+                    int[] z = to > from ? Workspace.lineCol(text, to) : null;
+                    endCol = z != null && z[0] == line ? z[1] : Math.min(srcLines[line].length(), col + 1);
+                    endCol = Math.max(endCol, col + 1);
+                } else {                                  // inside generated JSX code: mark the code on the line
                     col = indent(l);
                     endCol = Math.max(l.stripTrailing().length(), col + 1);
                 }
@@ -123,6 +105,38 @@ final class Analyzer {
             // diagnostics are best effort
         }
         return out;
+    }
+
+    /** Writes the other .jrx files as Java under {@code dir} and returns the javac options. */
+    static List<String> prepare(Input in, Path dir) throws IOException {
+        Path gen = dir.resolve("gen"), classes = dir.resolve("classes");
+        deleteTree(gen);
+        Files.createDirectories(gen);
+        Files.createDirectories(classes);
+        for (Map.Entry<String, String> e : in.jrx().entrySet()) {          // components defined in them resolve
+            if (e.getKey().equals(in.uri())) continue;
+            try {
+                String other = new JsxTranspiler(name(e.getKey()), e.getValue(), in.index()).transpile();
+                Path target = gen.resolve(relativeJavaPath(e.getKey(), e.getValue()));
+                Files.createDirectories(target.getParent());
+                Files.writeString(target, other, StandardCharsets.UTF_8);
+            } catch (RuntimeException ignored) {}
+        }
+        List<String> sp = new ArrayList<>();
+        sp.add(gen.toString());
+        for (Path r : in.javaRoots()) sp.add(r.toString());
+        List<String> opts = new ArrayList<>(List.of("-proc:none", "-implicit:none", "-Xlint:none", "-encoding", "UTF-8",
+                "-d", classes.toString(), "-sourcepath", String.join(File.pathSeparator, sp)));
+        if (!in.classpath().isEmpty()) opts.addAll(List.of("-classpath", String.join(File.pathSeparator, in.classpath())));
+        return opts;
+    }
+
+    /** The generated Java of the file, as a javac source. */
+    static JavaFileObject source(Input in, String text, String generated) {
+        String rel = relativeJavaPath(in.uri(), text);
+        return new SimpleJavaFileObject(URI.create("string:///" + rel.replace('\\', '/')), JavaFileObject.Kind.SOURCE) {
+            @Override public CharSequence getCharContent(boolean ignore) { return generated; }
+        };
     }
 
     /** {@code app/Card.java} for a file with {@code package app;} and name Card.jrx. */

@@ -182,7 +182,7 @@ public final class LspTest {
             check(complete(pageUri, inString, "title=\"Hi ").isEmpty(), "inside a string");
             String generics = PAGE_OK.replace("int n = 1;", "java.util.List<String> xs = null; java.util.List<St");
             change(pageUri, generics);
-            check(complete(pageUri, generics, "java.util.List<St").isEmpty(), "generics are not tags");
+            { List<String> g = complete(pageUri, generics, "java.util.List<St"); check(!g.contains("Card") && !g.contains("div"), "generics are not tags: " + g); }
         });
 
         test("hover on a tag and on a prop shows the Props signature and type", () -> {
@@ -193,7 +193,39 @@ public final class LspTest {
             Map<String, Object> h2 = at("textDocument/hover", pageUri, PAGE_OK, "open={true}", 1);
             String md2 = (String) ((Map<String, Object>) ((Map<String, Object>) h2.get("result")).get("contents")).get("value");
             check(md2.contains("boolean open"), md2);
-            check(at("textDocument/hover", pageUri, PAGE_OK, "int n", 1).get("result") == null, "no hover on plain Java");
+            check(at("textDocument/hover", pageUri, PAGE_OK, "public class", 1).get("result") == null, "no hover on a keyword");
+        });
+
+        test("Java in {expressions}: completion of members and locals, hover for types", () -> {
+            String text = PAGE_OK.replace("int n = 1;", "String name = \"a\"; java.util.List<String> xs = new java.util.ArrayList<>();").replace("<p>{n}</p>", "<p>{name.}</p>");
+            change(pageUri, text);
+            List<String> members = complete(pageUri, text, "{name.");
+            check(members.contains("length") && members.contains("toUpperCase") && !members.contains("Page"), members.toString());
+            String typed = PAGE_OK.replace("int n = 1;", "String name = \"a\"; java.util.List<String> xs = new java.util.ArrayList<>();").replace("<p>{n}</p>", "<p>{xs.si}</p>");
+            change(pageUri, typed);
+            check(complete(pageUri, typed, "{xs.si").equals(List.of("size")), complete(pageUri, typed, "{xs.si").toString());
+            String locals = PAGE_OK.replace("int n = 1;", "String name = \"a\"; int count = 2;").replace("<p>{n}</p>", "<p>{co}</p>");
+            change(pageUri, locals);
+            List<String> ids = complete(pageUri, locals, "{co");
+            check(ids.contains("count") && !ids.contains("name"), ids.toString());
+            change(pageUri, PAGE_OK);
+            Map<String, Object> h = at("textDocument/hover", pageUri, PAGE_OK, "{n}", 1);
+            String md = (String) ((Map<String, Object>) ((Map<String, Object>) h.get("result")).get("contents")).get("value");
+            check(md.contains("int n"), md);
+            diagnostics(pageUri);
+        });
+
+        test("javac errors inside JSX lines have an exact range", () -> {
+            String text = PAGE_OK.replace("<p>{n}</p>", "<p>{nope}</p>");
+            change(pageUri, text);
+            Map<String, Object> d = diagnostics(pageUri).get(0);
+            Map<String, Object> start = (Map<String, Object>) ((Map<String, Object>) d.get("range")).get("start");
+            int line = text.substring(0, text.indexOf("nope")).split("\n", -1).length - 1;
+            int col = text.indexOf("nope") - text.lastIndexOf('\n', text.indexOf("nope")) - 1;
+            eq(line, ((Number) start.get("line")).intValue());
+            eq(col, ((Number) start.get("character")).intValue());
+            change(pageUri, PAGE_OK);
+            diagnostics(pageUri);
         });
 
         test("go to definition of a component tag", () -> {
