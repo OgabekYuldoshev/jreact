@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests (compiler, scheduler, reconciler, dom, router, lsp)
+        run: ./build.sh test
+      - name: Modules (processor, starter, CLI)
+        run: mvn -B -q install -pl jreact-processor,jreact-spring-boot-starter,jreact-cli -am
+      - name: Example apps in jsdom
+        run: ./build.sh examples-test
+      - name: Spring Boot project end to end (jreact new, build, run, click through in jsdom)
+        run: ./build.sh spring-e2e

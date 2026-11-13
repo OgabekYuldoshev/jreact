@@ -48,3 +48,8 @@ echo "ok   HTTP checks"
 
 echo "== the app in jsdom"
 node "$ROOT/tools/spring-e2e.js" "http://localhost:$PORT"
+
+if [ -n "${E2E_BROWSER:-}" ]; then
+  echo "== the app in Chromium (Playwright)"
+  node "$ROOT/tools/browser-e2e.js" "http://localhost:$PORT"
+fi
