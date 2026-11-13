@@ -535,8 +535,18 @@ Misol: `examples/contacts` (`/contacts/`): qidiruv (GET forma, tarixni to'ldirma
 
 Frontend (JReact) va backend (Spring Boot) bitta loyihada, bitta buyruq bilan, bitta jar'da. Brauzer ham, server ham Java.
 
+O'rnatish (JDK 17+ kerak), release chiqqandan keyin:
+
 ```bash
-# 1. JReact'ni bir marta o'rnating (Maven Central'ga chiqquncha lokal repoga)
+curl -fsSLO https://raw.githubusercontent.com/OgabekYuldoshev/jreact/main/install.sh && sh install.sh   # ~/.jreact/bin/jreact
+jbang jreact@OgabekYuldoshev/jreact doctor                                                                # jbang bilan, o'rnatmasdan
+brew install OgabekYuldoshev/jreact/jreact                                                                # Homebrew (packaging/homebrew/jreact.rb tap'ga qo'yiladi)
+```
+
+Manba koddan (release chiqquncha):
+
+```bash
+# 1. JReact'ni bir marta o'rnating (lokal repoga)
 mvn -B -q install -DskipTests
 ln -s "$PWD/bin/jreact" /usr/local/bin/jreact        # yoki bin/ papkani PATH'ga qo'shing
 

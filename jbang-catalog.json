@@ -1,0 +1,10 @@
+{
+  "catalogs": {},
+  "aliases": {
+    "jreact": {
+      "script-ref": "https://github.com/OgabekYuldoshev/jreact/releases/latest/download/jreact-cli.jar",
+      "description": "JReact: fullstack Java framework (Spring Boot + .jrx UI). jreact new, dev, build, start"
+    }
+  },
+  "templates": {}
+}

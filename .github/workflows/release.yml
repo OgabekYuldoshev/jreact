@@ -37,6 +37,6 @@ jobs:
           CENTRAL_TOKEN: ${{ secrets.CENTRAL_TOKEN }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       - name: GitHub release
-        run: gh release create "$GITHUB_REF_NAME" --generate-notes jreact-cli/target/*.jar
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes jreact-cli/target/jreact-cli.jar
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
