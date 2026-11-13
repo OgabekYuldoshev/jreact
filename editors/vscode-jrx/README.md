@@ -8,8 +8,8 @@
   - completion: component names and props after `<`, HTML tags and attributes
   - hover: `record Props(...)` on a tag, the type on a prop
   - go to definition: from a tag to its component class
-
-Completion/hover inside `{...}` Java expressions is not provided (that is the Java extension's job).
+  - **Java inside the file** (`{...}` expressions and plain code): member and local completion (`user.` `items.si`), type hover; answered by javac on the generated Java, the cursor is mapped through a position map of the transpiler
+  - javac errors inside JSX lines are marked at the exact column
 
 ## Install
 
