@@ -9,13 +9,6 @@ JAVAC="javac -encoding UTF-8 -Xlint:-options"
 # Browser build (needs Maven, downloads TeaVM): .jrx -> .java -> .class -> app.js
 #   ./build.sh web        -> examples/todo-web/target/web/{index.html,app.js}
 #   ./build.sh web-test   -> same, then loads it in jsdom and clicks through the app (needs node + npm)
-#   ./build.sh dev [port] [app...] -> dev server for todo, kanban, shop, dashboard, landing + gallery,
-#                             rebuild on change + live reload (http://localhost:5173)
-if [[ "${1:-}" == "dev" ]]; then
-  shift
-  exec node tools/dev-server.js "$@"
-fi
-
 if [[ "${1:-}" == "web" || "${1:-}" == "web-test" ]]; then
   echo "== browser build (Maven + TeaVM)"
   mvn -B -q -pl examples/todo-web -am package
@@ -27,14 +20,14 @@ if [[ "${1:-}" == "web" || "${1:-}" == "web-test" ]]; then
   exit 0
 fi
 
-# Tailwind example apps (examples/kanban, shop, dashboard, landing): Maven + TeaVM, then Tailwind CLI, then a gallery.
-#   ./build.sh examples        -> examples/dist/{index.html,kanban,shop,dashboard,landing,blog,contacts}   (needs Maven + node)
+# Router example apps (examples/blog, contacts): Maven + TeaVM, then the Tailwind CLI, then a jsdom click-through.
+#   ./build.sh examples        -> examples/dist/{blog,contacts}   (needs Maven + node)
 #   ./build.sh examples-test   -> same, then clicks through every app in jsdom
-#   python3 -m http.server -d examples/dist 8080     # open http://localhost:8080
+#   python3 -m http.server -d examples/dist 8080     # open http://localhost:8080/blog/
 if [[ "${1:-}" == "examples" || "${1:-}" == "examples-test" ]]; then
-  APPS="kanban shop dashboard landing blog contacts"
+  APPS="blog contacts"
   echo "== example apps (Maven + TeaVM)"
-  mvn -B -q -pl examples/kanban,examples/shop,examples/dashboard,examples/landing,examples/blog,examples/contacts -am package
+  mvn -B -q -pl examples/blog,examples/contacts -am package
   echo "== Tailwind CSS"
   (cd examples && npm install --silent --no-audit --no-fund)
   rm -rf examples/dist
@@ -43,8 +36,6 @@ if [[ "${1:-}" == "examples" || "${1:-}" == "examples-test" ]]; then
     (cd examples && npx @tailwindcss/cli -i $a/src/main/styles/app.css -o $a/target/web/app.css --minify 2>&1 | tail -1)
     cp -R examples/$a/target/web examples/dist/$a
   done
-  cp examples/gallery/index.html examples/dist/index.html
-  (cd examples && npx @tailwindcss/cli -i gallery/gallery.css -o dist/gallery.css --minify 2>&1 | tail -1)
   echo "built examples/dist"
   if [[ "$1" == "examples-test" ]]; then
     echo "== example apps smoke test (jsdom)"

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  Parent of the Tailwind example apps (kanban, shop, dashboard, landing). The whole .jrx -> .java -> app.js chain
+  Parent of the client-only example apps (blog, contacts, bench). The whole .jrx -> .java -> app.js chain
   lives here; an app's own pom only names itself and lists the three plugins. Tailwind runs afterwards: ./build.sh examples
 -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -19,10 +19,6 @@
     <name>jreact-examples</name>
 
     <modules>
-        <module>kanban</module>
-        <module>shop</module>
-        <module>dashboard</module>
-        <module>landing</module>
         <module>blog</module>
         <module>contacts</module>
         <module>bench</module>

@@ -61,7 +61,7 @@ public class Counter extends Component<Counter.Props> {
 |---|---|
 | **JDK 17+** (JDK 21 va 26'da sinalgan) | doim. `javac` diagnostikasi uchun JRE emas, JDK kerak |
 | **Maven 3.x** (3.10 da sinalgan) | brauzer build'i (TeaVM) uchun. Internet kerak (TeaVM yuklanadi) |
-| **Node.js** (v26 da sinalgan) | `./build.sh web-test`, `./build.sh dev`, VS Code kengaytmasi uchun |
+| **Node.js** (v26 da sinalgan) | `./build.sh web-test`, `jreact dev` (live reload), VS Code kengaytmasi uchun |
 | VS Code | ixtiyoriy, `.jrx` ranglash va language server uchun |
 
 macOS, Linux va Windows'da (Git Bash yoki WSL) ishlaydi. Maven faqat brauzer build'i uchun kerak, qolgan hammasi (`./build.sh`, testlar) faqat JDK bilan ishlaydi.
@@ -74,12 +74,11 @@ cd jreact
 
 ./build.sh          # kompilyator -> runtime -> .jrx -> .java -> javac -> Todo namunasi HTML chiqaradi
 ./build.sh test     # barcha testlar (kompilyator 41, scheduler 14, reconciler 57, dom 24, router 20 + 31 (data router), language server 12)
-./build.sh dev      # galereya + 5 ilova: http://localhost:5173 (o'zgarsa o'zi qayta yig'iladi)
 ```
 
 `./build.sh` Todo'ning HTML'ini terminalga chiqaradi (`<section class="todo-app"><h1>JReact Todo</h1>...`). Har ishga tushganda `build/` noldan yaratiladi.
 
-`./build.sh dev` birinchi marta Maven orqali TeaVM'ni yuklaydi (bir necha daqiqa), keyingi qayta yig'ishlar ~4 soniya. `/` da galereya, `/todo/` da Todo ilovasi ("Xato chiqar" tugmasi error boundary namunasi), `/kanban/`, `/shop/`, `/dashboard/`, `/landing/`, `/blog/`, `/contacts/` da Tailwind ilovalari.
+Ilova bilan ishlash uchun `jreact dev` (qarang [Dev rejimi](#dev-rejimi-jreact-dev)).
 
 ## O'z ilovangizni yaratish
 
@@ -173,7 +172,7 @@ Natija: `target/web/{index.html, app.js}`. `app.js` ~120 KB (gzip bilan ~45 KB),
 </plugin>
 ```
 
-> Dev server (`./build.sh dev`) faqat `examples/` ilovalari uchun. O'z ilovangizda o'zgartirgach `mvn -B -q package` qilib sahifani yangilang.
+> Client-only ilovada o'zgartirgach `mvn -B -q package` qilib sahifani yangilang. Spring loyihada `jreact dev` o'zi qayta yig'adi.
 
 ## `.jrx` sintaksisi
 
@@ -403,7 +402,7 @@ public class PostPage extends Component<PostPage.Props> {
 | Router | Manzil | Qachon |
 |---|---|---|
 | `<HashRouter>` | `index.html#/posts/7` | Istalgan statik hosting (GitHub Pages, `python3 -m http.server`). Server `#` dan keyingisini ko'rmaydi |
-| `<BrowserRouter>` | `/posts/7` | Chiroyli manzil. **Server har bir yo'lga `index.html` qaytarishi kerak** (SPA fallback). Dev server (`./build.sh dev`) buni qiladi |
+| `<BrowserRouter>` | `/posts/7` | Chiroyli manzil. **Server har bir yo'lga `index.html` qaytarishi kerak** (SPA fallback). `jreact dev` va Spring starter buni qiladi |
 | `<Router history={...}>` | xotirada | Testlar va JVM'da HTML render: `new MemoryHistory("/posts/7")` |
 
 `basename` ilova pastki papkada turganda: `<BrowserRouter basename="/docs">`. Marshrutlar va `<Link>`lar uni ko'rmaydi, brauzer manzilida esa bor. Boshqa yo'lda router hech narsa chiqarmaydi.
@@ -460,7 +459,7 @@ Login'dan keyin `go.navigate(useSearchParams().params().get("next", "/account"),
 
 ### Namuna va testlar
 
-`examples/blog` ("Dispatch"): ichma-ich marshrutlar, `:id`, query'dagi filtr, `NavLink`, himoyalangan `/account` (layout + `Outlet`), `/login?next=` redirect, ikki xil 404. `./build.sh dev` da `/blog/`. `./build.sh test` da `RouterTest` (20 ta: moslash va tartib, nisbiy yo'llar, `SearchParams`, SSR, soxta DOM'da bosish/orqaga/redirect/basename) va `examples-test` da blog uchun 30 dan ortiq jsdom tekshiruvi.
+`examples/blog` ("Dispatch"): ichma-ich marshrutlar, `:id`, query'dagi filtr, `NavLink`, himoyalangan `/account` (layout + `Outlet`), `/login?next=` redirect, ikki xil 404. `./build.sh examples` dan keyin `examples/dist/blog/`. `./build.sh test` da `RouterTest` (20 ta: moslash va tartib, nisbiy yo'llar, `SearchParams`, SSR, soxta DOM'da bosish/orqaga/redirect/basename) va `examples-test` da blog uchun 30 dan ortiq jsdom tekshiruvi.
 
 JVM'da (SSR, test): `ServerRenderer.renderToString(<Router history={new MemoryHistory("/posts/7")}>...</Router>)`. Effektlar ishlamagani uchun `<Navigate>` SSR'da yo'naltirmaydi.
 
@@ -528,7 +527,7 @@ Misol: `examples/contacts` (`/contacts/`): qidiruv (GET forma, tarixni to'ldirma
 
 **Bu bundle hajmini kamaytirmaydi.** TeaVM bitta `app.js` chiqaradi (chunk'larga bo'lib, kerak bo'lganda yuklash yo'q), lazy marshrut kodi ham hamma narsa bilan birga yuklanadi. Foyda: og'ir qismlarni yasashni yoki asinxron olishni kechiktirish. Haqiqiy kod bo'lish uchun faqat sahifalarni alohida TeaVM dastur qilib `<script>` bilan yuklash qoladi, lekin har biri o'z runtime'ini (~150 KB) olib keladi va ular orasida obyekt almashib bo'lmaydi, shuning uchun qo'shilmadi.
 
-**Tree shaking** avtomatik: TeaVM butun dasturni tahlil qilib ishlatilmagan sinf va metodlarni tashlaydi (`optimizationLevel=FULL`, `minifying=true`). Hajmga ta'sir qiladigan narsa: `String.split`/`replaceAll`/`matches` (regex, ~100 KB), `getBytes`/`new String(bytes, charset)` (charset'lar, ~50 KB), `String.format` (TeaVM'da yo'q). Router shularsiz yozilgan: router bor ilova (blog, contacts) ~310 KB, routersiz (kanban) ~164 KB. O'z kodingizda ham shulardan qoching.
+**Tree shaking** avtomatik: TeaVM butun dasturni tahlil qilib ishlatilmagan sinf va metodlarni tashlaydi (`optimizationLevel=FULL`, `minifying=true`). Hajmga ta'sir qiladigan narsa: `String.split`/`replaceAll`/`matches` (regex, ~100 KB), `getBytes`/`new String(bytes, charset)` (charset'lar, ~50 KB), `String.format` (TeaVM'da yo'q). Router shularsiz yozilgan: router bor ilova (blog, contacts) ~310 KB, routersiz (todo-web) ~164 KB (o'lchov kanban ilovasida olingan, u o'chirilgan: raqam taxminiy). O'z kodingizda ham shulardan qoching.
 
 **Hali yo'q:** `defer`/`<Await>`/Suspense (loader'ning bir qismini kutmay chizish), orqaga tugmasini bloklash (`useBlocker` faqat ilova ichidagini ushlaydi), `Location.state` / `key` (`Link state`), `caseSensitive`, ixtiyoriy param (`:id?`), `useFormAction`, fayl yuklash formalari. Scroll tiklash joyni URL bo'yicha saqlaydi (bir URL'ga ikki marta kirsangiz bir xil joy).
 
@@ -842,25 +841,24 @@ Sass/Tailwind Maven build'iga hali ulanmagan, ularni `mvn package` dan **keyin**
 mvn -B -q clean package && npx sass src/main/styles/app.scss target/web/app.css
 ```
 
-Maven ichiga olish uchun `exec-maven-plugin` yoki `frontend-maven-plugin` ishlatiladi. Tailwind namunalarida (`examples/kanban` va boshqalar) `./build.sh dev` Maven'dan keyin Tailwind CLI'ni o'zi yurgizadi. Sass ulanmagan.
+Maven ichiga olish uchun `exec-maven-plugin` yoki `frontend-maven-plugin` ishlatiladi. Spring loyihada `jreact build` va `jreact dev` Tailwind CLI'ni o'zi yurgizadi. Sass ulanmagan.
 
-## Namunalar: Tailwind bilan 6 ta ilova
-
-`examples/` ichida Tailwind CSS v4 bilan yozilgan 5 ta real ilova bor. Hammasi `.jrx`, brauzerda TeaVM orqali ishlaydi.
+## Namunalar
 
 | Ilova | Nima ko'rsatadi |
 |-------|-----------------|
-| `examples/kanban` | 3 ustunli doska: `useState` bilan ro'yxat, controlled input va select, kartani ko'chirish/o'chirish, `style` bilan progress bar |
-| `examples/shop` | Do'kon: 12 mahsulot, qidiruv, kategoriya, saralash (`useMemo`), savat `Context` orqali (`Cart.CONTEXT`), yon panel, yetkazish narxi hisobi |
-| `examples/dashboard` | Admin panel: statistika kartalari, bar chart, saralanadigan/filtrlanadigan jadval, dark mode (`dark:` variantlari), `ErrorBoundary` ichidagi vidjet |
-| `examples/landing` | Landing sahifa: gradient hero, narx jadvali (oylik/yillik), FAQ akkordeon, mobil menyu, validatsiyali kontakt forma |
+| `examples/fullstack-crud` | **Asosiy misol.** Spring Boot + JPA (H2) + JReact: CRUD, qidiruv, sahifalash, validatsiya, SSR, tipli RPC |
+| `examples/blog` | Faqat brauzer: ichma-ich marshrutlar, `NavLink`, himoyalangan sahifa, redirect |
+| `examples/contacts` | Faqat brauzer: data router (loader, action, fetcher, optimistik UI) |
+| `examples/todo-web` | Eng kichik brauzer ilovasi, jsdom'da 60 dan ortiq tekshiruv (hooks, error boundary) |
+| `examples/bench` | js-framework-benchmark stsenariylari, React 18 bilan solishtirish |
 
-Yig'ish va ko'rish:
+Brauzer namunalarini yig'ish va ko'rish:
 
 ```bash
-./build.sh examples        # Maven + TeaVM, keyin Tailwind CLI -> examples/dist/
-./build.sh examples-test   # shuni yig'ib, 6 ilovani jsdom'da bosib tekshiradi (128 tekshiruv)
-python3 -m http.server -d examples/dist 8080     # http://localhost:8080
+./build.sh examples        # Maven + TeaVM, keyin Tailwind CLI -> examples/dist/{blog,contacts}
+./build.sh examples-test   # shuni yig'ib, ikkala ilovani jsdom'da bosib tekshiradi (56 tekshiruv)
+python3 -m http.server -d examples/dist 8080     # http://localhost:8080/blog/
 ```
 
 To'liq fullstack misol: `examples/fullstack-crud` ("Library"): Spring Boot + Spring Data JPA (H2) + JReact. Kitoblar CRUD, qidiruv, status filtri, sahifalash, server validatsiyasi (422), 404 sahifa, SSR + hydration, `@ServerApi` orqali tipli RPC. Ishga tushirish va tuzilma: `examples/fullstack-crud/README.md`.
@@ -932,15 +930,16 @@ Brauzersiz ham ishlatish mumkin:
 
 ## Ishlab chiqish jarayoni
 
-### Dev server
+### Dev rejimi (`jreact dev`)
+
+Loyiha ildizida (`jreact.properties` turgan papka):
 
 ```bash
-./build.sh dev                    # hamma ilova: http://localhost:5173
-./build.sh dev 3000               # boshqa port
-./build.sh dev kanban shop        # faqat tanlangan ilovalar (tezroq boshlanadi)
+jreact dev            # port jreact.properties dan (8080)
+jreact dev -p 8099    # boshqa port
 ```
 
-Bitta portda galereya (`/`) va ilovalarni (`/todo/`, `/kanban/`, `/shop/`, `/dashboard/`, `/landing/`, `/blog/`, `/contacts/`) ko'rsatadi. Ilovaning `.jrx`, `.java`, `.css` yoki `index.html` fayli o'zgarsa faqat shu ilova qayta yig'iladi (Maven + Tailwind, ~4 s) va uning sahifasi yangilanadi. `jreact-*` (framework) o'zgarsa hammasi qayta yig'iladi. Build xatosi brauzerda qizil sahifa bo'lib chiqadi, tuzatsangiz o'zi tiklanadi.
+Server ishga tushadi, `.jrx`, `.java` va CSS o'zgarganda qayta yig'iladi (Maven yoki Gradle), brauzer o'zi yangilanadi. Build xatosi brauzerda ko'rinadi. Dev'da SSR o'chiq (sahifa brauzerda chiziladi); SSR'ni ko'rish uchun `jreact build` va `jreact start`.
 
 ### VS Code
 
@@ -1016,8 +1015,7 @@ root.reconciler().setWarningHandler(msg -> log.warn(msg)); // default: System.er
 | `./build.sh test` | barcha testlar (bog'liqliksiz `main()` runner'lar, JUnit kerak emas) |
 | `./build.sh web` | Todo'ni brauzer uchun yig'adi: `examples/todo-web/target/web/{index.html,app.js}` (Maven + TeaVM) |
 | `./build.sh web-test` | shuni jsdom'da ochib, ilovada yozib/bosib tekshiradi (node + npm) |
-| `./build.sh dev [port] [ilova...]` | dev server (`tools/dev-server.js`): qayta yig'ish + sahifani yangilash |
-| `./build.sh examples` | Tailwind namunalari (kanban, shop, dashboard, landing, blog, contacts) -> `examples/dist/` (Maven + node) |
+| `./build.sh examples` | brauzer namunalari (blog, contacts) -> `examples/dist/` (Maven + node) |
 | `./build.sh examples-test` | shuni yig'ib, jsdom'da bosib tekshiradi |
 | `./build.sh gradle-plugin` | Gradle plaginini yig'adi va TestKit bilan sinaydi (Maven, Gradle) |
 | `./build.sh spring-e2e` | `jreact new` -> `build` -> jar'ni ishga tushirib, ilovani jsdom'da bosib tekshiradi (Maven, node). `E2E_BROWSER=1` bilan qo'shimcha haqiqiy Chromium'da (Playwright; birinchi marta `cd examples && npx playwright install chromium`; o'z brauzeringiz uchun `E2E_CHROMIUM=<yo'l>`) |
@@ -1060,7 +1058,8 @@ java -cp build/core:build/app app.Main        # Windows'da ':' o'rniga ';'
 | `jreact-maven-plugin` | Maven plagini: `jrx:compile` |
 | `jreact-lsp` | `.jrx` language server (LSP) |
 | `examples/todo`, `examples/todo-web` | namunaviy ilova: JVM'da HTML va brauzerda |
-| `examples/{kanban,shop,dashboard,landing,blog}` | Tailwind bilan 6 ta real ilova + `gallery` (blog: router) |
+| `examples/{blog,contacts}` | faqat brauzer ilovalari (router, data router) |
+| `examples/fullstack-crud` | to'liq Spring Boot + JReact misoli |
 | `templates/web-app` | o'z brauzer ilovangiz uchun andoza |
 | `editors/vscode-jrx` | VS Code kengaytmasi |
 
@@ -1221,21 +1220,21 @@ jreact/
 ├── jreact-lsp/                       # language server: Server, Analyzer, Features, Workspace, Json
 │   └── src/test/.../LspTest.java     # 12 ta test, haqiqiy JSON-RPC oqimi bilan
 ├── editors/vscode-jrx/              # VS Code kengaytmasi: grammar + LSP klienti
-├── tools/dev-server.js               # dev server: hamma namuna ilovalar, live reload
+├── tools/                            # e2e skriptlar (spring-e2e, browser-e2e)
 ├── templates/web-app/                # o'z ilovangiz uchun andoza (pom.xml, Counter, WebMain)
 └── examples/
     ├── todo/                         # namunaviy ilova (.jrx), JVM'da HTML chiqaradi
     ├── todo-web/                     # shu ilova brauzerda + jsdom smoke testi
-    ├── kanban/ shop/ dashboard/ landing/ blog/ contacts/   # Tailwind bilan 6 ta ilova (pom.xml, src/main/{jrx,java,styles})
-    ├── gallery/                      # to'rttasini bog'lovchi bosh sahifa
+    ├── blog/ contacts/               # faqat brauzer ilovalari (Tailwind, router)
+    ├── fullstack-crud/               # Spring Boot + JPA + JReact
+    ├── bench/                        # benchmark
     ├── pom.xml, package.json         # umumiy Maven sozlamasi; Tailwind CLI + jsdom
-    └── smoke.js                      # 4 ilova uchun jsdom testi
+    └── smoke.js                      # blog va contacts uchun jsdom testi
 ```
 
 ## Cheklovlar
 
-- Brauzer build'i faqat jsdom'da sinalgan, haqiqiy brauzerda emas. Dev server'ning live reload'i va VS Code klienti ham haqiqiy muhitda hali ko'rilmagan (server protokoli `vscode-jsonrpc` bilan sinalgan).
-- Dev server `examples/` ilovalari uchun qattiq yozilgan (`tools/dev-server.js` boshidagi ro'yxat).
+- Brauzer build'i faqat jsdom'da sinalgan, haqiqiy brauzerda emas. `jreact dev` ning live reload'i va VS Code klienti ham haqiqiy muhitda hali ko'rilmagan (server protokoli `vscode-jsonrpc` bilan sinalgan).
 - JReact hali Maven Central'ga chiqarilmagan: o'z ilovangiz uchun `mvn install` bilan lokal o'rnatiladi.
 - CSS Modules va CSS-in-JS yo'q. Sass/Tailwind Maven build'iga ulanmagan, alohida buyruq bilan yig'iladi.
 - DOM: SVG (namespace), `onMouseEnter/Leave`, `dangerouslySetInnerHTML` yo'q (xavfsizlik uchun ham, qarang [Xavfsizlik](#xavfsizlik-xss)).

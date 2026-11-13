@@ -1,9 +1,0 @@
-package app;
-
-import jreact.web.JReactWeb;
-
-public class WebMain {
-    public static void main(String[] args) {
-        JReactWeb.createRoot("root").render(<Board />);
-    }
-}
