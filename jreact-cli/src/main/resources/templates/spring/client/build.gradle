@@ -12,6 +12,8 @@ dependencies {
     implementation project(':shared')
     implementation "dev.jreact:jreact-web:${jreactVersion}"
     implementation "org.teavm:teavm-jso:${teavmVersion}"
+    // generates dev.jreact.generated.Pages and PagesApp (the routes) from the @Page and @Layout classes
+    annotationProcessor "dev.jreact:jreact-processor:${jreactVersion}"
     implementation "org.teavm:teavm-classlib:${teavmVersion}"
     implementation "org.teavm:teavm-jso-impl:${teavmVersion}"
 }

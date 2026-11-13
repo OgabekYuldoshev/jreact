@@ -1,5 +1,6 @@
 package dev.jreact.examples.library.client;
 
+import dev.jreact.api.Page;
 import jreact.Component;
 import jreact.Element;
 import jreact.State;
@@ -7,10 +8,16 @@ import jreact.router.*;
 import static jreact.router.RouterHooks.*;
 import dev.jreact.examples.library.shared.*;
 
-/** One book, with Edit and a two step Delete (the second step is the form post to the route's action). */
+/** One book, with Edit and a two step Delete (the second step is the form post to this page's action). */
+@Page("/books/:id")
 public class BookDetail extends Component<BookDetail.Props> {
 
     public record Props() {}
+
+    public static Object loader(DataArgs a) { return BookApiClient.get(Actions.id(a)); }
+
+    /** The delete form posts to this same page: delete, then back to the list. */
+    public static Object action(DataArgs a) { return BookApiClient.delete(Actions.id(a)).then(done -> (Object) Redirect.to("/")); }
 
     @Override
     public Element render(Props props) {
@@ -30,7 +37,7 @@ public class BookDetail extends Component<BookDetail.Props> {
                 <div className="mt-8 flex items-center gap-3">
                     <Link to={"/books/" + b.id() + "/edit"} id="edit" className="rounded-lg border border-slate-300 px-4 py-2 text-sm hover:bg-slate-100">Edit</Link>
                     {sure.get()
-                        ? <Form method="post" action={"/books/" + b.id() + "/delete"} id="delete-form" className="flex items-center gap-2">
+                        ? <Form method="post" id="delete-form" className="flex items-center gap-2">
                               <span className="text-sm text-red-700">Delete this book?</span>
                               <button type="submit" id="confirm-delete" className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700">Yes, delete</button>
                               <button type="button" id="cancel-delete" className="rounded-lg px-3 py-2 text-sm hover:bg-slate-100" onClick={e -> sure.set(false)}>No</button>

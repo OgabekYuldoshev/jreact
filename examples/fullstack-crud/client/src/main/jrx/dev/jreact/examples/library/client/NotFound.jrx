@@ -1,0 +1,27 @@
+package dev.jreact.examples.library.client;
+
+import dev.jreact.api.Page;
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+
+/** "/*" matches every URL that no other page has: a 404 page inside the layout. */
+@Page("/*")
+public class NotFound extends Component<NotFound.Props> {
+
+    public record Props() {}
+
+    /** The loader's error is what the server answers with HTTP 404 (and the layout's error page shows); without it this page would be a 200. */
+    public static Object loader(DataArgs a) { throw new ErrorResponse(404, "Not Found", "There is no such page."); }
+
+    @Override
+    public Element render(Props props) {
+        return (
+            <div id="page-error" className="mx-auto mt-24 max-w-md px-4 text-center">
+                <h1 className="text-3xl font-bold tracking-tight">404 Not Found</h1>
+                <p className="mt-3 text-slate-500">There is no such page.</p>
+                <Link to="/" className="mt-6 inline-block text-indigo-600 hover:underline">Back</Link>
+            </div>
+        );
+    }
+}

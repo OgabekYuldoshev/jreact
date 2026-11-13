@@ -648,6 +648,39 @@ Reflection yo'q, shuning uchun brauzerda (TeaVM) ham ishlaydi. Nima ketadi: `POS
 Har bir metod ochiq HTTP endpoint: ruxsatni serverda tekshiring (`@PreAuthorize`), argumentlarni validatsiya qiling. Interfeysga bitta bean mos kelishi kerak, aks holda server ishga tushmaydi (aniq xabar bilan).
 `JReactWeb.createRoot` HTTP transportni o'zi o'rnatadi; testda `Rpc.transport(...)` bilan soxta transport berish mumkin. Maven'da `maven-compiler-plugin` ning `annotationProcessorPaths` ida `jreact-processor` ko'rsatiladi (shablon shunday: JDK 23+ processor'ni classpath'dan o'zi topmaydi).
 
+### Sahifalar: `@Page` va `@Layout` (routes fayli kerak emas)
+
+Marshrutlar sinflardan generatsiya qilinadi: sahifa yozsangiz, URL tayyor. Spring'dagi `@GetMapping` ning brauzerdagi ekvivalenti:
+
+```java
+@Page("/books/:id")                                  // yoki "/books/{id}" (Spring uslubi)
+public class BookDetail extends Component<BookDetail.Props> {
+    public record Props() {}                         // sahifada props yo'q: ma'lumot loader'dan keladi
+
+    public static Object loader(DataArgs a) { return BookApiClient.get(Long.parseLong(a.params().get("id"))); }   // ixtiyoriy
+    public static Object action(DataArgs a) { return BookApiClient.delete(...); }                              // ixtiyoriy: forma POST
+
+    public Element render(Props props) { Book b = (Book) useLoaderData(); ... }
+}
+
+@Layout(value = "/", error = ErrorPage.class)        // hamma sahifalar atrofida: <Outlet /> sahifa o'rni
+public class AppLayout extends Component<AppLayout.Props> { ... }
+```
+
+| Qoida | Ma'nosi |
+|---|---|
+| `@Page("/")`, `@Page("/books/:id")`, `@Page("/docs/*")` | bosh sahifa, parametr (`a.params().get("id")`), URL'ning qolgan qismi |
+| `@Layout("/admin")` | `/admin` va uning ostidagi hamma sahifa shu layout ichida (ildiz layout ichida ichma-ich). Layout yo'li bilan bir xil yo'lli sahifa shu layout'ning index sahifasi |
+| Joylashuv | eng uzun mos prefiksli layout tanlanadi; fayl joyi (papka) ahamiyatsiz |
+| `public static Object loader(DataArgs)` / `action(DataArgs)` | nomi bo'yicha topiladi, `Promise` qaytarishi mumkin. Layout'da ham bo'lishi mumkin (masalan joriy foydalanuvchini olib, kirmagan bo'lsa `Redirect`) |
+| `error = X.class` | sahifada: loader/action xato bersa sahifa o'rniga X. Layout'da: bolalar o'rniga X, layout (header) **qoladi** (Next.js `error.js` kabi) |
+| 404 | `@Page("/*")` va uning `loader`'i `ErrorResponse(404, ...)` tashlasa, server HTTP 404 qaytaradi |
+| Route id | sinf nomi (`useRouteLoaderData("BookDetail")`) |
+
+Xatolar kompilyatsiya vaqtida sinfda ko'rinadi: ikki sahifa bir yo'lda (`/books/:id` va `/books/{bookId}` bir xil), `Props` bo'sh record emas, `loader` imzosi noto'g'ri, yo'l `/` bilan boshlanmaydi, public bo'lmagan sinf va hokazo.
+
+Qo'shish kerak: client modulga `jreact-processor` (Maven: `maven-compiler-plugin` ning `annotationProcessorPaths`, Gradle: `annotationProcessor`; `jreact new` shablonida bor). Procesor `dev.jreact.generated.Pages.routes()` va tayyor `PagesApp` (`ClientApp`) yaratadi: `WebMain` da `new PagesApp()`, serverda `jreact.ssr.app=dev.jreact.generated.PagesApp`. Namuna: `examples/fullstack-crud` (6 ta sahifa, bitta layout, 404). Qo'lda `RouteObject` yozish ham mumkin, `Pages.routes()` bilan birga ishlatiladi.
+
 ### Validatsiya (Bean Validation)
 
 Qoidalarni `shared` modulda API'ning o'zida annotatsiya bilan yozing (Java dev'lar buni biladi), serverdagi bean'ga `@Validated` qo'ying:

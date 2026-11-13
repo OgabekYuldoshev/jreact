@@ -1,0 +1,21 @@
+package dev.jreact.examples.library.client;
+
+import dev.jreact.api.Page;
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+import dev.jreact.examples.library.shared.*;
+
+/** /books/:id/edit: the same form, filled in by the loader; its action saves. */
+@Page("/books/:id/edit")
+public class EditBook extends Component<EditBook.Props> {
+
+    public record Props() {}
+
+    public static Object loader(DataArgs a) { return BookApiClient.get(Actions.id(a)); }
+
+    public static Object action(DataArgs a) { return Actions.save(Actions.id(a), a); }
+
+    @Override
+    public Element render(Props props) { return <BookForm />; }
+}

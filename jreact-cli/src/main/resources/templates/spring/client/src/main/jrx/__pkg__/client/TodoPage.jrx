@@ -1,16 +1,39 @@
 package {{package}}.client;
 
 import java.util.List;
+import dev.jreact.api.Page;
 import jreact.Component;
 import jreact.Element;
 import jreact.router.*;
 import static jreact.router.RouterHooks.*;
 import {{package}}.shared.Todo;
+import {{package}}.shared.TodoApiClient;
 
-/** The list comes from the route's loader (GET /api/todos); the forms post to the route's action. */
+/**
+ * The home page. {@code @Page("/")} is all the routing there is: the routes are generated from the @Page and @Layout classes (add a class
+ * with {@code @Page("/about")} and /about exists). The list comes from {@link #loader}, the forms post to {@link #action}.
+ */
+@Page(value = "/", error = ErrorPage.class)      // ErrorPage is shown when the loader or the action fails
 public class TodoPage extends Component<TodoPage.Props> {
 
     public record Props() {}
+
+    /**
+     * Runs before the page renders: on the server for the first page, in the browser afterwards. TodoApiClient is generated from the
+     * TodoApi interface in shared/: it calls the Spring Boot bean and returns a Promise<List<Todo>>.
+     */
+    public static Object loader(DataArgs a) { return TodoApiClient.list(); }
+
+    /** Every <Form method="post"> on the page lands here (in the browser); after it, the loader runs again. */
+    public static Object action(DataArgs a) {
+        SearchParams f = a.request().form();
+        switch (f.get("intent", "")) {
+            case "add": return TodoApiClient.add(f.get("title", ""));
+            case "toggle": return TodoApiClient.setDone(Long.parseLong(f.get("id", "0")), "true".equals(f.get("done")));
+            case "delete": return TodoApiClient.remove(Long.parseLong(f.get("id", "0")));
+            default: throw new ErrorResponse(400, "Bad Request", "unknown intent");
+        }
+    }
 
     private static final String ICON = "w-8 text-xl leading-none text-slate-400 hover:text-slate-900";
 

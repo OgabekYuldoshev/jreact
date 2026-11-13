@@ -23,6 +23,15 @@
 
     <build>
         <plugins>
+            <!-- generates dev.jreact.generated.Pages and PagesApp (the routes) from the @Page and @Layout classes -->
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPaths>
+                        <path><groupId>dev.jreact</groupId><artifactId>jreact-processor</artifactId><version>${jreact.version}</version></path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <!-- bytecode -> app.js -->
             <plugin>
                 <groupId>org.teavm</groupId>

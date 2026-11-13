@@ -1,12 +1,14 @@
 package dev.jreact.examples.library.client;
 
+import dev.jreact.api.Layout;
 import jreact.Component;
 import jreact.Element;
 import jreact.router.*;
 import static jreact.router.RouterHooks.*;
 
 /** The frame of every page: the header, and the page of the current route in the Outlet. */
-public class Layout extends Component<Layout.Props> {
+@Layout(value = "/", error = ErrorPage.class)      // around every page; an error in a page shows inside it (the header stays)
+public class AppLayout extends Component<AppLayout.Props> {
 
     public record Props() {}
 

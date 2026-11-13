@@ -3,11 +3,12 @@ package {{package}}.client;
 import jreact.router.*;
 import jreact.web.JReactWeb;
 import jreact.web.Routers;
+import dev.jreact.generated.PagesApp;
 
 public class WebMain {
 
     public static void main(String[] args) {
-        App app = new App();
+        PagesApp app = new PagesApp();      // the routes, generated from the @Page and @Layout classes
         // The server already put the page into index.html (jreact.ssr.app): hydrate takes that HTML over instead of building it again.
         // Without it (an empty #root) it simply renders. Real paths (/, /anything): the Spring Boot server answers every page URL.
         JReactWeb.createRoot("root").hydrate(<RouterProvider router={Routers.createBrowserRouter(app.routes())} fallbackElement={app.fallback()} />);

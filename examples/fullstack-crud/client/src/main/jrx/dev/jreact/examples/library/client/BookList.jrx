@@ -1,6 +1,7 @@
 package dev.jreact.examples.library.client;
 
 import java.util.List;
+import dev.jreact.api.Page;
 import jreact.Component;
 import jreact.Element;
 import jreact.router.*;
@@ -8,9 +9,17 @@ import static jreact.router.RouterHooks.*;
 import dev.jreact.examples.library.shared.*;
 
 /** The list: search box, status tabs with counts, the books of this page, and previous/next. All of it is in the URL (?q=&status=&page=). */
+@Page("/")
 public class BookList extends Component<BookList.Props> {
 
     public record Props() {}
+
+    /** Runs before the page shows (on the server for the first page, in the browser after that): the books of this URL, and the counts for the tabs. */
+    public static Object loader(DataArgs a) {
+        SearchParams q = a.request().searchParams();
+        return BookApiClient.list(q.get("q", ""), Actions.status(q.get("status")), Actions.number(q.get("page"), 1))
+            .thenCompose(page -> BookApiClient.counts().then(counts -> new ListData(page, counts)));
+    }
 
     @Override
     public Element render(Props props) {

@@ -1,0 +1,19 @@
+package dev.jreact.examples.library.client;
+
+import dev.jreact.api.Page;
+import jreact.Component;
+import jreact.Element;
+import jreact.router.*;
+import dev.jreact.examples.library.shared.*;
+
+/** /books/new: the create form (BookForm); its action saves. */
+@Page("/books/new")
+public class NewBook extends Component<NewBook.Props> {
+
+    public record Props() {}
+
+    public static Object action(DataArgs a) { return Actions.save(null, a); }
+
+    @Override
+    public Element render(Props props) { return <BookForm />; }
+}
