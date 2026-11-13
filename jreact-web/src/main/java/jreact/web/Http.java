@@ -33,9 +33,24 @@ public final class Http {
         void call(int status, String statusText, String body, String error);
     }
 
+    /**
+     * The path the app is served under ({@code /shop} when Spring Boot runs with {@code server.servlet.context-path=/shop}), or "".
+     * The server writes it into index.html as {@code <meta name="jreact-base" content="/shop">}. Requests to a URL that starts with
+     * {@code /} get it as a prefix, and {@code Routers.createBrowserRouter} uses it as the router's basename.
+     */
+    public static String base() {
+        String b = meta();
+        if (b == null || b.equals("/")) return "";
+        return b.endsWith("/") ? b.substring(0, b.length() - 1) : b;
+    }
+
+    @JSBody(script = "var m = document.querySelector('meta[name=\"jreact-base\"]'); return m ? m.getAttribute('content') : null;")
+    private static native String meta();
+
     /** Sends a request. Resolves for every HTTP status; rejects only when the network fails. {@code body}: a String is sent as is, anything else as JSON. */
     public static Promise<Response> request(String method, String url, Object body) {
         Promise<Response> out = Promise.pending();
+        if (url.startsWith("/") && !url.startsWith("//")) url = base() + url;
         String payload = body == null ? null : body instanceof String s ? s : Json.stringify(body);
         String type = body == null ? null : body instanceof String ? "text/plain;charset=UTF-8" : "application/json";
         try {

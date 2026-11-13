@@ -24,7 +24,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   check('the first render used the answers embedded in the page (no list call over the network)', rpcListCalls === 0, rpcListCalls);
   const items = () => [...d.querySelectorAll('#todos li span')].map(s => s.textContent);
   check('the loader called TodoApiClient.list() and the page rendered the list', items().length >= 3 && items().includes('Read the README'), items());
-  check('the page is styled by Tailwind (a stylesheet link with a hashed name)', !!d.querySelector('link[rel=stylesheet][href^="/assets/app."]'), '');
+  check('a LocalDate arrived from the server and was parsed in the browser (title="added 2026-..")', [...d.querySelectorAll('#todos li span')].every(s => /^added \d{4}-\d{2}-\d{2}$/.test(s.title)), [...d.querySelectorAll('#todos li span')].map(s => s.title));
+  check('the page is styled by Tailwind (a stylesheet link with a hashed name)', !!d.querySelector('link[rel=stylesheet][href*="/assets/app."]'), '');
 
   // add a todo through the form (an action: POST /api/todos, then the loader runs again)
   const before = items().length;

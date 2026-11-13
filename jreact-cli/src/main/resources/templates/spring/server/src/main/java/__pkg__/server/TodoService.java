@@ -5,6 +5,7 @@ import {{package}}.shared.Todo;
 import {{package}}.shared.TodoApi;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicLong;
@@ -18,9 +19,9 @@ import java.util.concurrent.atomic.AtomicLong;
 class TodoService implements TodoApi {
 
     private final List<Todo> todos = new CopyOnWriteArrayList<>(List.of(
-            new Todo(1, "Read the README", true),
-            new Todo(2, "Change something in client/ and watch the page reload", false),
-            new Todo(3, "Change something in server/", false)));
+            new Todo(1, "Read the README", true, LocalDate.now()),
+            new Todo(2, "Change something in client/ and watch the page reload", false, LocalDate.now()),
+            new Todo(3, "Change something in server/", false, LocalDate.now())));
     private final AtomicLong ids = new AtomicLong(3);
 
     @Override
@@ -30,7 +31,7 @@ class TodoService implements TodoApi {
     public Todo add(String title) {
         String clean = title == null ? "" : title.strip();
         if (clean.isEmpty() || clean.length() > 200) throw new RpcException(422, "title must be 1 to 200 characters");
-        Todo todo = new Todo(ids.incrementAndGet(), clean, false);
+        Todo todo = new Todo(ids.incrementAndGet(), clean, false, LocalDate.now());
         todos.add(todo);
         return todo;
     }
@@ -40,7 +41,7 @@ class TodoService implements TodoApi {
         for (int i = 0; i < todos.size(); i++) {
             Todo t = todos.get(i);
             if (t.id() != id) continue;
-            Todo changed = new Todo(t.id(), t.title(), done);
+            Todo changed = new Todo(t.id(), t.title(), done, t.created());
             todos.set(i, changed);
             return changed;
         }

@@ -43,7 +43,7 @@ public class TodoPage extends Component<TodoPage.Props> {
                                 <input type="hidden" name="done" value={t.done() ? "false" : "true"} />
                                 <button type="submit" className={ICON} aria-label="Toggle">{t.done() ? "☑" : "☐"}</button>
                             </Form>
-                            <span className={"flex-1 " + (t.done() ? "text-slate-400 line-through" : "")}>{t.title()}</span>
+                            <span className={"flex-1 " + (t.done() ? "text-slate-400 line-through" : "")} title={"added " + t.created()}>{t.title()}</span>
                             <Form method="post">
                                 <input type="hidden" name="intent" value="delete" />
                                 <input type="hidden" name="id" value={String.valueOf(t.id())} />

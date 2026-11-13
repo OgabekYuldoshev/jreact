@@ -620,7 +620,8 @@ Reflection yo'q, shuning uchun brauzerda (TeaVM) ham ishlaydi. Nima ketadi: `POS
 
 | Qoida | Ma'nosi |
 |---|---|
-| Ruxsat etilgan tiplar | `boolean`, `int`, `long`, `double` (va o'ramlari), `String`, enum, `List<T>`, `Map<String,T>`, shularning record'lari (o'zini o'zi ichiga olgan record ham) |
+| Ruxsat etilgan tiplar | `boolean`, `int`, `long`, `double` (va o'ramlari), `String`, enum, `Optional<T>`, `LocalDate`, `LocalDateTime`, `LocalTime`, `Instant`, `List<T>`, `Map<String,T>`, shularning record'lari (o'zini o'zi ichiga olgan record ham) |
+| `Optional<T>` | JSON'da qiymat yoki `null` (bo'sh `Optional` = `null`); sana/vaqt ISO-8601 satr (`"2026-11-13"`, `"2026-11-13T09:30:00"`, `"2026-11-13T04:30:00Z"`), noto'g'ri format 400 |
 | Boshqa tip | kompilyatsiya xatosi, nima ruxsat etilganini aytadi |
 | Overload, generik metod/record, `Map<Integer,..>` | kompilyatsiya xatosi |
 | Noto'g'ri argument | 400, joyi ko'rsatiladi: `title: expected a string, got a number`, `numbers[1]: expected an integer` |
@@ -709,6 +710,10 @@ jrxBundle { dependsOn 'assembleWeb' }
 
 **Hozircha yo'q:** `jreact` CLI faqat Maven loyihalari bilan ishlaydi (`new/dev/build` Gradle'ni bilmaydi), Gradle uchun TeaVM + Spring Boot shabloni yo'q. TeaVM bilan sinov qo'lda qilingan (sahifa brauzerda ochilmagan), avtomatik testda yo'q.
 
+### Context path (`server.servlet.context-path=/shop`)
+
+Ilova URL prefiks ostida ishlaydi (`/shop/`, `/shop/assets/...`, `/shop/_rpc/...`) va hech narsa sozlash shart emas. Starter `index.html` dagi `/` bilan boshlanadigan `href`/`src` larga prefiks qo'shadi va `<meta name="jreact-base" content="/shop">` yozadi. Brauzer tomoni uni o'qiydi: `Routers.createBrowserRouter` basename sifatida, `HttpTransport` va `Http` (`/` bilan boshlanadigan URL'larga) prefiks sifatida (`Http.base()`). Server render ham linklarga prefiks qo'yadi, redirect `Location` ga ham. `jreact dev` da reload skripti ham prefiks bilan yuklanadi (dev rejimida qo'lda sinalmagan, avtomatik testda yo'q). `spring-e2e` shu jar'ni `/app` ostida ham ishga tushirib tekshiradi.
+
 ### `jreact-spring-boot-starter`
 
 Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
@@ -723,7 +728,7 @@ Server modulidagi bitta bog'liqlik, qolganini avtomatik sozlaydi:
 Maven plagini `jrx:bundle` ham beradi (client modulida avtomatik): TeaVM natijasini hash'lab `target/classes/jreact/` ga qo'yadi, `index.html` ni yangilaydi, `manifest.json` yozadi.
 Spring Security ishlatsangiz va `/` ni ochiq qilmasangiz, UI ham login talab qiladi: starter filtr emas, oddiy resource handler.
 
-**Hozircha yo'q** (reja): `@ServerApi` da `Optional`, sana/vaqt va generik tiplar, `context-path` bilan ishlash (asset yo'llari `/` dan boshlanadi), `shared/` o'zgarganda tezroq qayta yig'ish.
+**Hozircha yo'q** (reja): `@ServerApi` da generik tiplar, `BigDecimal`/`ZonedDateTime`, `shared/` o'zgarganda tezroq qayta yig'ish.
 
 ## Stillar: CSS, Sass, Tailwind
 

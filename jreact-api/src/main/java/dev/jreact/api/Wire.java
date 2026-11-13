@@ -66,6 +66,32 @@ public final class Wire {
         throw bad(path, "an object", j);
     }
 
+    // ---- java.time as ISO-8601 strings ("2026-11-13", "2026-11-13T09:30:00", "09:30", "2026-11-13T04:30:00Z")
+
+    public static java.time.LocalDate localDate(Object j, String path) {
+        String s = str(j, path);
+        if (s == null) return null;
+        try { return java.time.LocalDate.parse(s); } catch (RuntimeException e) { throw bad(path, "a date like 2026-11-13", s); }
+    }
+
+    public static java.time.LocalDateTime localDateTime(Object j, String path) {
+        String s = str(j, path);
+        if (s == null) return null;
+        try { return java.time.LocalDateTime.parse(s); } catch (RuntimeException e) { throw bad(path, "a date and time like 2026-11-13T09:30:00", s); }
+    }
+
+    public static java.time.LocalTime localTime(Object j, String path) {
+        String s = str(j, path);
+        if (s == null) return null;
+        try { return java.time.LocalTime.parse(s); } catch (RuntimeException e) { throw bad(path, "a time like 09:30", s); }
+    }
+
+    public static java.time.Instant instant(Object j, String path) {
+        String s = str(j, path);
+        if (s == null) return null;
+        try { return java.time.Instant.parse(s); } catch (RuntimeException e) { throw bad(path, "an instant like 2026-11-13T04:30:00Z", s); }
+    }
+
     /** The arguments of a call: exactly {@code count} of them. */
     public static void args(List<Object> args, int count) {
         if (args == null || args.size() != count) throw new RpcException(400, "expected " + count + " argument(s), got " + (args == null ? 0 : args.size()));

@@ -49,6 +49,26 @@ echo "ok   HTTP checks"
 echo "== the app in jsdom"
 node "$ROOT/tools/spring-e2e.js" "http://localhost:$PORT"
 
+echo "== the same jar under a context path (/app)"
+kill "$SERVER" 2>/dev/null || true; wait "$SERVER" 2>/dev/null || true
+CPORT=$((PORT + 1))
+java -jar "$JAR" --server.port="$CPORT" --server.servlet.context-path=/app > "$WORK/server-cp.log" 2>&1 &
+SERVER=$!
+for i in $(seq 1 60); do curl -s -o /dev/null -X POST -H 'Content-Type: application/json' -d '[]' "http://localhost:$CPORT/app/_rpc/TodoApi/list" && break; sleep 1; done
+CPAGE="$(curl -s -H 'Accept: text/html' "http://localhost:$CPORT/app/")"
+echo "$CPAGE" | grep -q '<meta name="jreact-base" content="/app">' || fail "no jreact-base meta under a context path"
+echo "$CPAGE" | grep -q 'src="/app/assets/app\.' || fail "assets are not under the context path"
+echo "$CPAGE" | grep -q 'Read the README' || fail "SSR does not work under a context path"
+node "$ROOT/tools/spring-e2e.js" "http://localhost:$CPORT/app"
+
+if [ -n "${E2E_BROWSER:-}" ]; then
+  # the browser run needs the server of the first part
+  kill "$SERVER" 2>/dev/null || true; wait "$SERVER" 2>/dev/null || true
+  java -jar "$JAR" --server.port="$PORT" > "$WORK/server.log" 2>&1 &
+  SERVER=$!
+  for i in $(seq 1 60); do curl -s -o /dev/null -X POST -H 'Content-Type: application/json' -d '[]' "http://localhost:$PORT/_rpc/TodoApi/list" && break; sleep 1; done
+fi
+
 if [ -n "${E2E_BROWSER:-}" ]; then
   echo "== the app in Chromium (Playwright)"
   node "$ROOT/tools/browser-e2e.js" "http://localhost:$PORT"

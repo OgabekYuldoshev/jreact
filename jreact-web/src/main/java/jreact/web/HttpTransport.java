@@ -17,7 +17,7 @@ public final class HttpTransport implements Rpc.Transport {
 
     public HttpTransport(String prefix) { this.prefix = prefix.endsWith("/") ? prefix : prefix + "/"; }
 
-    public HttpTransport() { this("/_rpc"); }
+    public HttpTransport() { this("/_rpc"); }      // under the context path, when there is one (Http.request adds it)
 
     @Override
     public Promise<Object> call(String api, String method, List<Object> args) {

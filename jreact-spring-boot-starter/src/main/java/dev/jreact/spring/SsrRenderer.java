@@ -11,13 +11,10 @@ import jreact.router.ErrorResponse;
 import jreact.router.Location;
 import jreact.router.Promise;
 import jreact.router.RouterProvider;
-import jreact.router.Routers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.core.io.Resource;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -40,21 +37,20 @@ final class SsrRenderer {
     record Page(int status, String html, String redirect) {}
 
     private final ClientApp app;
-    private final Resource indexHtml;
+    private final IndexHtml index;
     private final Pattern container;
-    private String template;
 
     /** The answers of the loaders of the request being rendered, per thread. */
     private final ThreadLocal<Map<String, Object>> recording = new ThreadLocal<>();
 
-    SsrRenderer(String appClass, String containerId, RpcController rpc, Resource indexHtml, ClassLoader loader) {
+    SsrRenderer(String appClass, String containerId, RpcController rpc, IndexHtml index, ClassLoader loader) {
         try {
             this.app = (ClientApp) loader.loadClass(appClass).getDeclaredConstructor().newInstance();
         } catch (ReflectiveOperationException | ClassCastException e) {
             throw new IllegalStateException("jreact.ssr.app=" + appClass + " must be a public class with a public no-argument constructor that implements dev.jreact.api.ClientApp. "
                     + "Is the client module's jar (with its classes) on the server's classpath? " + e, e);
         }
-        this.indexHtml = indexHtml;
+        this.index = index;
         this.container = Pattern.compile("(<[a-zA-Z][^>]*\\bid=[\"']" + Pattern.quote(containerId) + "[\"'][^>]*>)(\\s*)(</[a-zA-Z]+>)");
         Rpc.transport((api, method, args) -> {
             RpcController.Result r = rpc.invoke(api, method, args);
@@ -70,13 +66,14 @@ final class SsrRenderer {
         });
     }
 
-    /** The page for {@code uri} (path and query), or null when the browser has to do it. */
-    Page render(String uri) {
+    /** The page for {@code uri} (path and query, without the context path), or null when the browser has to do it. */
+    Page render(String uri, String contextPath) {
         Map<String, Object> answers = new LinkedHashMap<>();
         recording.set(answers);
         DataRouter router = null;
         try {
-            router = Routers.createMemoryRouter(app.routes(), uri);
+            // links on the page carry the context path, like the browser's router does with its basename
+            router = new DataRouter(app.routes(), new jreact.router.MemoryHistory(contextPath + uri), contextPath.isEmpty() ? null : contextPath);
             DataRouter.Snapshot s = router.state();
             if (!s.initialized() || s.matches() == null) return null;       // a loader waits for something: not on the JVM
             Location wanted = Location.parse(uri);
@@ -91,7 +88,7 @@ final class SsrRenderer {
                 status = error instanceof ErrorResponse r ? r.status() : 500;
                 break;
             }
-            return new Page(status, assemble(body, answers), null);
+            return new Page(status, assemble(body, answers, contextPath), null);
         } catch (RuntimeException | IOException e) {
             log.warn("jreact ssr: {} could not be rendered on the server, the browser will render it ({})", uri, e.toString());
             return null;
@@ -101,8 +98,8 @@ final class SsrRenderer {
         }
     }
 
-    private String assemble(String body, Map<String, Object> answers) throws IOException {
-        if (template == null) template = new String(indexHtml.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+    private String assemble(String body, Map<String, Object> answers, String contextPath) throws IOException {
+        String template = index.html(contextPath);
         Matcher m = container.matcher(template);
         if (!m.find()) throw new IOException("index.html has no empty element with the id of jreact.ssr.container-id");
         String data = answers.isEmpty() ? "" : "<script id=\"__jreact_data\" type=\"application/json\">" + Json.stringify(answers) + "</script>";

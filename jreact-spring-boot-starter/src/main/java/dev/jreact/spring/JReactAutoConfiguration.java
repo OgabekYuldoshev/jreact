@@ -38,25 +38,31 @@ import java.time.Duration;
 @EnableConfigurationProperties(JReactProperties.class)
 public class JReactAutoConfiguration {
 
-    /** Server side rendering of page requests, on when {@code jreact.ssr.app} is set (and not in dev mode). */
+    /** index.html adapted to the context path, and server side rendering ({@code jreact.ssr.app}, not in dev mode). */
     @Bean
-    @ConditionalOnProperty(prefix = "jreact.ssr", name = "app")
-    SsrInterceptor jreactSsrInterceptor(JReactProperties props, ResourceLoader loader, RpcController rpc) {
-        if (props.isDev()) return new SsrInterceptor(null, props);       // dev: the client changes all the time, the browser renders
+    PageInterceptor jreactPageInterceptor(JReactProperties props, ResourceLoader loader, org.springframework.beans.factory.ObjectProvider<RpcController> rpc) {
         Resource index;
         try { index = locationOf(props, loader).createRelative("index.html"); }
         catch (IOException e) { throw new IllegalStateException("bad jreact.location: " + e.getMessage(), e); }
-        ClassLoader cl = loader != null && loader.getClassLoader() != null ? loader.getClassLoader() : getClass().getClassLoader();
-        return new SsrInterceptor(new SsrRenderer(props.getSsr().getApp(), props.getSsr().getContainerId(), rpc, index, cl), props);
+        IndexHtml html = new IndexHtml(index, props.isDev());
+        SsrRenderer renderer = null;
+        String app = props.getSsr().getApp();
+        if (app != null && !app.isBlank() && !props.isDev()) {      // dev: the client changes all the time, the browser renders
+            RpcController controller = rpc.getIfAvailable();
+            if (controller == null) throw new IllegalStateException("jreact.ssr.app needs the RPC controller (jreact.rpc.enabled=true)");
+            ClassLoader cl = loader != null && loader.getClassLoader() != null ? loader.getClassLoader() : getClass().getClassLoader();
+            renderer = new SsrRenderer(app, props.getSsr().getContainerId(), controller, html, cl);
+        }
+        return new PageInterceptor(renderer, html, props);
     }
 
     @Bean
     WebMvcConfigurer jreactWebMvcConfigurer(JReactProperties props, ResourceLoader loader,
-                                            org.springframework.beans.factory.ObjectProvider<SsrInterceptor> ssr) {
+                                            org.springframework.beans.factory.ObjectProvider<PageInterceptor> pageInterceptor) {
         return new WebMvcConfigurer() {
             @Override
             public void addInterceptors(org.springframework.web.servlet.config.annotation.InterceptorRegistry registry) {
-                SsrInterceptor i = ssr.getIfAvailable();
+                PageInterceptor i = pageInterceptor.getIfAvailable();
                 if (i != null) registry.addInterceptor(i);
             }
 

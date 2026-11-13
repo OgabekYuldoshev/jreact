@@ -49,6 +49,7 @@ class DevReloadController {
 
     private static final String RELOAD_JS = """
             (function () {
+              var base = new URL(document.currentScript.src).pathname.replace(/\\/__jreact\\/reload\\.js$/, '');     // the context path, if any
               var current = null, box = null;
               function overlay(text) {
                 if (!text) { if (box) { box.remove(); box = null; } return; }
@@ -60,11 +61,11 @@ class DevReloadController {
                 box.textContent = 'JReact build failed\\n\\n' + text;
               }
               function tick() {
-                fetch('/__jreact/version', {cache: 'no-store'}).then(function (r) { return r.text(); }).then(function (v) {
+                fetch(base + '/__jreact/version', {cache: 'no-store'}).then(function (r) { return r.text(); }).then(function (v) {
                   if (current === null) current = v;
                   else if (v !== current) {
                     current = v;
-                    fetch('/__jreact/error', {cache: 'no-store'}).then(function (r) { return r.text(); }).then(function (t) {
+                    fetch(base + '/__jreact/error', {cache: 'no-store'}).then(function (r) { return r.text(); }).then(function (t) {
                       if (t.trim()) overlay(t); else location.reload();
                     });
                   }

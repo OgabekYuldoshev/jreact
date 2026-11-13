@@ -10,4 +10,5 @@ public interface GreetApi {
     List<Greeting> all();
     void fail(String how);
     void ping();
+    Booking book(String who, java.time.LocalDate day, java.util.Optional<String> note);
 }

@@ -20,6 +20,10 @@ public class GreetService implements GreetApi {
 
     @Override public void ping() {}
 
+    @Override public Booking book(String who, java.time.LocalDate day, java.util.Optional<String> note) {
+        return new Booking(who, day, note, day.atTime(9, 30), java.time.Instant.parse("2026-11-13T04:30:00Z"));
+    }
+
     @Override public void fail(String how) {
         switch (how) {
             case "denied": throw new AccessDeniedException();

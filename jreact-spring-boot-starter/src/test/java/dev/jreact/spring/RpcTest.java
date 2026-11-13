@@ -36,6 +36,16 @@ class RpcTest {
     }
 
     @Test
+    void datesAreIsoStringsAndOptionalIsNullOrTheValue() {
+        ResponseEntity<String> r = rpc("book", "[\"Ada\", \"2026-11-20\", \"window seat\"]");
+        assertThat(r.getBody()).isEqualTo("{\"who\":\"Ada\",\"day\":\"2026-11-20\",\"note\":\"window seat\",\"start\":\"2026-11-20T09:30\",\"at\":\"2026-11-13T04:30:00Z\"}");
+        assertThat(rpc("book", "[\"Ada\", \"2026-11-20\", null]").getBody()).contains("\"note\":null");
+        ResponseEntity<String> bad = rpc("book", "[\"Ada\", \"tomorrow\", null]");
+        assertThat(bad.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(bad.getBody()).contains("day: expected a date like 2026-11-13, got a string");
+    }
+
+    @Test
     void aVoidMethodAnswersNull() {
         ResponseEntity<String> r = rpc("ping", "[]");
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);

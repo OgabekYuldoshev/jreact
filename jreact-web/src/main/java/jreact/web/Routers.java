@@ -16,8 +16,9 @@ public final class Routers {
 
     public static DataRouter createBrowserRouter(List<RouteObject> routes) { return createBrowserRouter(routes, null); }
 
-    /** @param basename the prefix the app is served under (for example {@code /docs}), or null */
+    /** @param basename the prefix the app is served under (for example {@code /docs}); null: the server's context path ({@link Http#base()}), if any */
     public static DataRouter createBrowserRouter(List<RouteObject> routes, String basename) {
+        if (basename == null) basename = Http.base();
         return withScroll(new DataRouter(routes, new BrowserHistory(), basename));
     }
 

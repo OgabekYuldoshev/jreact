@@ -44,6 +44,7 @@ public final class ServerApiProcessor extends AbstractProcessor {
 
     private static final String LIST = "java.util.List";
     private static final String MAP = "java.util.Map";
+    private static final String OPTIONAL = "java.util.Optional";
 
     private final Set<String> dispatchers = new TreeSet<>();
     private final Map<String, String> apiNames = new HashMap<>();   // simple name -> qualified name (they must be unique: the URL uses the simple name)
@@ -205,7 +206,11 @@ public final class ServerApiProcessor extends AbstractProcessor {
                     String q = el.getQualifiedName().toString();
                     if (isBox(q) || q.equals("java.lang.String")) b.append("        return v;\n");
                     else if (el.getKind() == ElementKind.ENUM) b.append("        return v == null ? null : v.name();\n");
-                    else if (q.equals(LIST)) {
+                    else if (isTime(q)) b.append("        return v == null ? null : v.toString();\n");        // ISO-8601
+                    else if (q.equals(OPTIONAL)) {
+                        String item = enc(arg(d, 0, at), at);
+                        b.append("        if (v == null || v.isEmpty()) return null;\n        return ").append(item).append("(v.get());\n");
+                    } else if (q.equals(LIST)) {
                         String item = enc(arg(d, 0, at), at);
                         b.append("        if (v == null) return null;\n        java.util.List<Object> out = dev.jreact.api.Wire.newArray();\n")
                                 .append("        for (").append(typeName(arg(d, 0, at))).append(" e : v) out.add(").append(item).append("(e));\n        return out;\n");
@@ -259,6 +264,14 @@ public final class ServerApiProcessor extends AbstractProcessor {
                         case "java.lang.Short" -> b.append("        Integer i = dev.jreact.api.Wire.intOrNull(j, path);\n        return i == null ? null : (Short) (short) (int) i;\n");
                         case "java.lang.Byte" -> b.append("        Integer i = dev.jreact.api.Wire.intOrNull(j, path);\n        return i == null ? null : (Byte) (byte) (int) i;\n");
                         case "java.lang.Boolean" -> b.append("        return dev.jreact.api.Wire.boolOrNull(j, path);\n");
+                        case "java.time.LocalDate" -> b.append("        return dev.jreact.api.Wire.localDate(j, path);\n");
+                        case "java.time.LocalDateTime" -> b.append("        return dev.jreact.api.Wire.localDateTime(j, path);\n");
+                        case "java.time.LocalTime" -> b.append("        return dev.jreact.api.Wire.localTime(j, path);\n");
+                        case "java.time.Instant" -> b.append("        return dev.jreact.api.Wire.instant(j, path);\n");
+                        case OPTIONAL -> {
+                            String item = dec(arg(d, 0, at), at);
+                            b.append("        if (j == null) return java.util.Optional.empty();\n        return java.util.Optional.ofNullable(").append(item).append("(j, path));\n");
+                        }
                         case LIST -> {
                             String item = dec(arg(d, 0, at), at);
                             b.append("        java.util.List<Object> in = dev.jreact.api.Wire.list(j, path);\n        if (in == null) return null;\n")
@@ -313,7 +326,11 @@ public final class ServerApiProcessor extends AbstractProcessor {
         }
 
         private Unsupported unsupported(TypeMirror t, Element at) {
-            return new Unsupported(at, "the type " + t + " cannot be sent over a @ServerApi. Allowed: boolean, int, long, double (and boxes), String, enums, List<T>, Map<String,T>, records of these");
+            return new Unsupported(at, "the type " + t + " cannot be sent over a @ServerApi. Allowed: boolean, int, long, double (and boxes), String, enums, Optional<T>, LocalDate, LocalDateTime, LocalTime, Instant, List<T>, Map<String,T>, records of these");
+        }
+
+        private boolean isTime(String q) {
+            return q.equals("java.time.LocalDate") || q.equals("java.time.LocalDateTime") || q.equals("java.time.LocalTime") || q.equals("java.time.Instant");
         }
 
         private boolean isBox(String q) {

@@ -44,6 +44,11 @@ class TodoApiTest {
     }
 
     @Test
+    void datesTravelAsIsoStrings() {
+        assertThat(rpc("list", "[]").getBody()).containsPattern("\"created\":\"\\d{4}-\\d{2}-\\d{2}\"");
+    }
+
+    @Test
     void validationAndTypeErrors() {
         ResponseEntity<String> empty = rpc("add", "[\"  \"]");
         assertThat(empty.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
