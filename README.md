@@ -1278,7 +1278,7 @@ jreact/
 ├── jreact-spring-boot-starter/       # Spring Boot starter: hash'li assetlar, SPA fallback, dev reload (19 ta JUnit testi, RPC bilan)
 ├── jreact-gradle-plugin/             # Gradle plagini dev.jreact.jrx: jrxCompile, jrxBundle (alohida Gradle build, 3 ta TestKit test)
 ├── jreact-api/                       # @ServerApi, Rpc, RpcException, Wire: generatsiya qilingan kod ishlatadigan runtime (JVM va TeaVM)
-├── jreact-processor/                 # @ServerApi annotation processor: Client, Dispatcher, Wire generatsiyasi (11 ta test)
+├── jreact-processor/                 # annotation processor'lar: @ServerApi (Client, Dispatcher, Wire) va @Page/@Layout (Pages, PagesApp); 14 ta test
 ├── jreact-cli/                       # `jreact` buyrug'i (picocli): new, dev, build, start, test, doctor, docker; shablon resources/templates/spring
 ├── bin/jreact                        # CLI ishga tushiruvchisi
 ├── jreact-lsp/                       # language server: Server, Analyzer, Features, Workspace, Json
